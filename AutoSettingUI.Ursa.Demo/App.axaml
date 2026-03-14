@@ -1,0 +1,33 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:u="https://irihi.tech/ursa/themes"
+             x:Class="AutoSettingUI.Ursa.Demo.App"
+             xmlns:local="using:AutoSettingUI.Ursa.Demo"
+             xmlns:u-semi="https://irihi.tech/ursa/themes/semi"
+             xmlns:semi="https://irihi.tech/semi"
+             RequestedThemeVariant="{x:Static u-semi:SemiTheme.Dusk}"
+             >
+             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+
+    <Application.DataTemplates>
+        <local:ViewLocator/>
+    </Application.DataTemplates>
+  
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://AutoSettingUI.Ursa/Themes/Generic.axaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
+    <Application.Styles>
+        <u-semi:SemiTheme Locale="zh-CN" />
+        <semi:SemiTheme></semi:SemiTheme>
+        <!-- <FluentTheme /> -->
+        <!-- Semi and Ursa Themes -->
+        
+        
+    </Application.Styles>
+
+</Application>

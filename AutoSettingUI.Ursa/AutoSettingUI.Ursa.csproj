@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <IsAotCompatible>true</IsAotCompatible>
+        <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="11.2.3" />
+        <PackageReference Include="Irihi.Ursa" Version="1.8.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\AutoSettingUI.Core\AutoSettingUI.Core.csproj" />
+        <ProjectReference Include="..\AutoSettingUI\AutoSettingUI.csproj" />
+        <ProjectReference Include="..\AutoSettingUI.Avalonia\AutoSettingUI.Avalonia.csproj" />
+    </ItemGroup>
+
+</Project>

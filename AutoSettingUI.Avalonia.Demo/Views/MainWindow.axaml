@@ -1,0 +1,151 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:AutoSettingUI.Avalonia.Demo.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="clr-namespace:AutoSettingUI.Avalonia.Controls;assembly=AutoSettingUI.Avalonia"
+        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
+        x:Class="AutoSettingUI.Avalonia.Demo.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="AutoSettingUI Avalonia Demo"
+        Height="600"
+        Width="900">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Header -->
+        <Border Grid.Row="0" Background="#FF2D2D30" Padding="15">
+            <Grid ColumnDefinitions="*,Auto,Auto">
+                <TextBlock Grid.Column="0" Text="AutoSettingUI Avalonia Demo"
+                           Foreground="White"
+                           FontSize="20"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center"/>
+                <Button Grid.Column="1"
+                        Command="{Binding ToggleNavigationCommand}"
+                        Margin="10,0,5,0"
+                        Padding="10,5">
+                    <TextBlock Text="{Binding ShowNavigation, StringFormat='Nav: {0}'}"/>
+                </Button>
+                <Button Grid.Column="2"
+                        Command="{Binding ToggleViewCommand}"
+                        Margin="5,0,0,0"
+                        Padding="10,5">
+                    <TextBlock Text="{Binding ViewModeText}"/>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- Settings Panel - Default Style -->
+        <controls:AvaloniaAutoSettingPanel Grid.Row="1"
+                                           IsVisible="{Binding !IsCustomView}"
+                                           Title="{Binding Title}"
+                                           ShowNavigation="{Binding ShowNavigation}"
+                                           NavigationWidth="{Binding NavigationWidth}"
+                                           Targets="{Binding Targets}"/>
+
+        <!-- Settings Panel - Custom Styled -->
+        <Border Grid.Row="1"
+                IsVisible="{Binding IsCustomView}"
+                Background="#FFE8E8E8">
+            <controls:AvaloniaAutoSettingPanel Title="Custom Styled Settings"
+                                               ShowNavigation="{Binding ShowNavigation}"
+                                               NavigationWidth="250"
+                                               Targets="{Binding Targets}">
+                <controls:AvaloniaAutoSettingPanel.Styles>
+                    <!-- Card container style -->
+                    <Style Selector="Border">
+                        <Setter Property="Background" Value="#FFFAFAFA"/>
+                        <Setter Property="CornerRadius" Value="12"/>
+                        <Setter Property="Padding" Value="24"/>
+                        <Setter Property="Margin" Value="0,0,0,24"/>
+                        <Setter Property="BoxShadow" Value="0 4 12 0 #40000000"/>
+                    </Style>
+                    <!-- Default text color -->
+                    <Style Selector="TextBlock">
+                        <Setter Property="Foreground" Value="#FF222222"/>
+                    </Style>
+                    <!-- Main header text -->
+                    <Style Selector="TextBlock.main-header">
+                        <Setter Property="FontSize" Value="28"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                        <Setter Property="Foreground" Value="#FF1565C0"/>
+                        <Setter Property="Margin" Value="0,0,0,20"/>
+                    </Style>
+                    <!-- Sub header text -->
+                    <Style Selector="TextBlock.sub-header">
+                        <Setter Property="FontSize" Value="18"/>
+                        <Setter Property="FontWeight" Value="SemiBold"/>
+                        <Setter Property="Foreground" Value="#FF424242"/>
+                        <Setter Property="Margin" Value="0,15,0,10"/>
+                    </Style>
+                    <!-- Label text -->
+                    <Style Selector="TextBlock.label">
+                        <Setter Property="FontSize" Value="14"/>
+                        <Setter Property="Foreground" Value="#FF333333"/>
+                        <Setter Property="VerticalAlignment" Value="Center"/>
+                        <Setter Property="Margin" Value="0,0,10,0"/>
+                    </Style>
+                    <!-- TextBox with proper contrast -->
+                    <Style Selector="TextBox">
+                        <Setter Property="Background" Value="#FFFFFFFF"/>
+                        <Setter Property="BorderBrush" Value="#FF757575"/>
+                        <Setter Property="BorderThickness" Value="1"/>
+                        <Setter Property="CornerRadius" Value="6"/>
+                        <Setter Property="Padding" Value="10,8"/>
+                        <Setter Property="Margin" Value="5"/>
+                        <Setter Property="Foreground" Value="#FF212121"/>
+                        <Setter Property="CaretBrush" Value="#FF212121"/>
+                    </Style>
+                    <Style Selector="TextBox:focus /template/ Border">
+                        <Setter Property="BorderBrush" Value="#FF2196F3"/>
+                        <Setter Property="BorderThickness" Value="2"/>
+                    </Style>
+                    <!-- ComboBox styling -->
+                    <Style Selector="ComboBox">
+                        <Setter Property="Background" Value="#FFFFFFFF"/>
+                        <Setter Property="BorderBrush" Value="#FF757575"/>
+                        <Setter Property="BorderThickness" Value="1"/>
+                        <Setter Property="CornerRadius" Value="6"/>
+                        <Setter Property="Padding" Value="10,8"/>
+                        <Setter Property="Margin" Value="5"/>
+                        <Setter Property="Foreground" Value="#FF212121"/>
+                    </Style>
+                    <!-- ToggleSwitch -->
+                    <Style Selector="ToggleSwitch">
+                        <Setter Property="Margin" Value="5"/>
+                    </Style>
+                    <!-- Slider -->
+                    <Style Selector="Slider">
+                        <Setter Property="Margin" Value="5"/>
+                    </Style>
+                    <!-- NumericUpDown -->
+                    <Style Selector="NumericUpDown">
+                        <Setter Property="Background" Value="#FFFFFFFF"/>
+                        <Setter Property="BorderBrush" Value="#FF757575"/>
+                        <Setter Property="BorderThickness" Value="1"/>
+                        <Setter Property="CornerRadius" Value="6"/>
+                        <Setter Property="Padding" Value="10,8"/>
+                        <Setter Property="Margin" Value="5"/>
+                        <Setter Property="Foreground" Value="#FF212121"/>
+                    </Style>
+                </controls:AvaloniaAutoSettingPanel.Styles>
+            </controls:AvaloniaAutoSettingPanel>
+        </Border>
+
+        <!-- Buttons -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,*,*">
+            <Button Grid.Column="0" Content="Add App" HorizontalAlignment="Stretch" Margin="5"
+                    Command="{Binding AddAppCommand}"/>
+            <Button Grid.Column="1" Content="Add User" HorizontalAlignment="Stretch" Margin="5"
+                    Command="{Binding AddUserCommand}"/>
+            <Button Grid.Column="2" Content="Add Network Config" HorizontalAlignment="Stretch" Margin="5"
+                    Command="{Binding AddNetworkConfigCommand}"/>
+        </Grid>
+    </Grid>
+
+</Window>
