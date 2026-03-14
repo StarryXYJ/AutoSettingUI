@@ -1,6 +1,9 @@
+using System.ComponentModel;
 using System.Windows.Controls;
 using System.Windows.Media;
 using AutoSettingUI.Core.Attributes;
+using AutoSettingUI.Wpf.Demo.Controls;
+using ReadOnlyAttribute = AutoSettingUI.Core.Attributes.ReadOnlyAttribute;
 
 namespace AutoSettingUI.Wpf.Demo.Models;
 
@@ -14,21 +17,22 @@ public class ApplicationSettings
     [Title("Application Name")]
     public string AppName { get; set; } = "My Application";
 
-    
+    [Title("Version")]
+    [ReadOnly(true)]
     public string Version { get; set; } = "1.0.0";
 
     [Title("Enable Logging")]
     public bool EnableLogging { get; set; } = true;
 
     [Title("Log Level")]
-    public LogLevel LogLevel { get; set; } = LogLevel.Info;
+    public LogLevel CurLogLevel { get; set; } = LogLevel.Info;
 
     [Title("Max Log Size (MB)")]
     [Range(1, 100)]
     public int MaxLogSize { get; set; } = 10;
 
     [Title("Volume")]
-    [ControlBinding(typeof(Slider), BindingProperty = "Value",FactoryMethod = nameof(VolumeFactory))]
+    [ControlBinding(typeof(Slider), BindingProperty = "Value", FactoryMethod = nameof(VolumeFactory))]
     public double Volume { get; set; } = 50.0;
 
     [Hide]
@@ -48,32 +52,149 @@ public class ApplicationSettings
 }
 
 /// <summary>
-/// Sample user preferences class.
+/// Sample user preferences class demonstrating delegate properties and collection editors.
+/// WPF's CommandManager automatically handles CanExecute re-evaluation on UI changes.
 /// </summary>
 [SettingUI]
 [MainHeader("User Preferences")]
-public class UserPreferences
+public class UserPreferences : INotifyPropertyChanged
 {
+    private bool _isAdmin = true;
+    private string _email = "";
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    protected virtual void OnPropertyChanged(string propertyName)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
     [SubHeader("Display")]
     [Title("Theme")]
-    public Theme Theme { get; set; } = Theme.Light;
+    public Theme CurTheme { get; set; } = Theme.Light;
 
-    [Title("Language")]
-    public string Language { get; set; } = "English";
+    [Title("Language")] public string Language { get; set; } = "English";
 
-    [Title("Font Size")]
-    [Range(8, 32)]
-    public int FontSize { get; set; } = 14;
+    [Title("Font Size")] [Range(8, 32)] public int FontSize { get; set; } = 14;
 
+    [SubHeader("Actions (Delegate Properties)")]
+    [Title("Reset Settings")]
+    public Action? ResetSettingsCommand { get; set; }
+
+    [Title("Export Settings")]
+    [CommandCanExecute(nameof(CanExport))]
+    public Action? ExportSettingsCommand { get; set; }
+
+    [Title("Import Settings")]
+    [CommandCanExecute(nameof(CanImport))]
+    public Action? ImportSettingsCommand { get; set; }
+
+    [Title("Admin Action")]
+    [CommandCanExecute(nameof(IsAdmin))]
+    public Action? AdminActionCommand { get; set; }
+
+    [SubHeader("ReadOnly Examples")]
+    [Title("Read-Only Field")]
+    [ReadOnly(true)]
+    public string ReadOnlyField { get; set; } = "This field is read-only";
+
+    [Title("Dynamic ReadOnly")]
+    [ReadOnly(nameof(CanEdit))]
+    public string DynamicReadOnlyField { get; set; } = "Only editable by admins";
+
+    public bool IsAdmin
+    {
+        get => _isAdmin;
+        set
+        {
+            if (_isAdmin != value)
+            {
+                _isAdmin = value;
+                OnPropertyChanged(nameof(IsAdmin));
+            }
+        }
+    }
     [SubHeader("Notifications")]
     [Title("Enable Notifications")]
     public bool EnableNotifications { get; set; } = true;
 
-    [Title("Notification Sound")]
-    public bool NotificationSound { get; set; } = true;
+    [Title("Notification Sound")] public bool NotificationSound { get; set; } = true;
 
     [Title("Email Address")]
-    public string Email { get; set; } = "";
+    public string Email
+    {
+        get => _email;
+        set
+        {
+            if (_email != value)
+            {
+                _email = value;
+                OnPropertyChanged(nameof(Email));
+            }
+        }
+    }
+
+    [SubHeader("Collection Examples")]
+    [Title("Tags (Default Collection Editor)")]
+    public List<string> Tags { get; set; } = ["Important", "Work"];
+
+    [Title("Versions (Read-Only Collection)")]
+    [CollectionEditor(AllowAdd = false, AllowRemove = false, AllowReorder = false)]
+    public List<string> Versions { get; set; } = ["1.0.0", "1.1.0", "2.0.0"];
+
+    [Title("People (Default Editor)")]
+    public List<Person> People1 { get; set; } =
+    [
+        new Person { Name = "John Doe", Age = 30, Email = "john@example.com" },
+        new Person { Name = "Jane Smith", Age = 25, Email = "jane@example.com" }
+    ];
+    
+    [Title("People (Custom Editor)")]
+    [CollectionEditor(typeof(PersonCollectionEditor))]
+    public List<Person> People { get; set; } =
+    [
+        new Person { Name = "John Doe", Age = 30, Email = "john@example.com" },
+        new Person { Name = "Jane Smith", Age = 25, Email = "jane@example.com" }
+    ];
+
+    public UserPreferences()
+    {
+        ResetSettingsCommand = ResetSettings;
+        ExportSettingsCommand = ExportSettings;
+        ImportSettingsCommand = ImportSettings;
+        AdminActionCommand = AdminAction;
+    }
+
+    private void ResetSettings()
+    {
+        CurTheme = Theme.Light;
+        Language = "English";
+        FontSize = 14;
+        EnableNotifications = true;
+        NotificationSound = true;
+        System.Windows.MessageBox.Show("Settings have been reset!");
+    }
+
+    private void ExportSettings()
+    {
+        System.Windows.MessageBox.Show("Settings exported!");
+    }
+
+    private void ImportSettings()
+    {
+        System.Windows.MessageBox.Show("Settings imported!");
+    }
+
+    private void AdminAction()
+    {
+        System.Windows.MessageBox.Show("Admin action executed!");
+    }
+
+    public bool CanExport() => EnableNotifications;
+    public bool CanImport() => !string.IsNullOrEmpty(Email);
+    public bool CanEdit() => !IsAdmin;
+
+
 }
 
 /// <summary>
@@ -104,6 +225,32 @@ public class NetworkSettings
     [Title("Timeout (seconds)")]
     [Range(1, 300)]
     public int Timeout { get; set; } = 30;
+
+    [SubHeader("Actions")]
+    [Title("Test Connection")]
+    [CommandCanExecute(nameof(CanTestConnection))]
+    public Action? TestConnectionCommand { get; set; }
+
+    [Title("Ping Server")]
+    public Action? PingServerCommand { get; set; }
+
+    public NetworkSettings()
+    {
+        TestConnectionCommand = TestConnection;
+        PingServerCommand = PingServer;
+    }
+
+    private void TestConnection()
+    {
+        System.Windows.MessageBox.Show($"Testing connection to {ServerAddress}:{Port}...");
+    }
+
+    private void PingServer()
+    {
+        System.Windows.MessageBox.Show($"Pinging {ServerAddress}...");
+    }
+
+    public bool CanTestConnection() => !string.IsNullOrEmpty(ServerAddress) && Port > 0;
 }
 
 /// <summary>

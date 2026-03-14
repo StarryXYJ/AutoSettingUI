@@ -25,6 +25,9 @@ public class AutoSettingGenerator : IIncrementalGenerator
     private const string RangeAttributeName = "RangeAttribute";
     private const string ItemsSourceAttributeName = "ItemsSourceAttribute";
     private const string ControlBindingAttributeName = "ControlBindingAttribute";
+    private const string CommandCanExecuteAttributeName = "CommandCanExecuteAttribute";
+    private const string ReadOnlyAttributeName = "ReadOnlyAttribute";
+    private const string CollectionEditorAttributeName = "CollectionEditorAttribute";
 
     // Diagnostic descriptors
     private static readonly DiagnosticDescriptor NonPublicClassWarning = new(
@@ -358,6 +361,62 @@ public class AutoSettingGenerator : IIncrementalGenerator
                 cbBindingProp = GetNamedArgRaw(cbAttr, "BindingProperty");
                 cbFactoryMethod = GetNamedArgRaw(cbAttr, "FactoryMethod");
             }
+
+            // Check if property type is a delegate
+            var isDelegate = IsDelegateType(prop.Type);
+
+            // CommandCanExecute
+            var canExecAttr = GetAttr(prop, CommandCanExecuteAttributeName);
+            var canExecuteMethodName = GetConstructorArgRaw(canExecAttr, 0);
+
+            // ReadOnly
+            var readOnlyAttr = GetAttr(prop, ReadOnlyAttributeName);
+            bool isReadOnly = false;
+            string? readOnlyMethodName = null;
+            if (readOnlyAttr != null)
+            {
+                // Check if it's a bool or string constructor argument
+                if (readOnlyAttr.ConstructorArguments.Length > 0)
+                {
+                    var arg = readOnlyAttr.ConstructorArguments[0];
+                    if (arg.Value is bool boolVal)
+                        isReadOnly = boolVal;
+                    else if (arg.Value is string strVal)
+                        readOnlyMethodName = strVal;
+                }
+            }
+
+            // CollectionEditor
+            var collEditorAttr = GetAttr(prop, CollectionEditorAttributeName);
+            string? collEditorTypeName = null;
+            string? collEditorFactoryMethod = null;
+            bool collAllowAdd = true;
+            bool collAllowRemove = true;
+            bool collAllowReorder = true;
+            string? collElementTypeName = null;
+
+            // Check if collection type
+            var isCollection = IsCollectionType(prop.Type);
+            if (isCollection)
+            {
+                var elementType = GetCollectionElementType(prop.Type);
+                if (elementType != null)
+                    collElementTypeName = elementType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", "");
+            }
+
+            if (collEditorAttr != null)
+            {
+                if (collEditorAttr.ConstructorArguments.Length > 0 && collEditorAttr.ConstructorArguments[0].Value is INamedTypeSymbol editorType)
+                    collEditorTypeName = editorType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", "");
+                collEditorFactoryMethod = GetNamedArgRaw(collEditorAttr, "FactoryMethod");
+                var allowAddVal = GetNamedArgRaw(collEditorAttr, "AllowAdd");
+                var allowRemoveVal = GetNamedArgRaw(collEditorAttr, "AllowRemove");
+                var allowReorderVal = GetNamedArgRaw(collEditorAttr, "AllowReorder");
+                if (allowAddVal != null) collAllowAdd = allowAddVal == "True";
+                if (allowRemoveVal != null) collAllowRemove = allowRemoveVal == "True";
+                if (allowReorderVal != null) collAllowReorder = allowReorderVal == "True";
+            }
+
             // For enum types, pre-compute the enum values as string array to avoid runtime Type.GetType()
             string? enumValuesExpr = null;
             if (isEnum)
@@ -382,7 +441,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
             sb.AppendLine($"                {displayName},");
             sb.AppendLine($"                \"{propTypeFqn}\",");
             sb.AppendLine($"                {(isEnum ? "true" : "false")},");
-            sb.AppendLine($"                false,");
+            sb.AppendLine($"                {(isCollection ? "true" : "false")},");
             sb.AppendLine($"                {(hasRange ? "true" : "false")},");
             sb.AppendLine($"                {minVal},");
             sb.AppendLine($"                {maxVal},");
@@ -391,7 +450,17 @@ public class AutoSettingGenerator : IIncrementalGenerator
             sb.AppendLine($"                {(cbTypeName != null ? $"\"{cbTypeName}\"" : "null")},");
             sb.AppendLine($"                {(cbBindingProp != null ? $"\"{cbBindingProp}\"" : "null")},");
             sb.AppendLine($"                {(cbFactoryMethod != null ? $"\"{cbFactoryMethod}\"" : "null")},");
-            sb.AppendLine($"                {(enumValuesExpr ?? "null")});");
+            sb.AppendLine($"                {(enumValuesExpr ?? "null")},");
+            sb.AppendLine($"                {(isDelegate ? "true" : "false")},");
+            sb.AppendLine($"                {(canExecuteMethodName != null ? $"\"{canExecuteMethodName}\"" : "null")},");
+            sb.AppendLine($"                {(isReadOnly ? "true" : "false")},");
+            sb.AppendLine($"                {(readOnlyMethodName != null ? $"\"{readOnlyMethodName}\"" : "null")},");
+            sb.AppendLine($"                {(collEditorTypeName != null ? $"\"{collEditorTypeName}\"" : "null")},");
+            sb.AppendLine($"                {(collEditorFactoryMethod != null ? $"\"{collEditorFactoryMethod}\"" : "null")},");
+            sb.AppendLine($"                {(collAllowAdd ? "true" : "false")},");
+            sb.AppendLine($"                {(collAllowRemove ? "true" : "false")},");
+            sb.AppendLine($"                {(collAllowReorder ? "true" : "false")},");
+            sb.AppendLine($"                {(collElementTypeName != null ? $"\"{collElementTypeName}\"" : "null")});");
 
             var varName = $"pd_{safeName}_{EscapeName(prop.Name)}";
             sb.AppendLine($"            if (currentSub != null) currentSub.Add({varName}); else directProps.Add({varName});");
@@ -517,4 +586,81 @@ public class AutoSettingGenerator : IIncrementalGenerator
 
     private static string EscapeString(string s)
         => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+
+    /// <summary>Checks if a type is a delegate type (Action, Func, custom delegate).</summary>
+    private static bool IsDelegateType(ITypeSymbol type)
+    {
+        // Delegate is the base class for all delegates
+        // We need to check if it inherits from Delegate but is not Delegate itself
+        if (type.TypeKind == TypeKind.Delegate)
+            return true;
+
+        // Check if it inherits from System.Delegate
+        var baseType = type.BaseType;
+        while (baseType != null)
+        {
+            if (baseType.ToDisplayString() == "System.Delegate" ||
+                baseType.ToDisplayString() == "System.MulticastDelegate")
+                return true;
+            baseType = baseType.BaseType;
+        }
+
+        return false;
+    }
+
+    /// <summary>Checks if a type is a collection type.</summary>
+    private static bool IsCollectionType(ITypeSymbol type)
+    {
+        var typeName = type.ToDisplayString();
+        // Exclude string as it implements IEnumerable but is not a collection for our purposes
+        if (typeName == "string" || typeName == "System.String")
+            return false;
+
+        // Check if it implements IEnumerable
+        if (type.AllInterfaces.Any(i => i.ToDisplayString().StartsWith("System.Collections.Generic.IEnumerable")))
+            return true;
+
+        // Check if it's an array
+        if (type.TypeKind == TypeKind.Array)
+            return true;
+
+        return false;
+    }
+
+    /// <summary>Gets the element type of a collection type.</summary>
+    private static ITypeSymbol? GetCollectionElementType(ITypeSymbol type)
+    {
+        // Handle array types
+        if (type is IArrayTypeSymbol arrayType)
+            return arrayType.ElementType;
+
+        // Handle generic types (List<T>, IList<T>, IEnumerable<T>, etc.)
+        if (type is INamedTypeSymbol namedType && namedType.IsGenericType)
+        {
+            var typeArgs = namedType.TypeArguments;
+            if (typeArgs.Length > 0)
+                return typeArgs[0];
+        }
+
+        // Check interfaces for generic IEnumerable<T>
+        foreach (var iface in type.AllInterfaces)
+        {
+            if (iface.IsGenericType &&
+                iface.OriginalDefinition.ToDisplayString() == "System.Collections.Generic.IEnumerable<T>")
+            {
+                var typeArgs = iface.TypeArguments;
+                if (typeArgs.Length > 0)
+                    return typeArgs[0];
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Gets a raw constructor argument value as string.</summary>
+    private static string? GetConstructorArgRaw(AttributeData? attr, int index)
+    {
+        if (attr == null || attr.ConstructorArguments.Length <= index) return null;
+        return attr.ConstructorArguments[index].Value?.ToString();
+    }
 }

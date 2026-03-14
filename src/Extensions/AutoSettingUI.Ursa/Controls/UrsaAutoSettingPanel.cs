@@ -1,11 +1,13 @@
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Reflection;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Data;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.VisualTree;
@@ -28,6 +30,7 @@ public class UrsaAutoSettingPanel : TemplatedControl
     private readonly ObservableCollection<NavigationNode> _navigationNodes = new();
     private readonly Dictionary<string, global::Avalonia.Controls.Control> _sectionControlMap = new();
     private IEnumerable? _previousTargets;
+    private readonly List<UrsaDelegateCommand> _commands = new();
 
     #region Styled Properties
 
@@ -159,6 +162,19 @@ public class UrsaAutoSettingPanel : TemplatedControl
     /// </summary>
     public UrsaAutoSettingPanel()
     {
+    }
+
+    /// <summary>
+    /// Refreshes all dynamic states (CanExecute for commands).
+    /// Call this method when underlying data changes that affects CanExecute conditions.
+    /// </summary>
+    public void Refresh()
+    {
+        // Raise CanExecuteChanged for all commands
+        foreach (var command in _commands)
+        {
+            command.RaiseCanExecuteChanged();
+        }
     }
 
     protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
@@ -345,6 +361,7 @@ public class UrsaAutoSettingPanel : TemplatedControl
         _formSections.Clear();
         _navigationNodes.Clear();
         _sectionControlMap.Clear();
+        _commands.Clear();
 
         var formPanel = new StackPanel
         {
@@ -555,14 +572,26 @@ public class UrsaAutoSettingPanel : TemplatedControl
 
         if (control == null)
         {
-            if (prop.IsEnum && prop.EnumValues != null)
+            // Handle delegate types (Action, Func, etc.) - create a button
+            if (prop.IsDelegate)
+            {
+                control = CreateDelegateControl(prop, target);
+            }
+            // Handle collection types
+            else if (prop.IsCollection)
+            {
+                control = CreateCollectionControl(prop, target);
+            }
+            else if (prop.IsEnum && prop.EnumValues != null)
             {
                 var currentValue = _accessor?.GetValue(target, prop.PropertyName)?.ToString();
+                var isReadOnly = IsEffectivelyReadOnly(prop, target);
                 var comboBox = new ComboBox
                 {
                     ItemsSource = prop.EnumValues,
                     SelectedItem = currentValue,
-                    HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch
+                    HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
+                    IsEnabled = !isReadOnly
                 };
                 comboBox.SelectionChanged += (s, e) =>
                 {
@@ -580,11 +609,13 @@ public class UrsaAutoSettingPanel : TemplatedControl
             else if (prop.PropertyTypeName == "System.Boolean" || prop.PropertyTypeName == "bool")
             {
                 var currentValue = _accessor?.GetValue(target, prop.PropertyName);
+                var isReadOnly = IsEffectivelyReadOnly(prop, target);
                 var checkBox = new global::Avalonia.Controls.Primitives.ToggleButton
                 {
                     IsChecked = currentValue is bool b ? b : false,
                     Content = prop.DisplayName,
-                    HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Left
+                    HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Left,
+                    IsEnabled = !isReadOnly
                 };
                 checkBox.IsCheckedChanged += (s, e) =>
                 {
@@ -594,9 +625,11 @@ public class UrsaAutoSettingPanel : TemplatedControl
             }
             else
             {
+                var isReadOnly = IsEffectivelyReadOnly(prop, target);
                 var textBox = new TextBox
                 {
-                    Text = _accessor?.GetValue(target, prop.PropertyName)?.ToString() ?? ""
+                    Text = _accessor?.GetValue(target, prop.PropertyName)?.ToString() ?? "",
+                    IsReadOnly = isReadOnly
                 };
                 textBox.TextChanged += (s, e) =>
                 {
@@ -621,4 +654,266 @@ public class UrsaAutoSettingPanel : TemplatedControl
 
         return panel;
     }
+
+    #region Delegate (Command) Controls
+
+    /// <summary>
+    /// Creates a button control for delegate properties (Action, Func, etc.).
+    /// </summary>
+    private global::Avalonia.Controls.Control CreateDelegateControl(Core.Models.PropertyDescriptor prop, object target)
+    {
+        var button = new Button
+        {
+            Content = prop.DisplayName,
+            HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Left,
+            Padding = new Thickness(15, 5, 15, 5),
+            MinWidth = 80
+        };
+
+        // Get the delegate value
+        var delegateValue = _accessor?.GetValue(target, prop.PropertyName) as Delegate;
+
+        // Create command with CanExecute support
+        var command = new UrsaDelegateCommand(
+            execute: () => delegateValue?.DynamicInvoke(),
+            canExecute: () => CanExecuteDelegate(prop, target)
+        );
+
+        button.Command = command;
+
+        // Track command for Refresh
+        _commands.Add(command);
+
+        return button;
+    }
+
+    /// <summary>
+    /// Determines if a delegate command can execute.
+    /// </summary>
+    private bool CanExecuteDelegate(Core.Models.PropertyDescriptor prop, object target)
+    {
+        // If CanExecuteMethodName is specified, call that method
+        if (!string.IsNullOrEmpty(prop.CanExecuteMethodName))
+        {
+            var method = target.GetType().GetMethod(prop.CanExecuteMethodName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+            if (method != null)
+            {
+                var result = method.IsStatic
+                    ? method.Invoke(null, null)
+                    : method.Invoke(target, null);
+                return result is bool b && b;
+            }
+        }
+
+        // If ReadOnly is specified, use that
+        if (prop.IsReadOnlyDynamic && !string.IsNullOrEmpty(prop.ReadOnlyMethodName))
+        {
+            return !IsEffectivelyReadOnly(prop, target);
+        }
+
+        // Default: always can execute
+        return !prop.IsReadOnly;
+    }
+
+    #endregion
+
+    #region Collection Controls
+
+    /// <summary>
+    /// Creates a control for editing collection properties.
+    /// </summary>
+    private global::Avalonia.Controls.Control CreateCollectionControl(Core.Models.PropertyDescriptor prop, object target)
+    {
+        // Default collection editor
+        return CreateDefaultCollectionEditor(prop, target);
+    }
+
+    /// <summary>
+    /// Creates a default collection editor with add/remove/reorder capabilities.
+    /// </summary>
+    private global::Avalonia.Controls.Control CreateDefaultCollectionEditor(Core.Models.PropertyDescriptor prop, object target)
+    {
+        var collection = _accessor?.GetValue(target, prop.PropertyName) as IList;
+
+        var panel = new StackPanel();
+
+        // Items list
+        var listBox = new ListBox
+        {
+            MinHeight = 60,
+            MaxHeight = 150,
+            Margin = new Thickness(0, 0, 0, 5),
+            ItemsSource = collection as IEnumerable
+        };
+
+        panel.Children.Add(listBox);
+
+        // Button panel
+        var buttonPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 5
+        };
+
+        // Add button
+        if (prop.CollectionAllowAdd)
+        {
+            var addBtn = new Button
+            {
+                Content = "+",
+                Width = 25
+            };
+            ToolTip.SetTip(addBtn, "Add item");
+            addBtn.Click += (s, e) =>
+            {
+                if (collection != null && !string.IsNullOrEmpty(prop.CollectionElementTypeName))
+                {
+                    var elementType = Type.GetType(prop.CollectionElementTypeName);
+                    if (elementType != null)
+                    {
+                        try
+                        {
+                            var newItem = elementType.IsValueType
+                                ? Activator.CreateInstance(elementType)
+                                : (elementType.GetConstructor(Type.EmptyTypes) != null
+                                    ? Activator.CreateInstance(elementType)
+                                    : null);
+
+                            if (newItem != null || elementType.IsValueType)
+                            {
+                                collection.Add(newItem);
+                                // Refresh the ListBox
+                                listBox.ItemsSource = null;
+                                listBox.ItemsSource = collection as IEnumerable;
+                            }
+                        }
+                        catch { }
+                    }
+                }
+            };
+            buttonPanel.Children.Add(addBtn);
+        }
+
+        // Remove button
+        if (prop.CollectionAllowRemove)
+        {
+            var removeBtn = new Button
+            {
+                Content = "-",
+                Width = 25
+            };
+            ToolTip.SetTip(removeBtn, "Remove selected item");
+            removeBtn.Click += (s, e) =>
+            {
+                if (listBox.SelectedItem != null && collection != null)
+                {
+                    collection.Remove(listBox.SelectedItem);
+                    listBox.ItemsSource = null;
+                    listBox.ItemsSource = collection as IEnumerable;
+                }
+            };
+            buttonPanel.Children.Add(removeBtn);
+        }
+
+        // Move up button
+        if (prop.CollectionAllowReorder)
+        {
+            var upBtn = new Button
+            {
+                Content = "↑",
+                Width = 25
+            };
+            ToolTip.SetTip(upBtn, "Move up");
+            upBtn.Click += (s, e) =>
+            {
+                var index = listBox.SelectedIndex;
+                if (index > 0 && collection != null)
+                {
+                    var item = collection[index];
+                    collection.RemoveAt(index);
+                    collection.Insert(index - 1, item);
+                    listBox.SelectedIndex = index - 1;
+                    listBox.ItemsSource = null;
+                    listBox.ItemsSource = collection as IEnumerable;
+                }
+            };
+            buttonPanel.Children.Add(upBtn);
+
+            // Move down button
+            var downBtn = new Button
+            {
+                Content = "↓",
+                Width = 25
+            };
+            ToolTip.SetTip(downBtn, "Move down");
+            downBtn.Click += (s, e) =>
+            {
+                var index = listBox.SelectedIndex;
+                if (index >= 0 && index < collection!.Count - 1)
+                {
+                    var item = collection[index];
+                    collection.RemoveAt(index);
+                    collection.Insert(index + 1, item);
+                    listBox.SelectedIndex = index + 1;
+                    listBox.ItemsSource = null;
+                    listBox.ItemsSource = collection as IEnumerable;
+                }
+            };
+            buttonPanel.Children.Add(downBtn);
+        }
+
+        panel.Children.Add(buttonPanel);
+
+        return panel;
+    }
+
+    #endregion
+
+    #region ReadOnly Support
+
+    /// <summary>
+    /// Determines if a property is effectively read-only.
+    /// </summary>
+    private bool IsEffectivelyReadOnly(Core.Models.PropertyDescriptor prop, object target)
+    {
+        // If dynamic method is specified, call that
+        if (prop.IsReadOnlyDynamic && !string.IsNullOrEmpty(prop.ReadOnlyMethodName))
+        {
+            var method = target.GetType().GetMethod(prop.ReadOnlyMethodName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+            if (method != null)
+                {
+                var result = method.IsStatic
+                    ? method.Invoke(null, null)
+                    : method.Invoke(target, null);
+                return result is bool b && b;
+            }
+        }
+
+        return prop.IsReadOnly;
+    }
+
+    #endregion
+}
+
+/// <summary>
+/// A simple delegate command implementation for button bindings.
+/// </summary>
+internal class UrsaDelegateCommand : global::System.Windows.Input.ICommand
+{
+    private readonly Action _execute;
+    private readonly Func<bool>? _canExecute;
+
+    public event EventHandler? CanExecuteChanged;
+
+    public UrsaDelegateCommand(Action execute, Func<bool>? canExecute = null)
+    {
+        _execute = execute ?? throw new ArgumentNullException(nameof(execute));
+        _canExecute = canExecute;
+    }
+
+    public bool CanExecute(object? parameter) => _canExecute?.Invoke() ?? true;
+
+    public void Execute(object? parameter) => _execute();
+
+    public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
 }

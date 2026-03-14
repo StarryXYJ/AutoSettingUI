@@ -28,6 +28,8 @@ public partial class MainWindow : Window
         var networkSettings = new NetworkSettings();
 
         // Set the targets for both panels
+        // Note: WPF's CommandManager automatically handles CanExecute re-evaluation
+        // when UI changes occur (focus changes, text input, etc.)
         _targets = [appSettings, userPreferences, networkSettings];
         SettingsPanel.Targets = _targets;
         CustomSettingsPanel.Targets = _targets;

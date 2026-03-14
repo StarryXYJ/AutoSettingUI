@@ -77,6 +77,61 @@ public sealed class PropertyDescriptor
     public string[]? EnumValues { get; }
 
     /// <summary>
+    /// Gets a value indicating whether the property type is a delegate (Action, Func, etc.).
+    /// </summary>
+    public bool IsDelegate { get; }
+
+    /// <summary>
+    /// Gets the name of the method to call for CanExecute evaluation on delegate properties.
+    /// </summary>
+    public string? CanExecuteMethodName { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether the property is read-only (static value).
+    /// </summary>
+    public bool IsReadOnly { get; }
+
+    /// <summary>
+    /// Gets the name of the method that returns whether the property is read-only.
+    /// </summary>
+    public string? ReadOnlyMethodName { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether the read-only state is determined dynamically.
+    /// </summary>
+    public bool IsReadOnlyDynamic => !string.IsNullOrEmpty(ReadOnlyMethodName);
+
+    /// <summary>
+    /// Gets the collection editor type name, if specified.
+    /// </summary>
+    public string? CollectionEditorTypeName { get; }
+
+    /// <summary>
+    /// Gets the collection editor factory method name, if specified.
+    /// </summary>
+    public string? CollectionEditorFactoryMethod { get; }
+
+    /// <summary>
+    /// Gets whether users can add new items to the collection.
+    /// </summary>
+    public bool CollectionAllowAdd { get; }
+
+    /// <summary>
+    /// Gets whether users can remove items from the collection.
+    /// </summary>
+    public bool CollectionAllowRemove { get; }
+
+    /// <summary>
+    /// Gets whether users can reorder items in the collection.
+    /// </summary>
+    public bool CollectionAllowReorder { get; }
+
+    /// <summary>
+    /// Gets the element type name for collection properties.
+    /// </summary>
+    public string? CollectionElementTypeName { get; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="PropertyDescriptor"/> class.
     /// </summary>
     public PropertyDescriptor(
@@ -93,7 +148,17 @@ public sealed class PropertyDescriptor
         string? customControlBinding,
         string? customControlBindingProperty = null,
         string? customControlFactoryMethod = null,
-        string[]? enumValues = null)
+        string[]? enumValues = null,
+        bool isDelegate = false,
+        string? canExecuteMethodName = null,
+        bool isReadOnly = false,
+        string? readOnlyMethodName = null,
+        string? collectionEditorTypeName = null,
+        string? collectionEditorFactoryMethod = null,
+        bool collectionAllowAdd = true,
+        bool collectionAllowRemove = true,
+        bool collectionAllowReorder = true,
+        string? collectionElementTypeName = null)
     {
         PropertyName = propertyName;
         DisplayName = displayName;
@@ -109,6 +174,16 @@ public sealed class PropertyDescriptor
         CustomControlBindingProperty = customControlBindingProperty;
         CustomControlFactoryMethod = customControlFactoryMethod;
         EnumValues = enumValues;
+        IsDelegate = isDelegate;
+        CanExecuteMethodName = canExecuteMethodName;
+        IsReadOnly = isReadOnly;
+        ReadOnlyMethodName = readOnlyMethodName;
+        CollectionEditorTypeName = collectionEditorTypeName;
+        CollectionEditorFactoryMethod = collectionEditorFactoryMethod;
+        CollectionAllowAdd = collectionAllowAdd;
+        CollectionAllowRemove = collectionAllowRemove;
+        CollectionAllowReorder = collectionAllowReorder;
+        CollectionElementTypeName = collectionElementTypeName;
     }
 }
 

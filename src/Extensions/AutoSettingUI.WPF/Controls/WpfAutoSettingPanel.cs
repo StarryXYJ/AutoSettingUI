@@ -8,6 +8,9 @@ using AutoSettingUI.Core.Interfaces;
 using AutoSettingUI.Core.Models;
 using AutoSettingUI.Core.Providers;
 using AutoSettingUI.WPF.Factories;
+using PropertyChangedEventHandler = System.ComponentModel.PropertyChangedEventHandler;
+using PropertyChangedEventArgs = System.ComponentModel.PropertyChangedEventArgs;
+using INotifyPropertyChanged = System.ComponentModel.INotifyPropertyChanged;
 
 namespace AutoSettingUI.WPF.Controls;
 
@@ -109,6 +112,8 @@ public class WpfAutoSettingPanel : Control
     private readonly ObservableCollection<NavigationNode> _navigationNodes = new();
     private readonly Dictionary<string, FrameworkElement> _sectionControlMap = new();
     private IEnumerable? _previousTargets;
+    private readonly List<(FrameworkElement Control, Func<bool> IsReadOnlyGetter)> _readOnlyControls = new();
+    private readonly HashSet<INotifyPropertyChanged> _subscribedTargets = new();
 
     public WpfAutoSettingPanel()
     {
@@ -186,6 +191,9 @@ public class WpfAutoSettingPanel : Control
                 oldNotify.CollectionChanged -= panel.OnTargetsCollectionChanged;
             }
             
+            // Unsubscribe from PropertyChanged events on old targets
+            panel.UnsubscribeFromPropertyChangedEvents();
+            
             // Subscribe to new collection changes
             if (e.NewValue is INotifyCollectionChanged newNotify)
             {
@@ -196,7 +204,7 @@ public class WpfAutoSettingPanel : Control
             // Ensure provider is initialized
             panel.InitializeProvider();
             
-            // Register all new target types
+            // Register all new target types and subscribe to PropertyChanged events
             if (panel._effectiveProvider is not null && e.NewValue is IEnumerable enumerable)
             {
                 var provider = panel._effectiveProvider as ReflectionSettingDescriptorProvider;
@@ -205,6 +213,7 @@ public class WpfAutoSettingPanel : Control
                     if (target is not null)
                     {
                         provider?.RegisterType(target.GetType());
+                        panel.SubscribeToPropertyChangedEvents(target);
                     }
                 }
             }
@@ -219,7 +228,20 @@ public class WpfAutoSettingPanel : Control
     
     private void OnTargetsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        // Register new types if items were added
+        // Unsubscribe from removed items
+        if (e.OldItems is not null)
+        {
+            foreach (var item in e.OldItems)
+            {
+                if (item is INotifyPropertyChanged notifyPropertyChanged && _subscribedTargets.Contains(notifyPropertyChanged))
+                {
+                    notifyPropertyChanged.PropertyChanged -= OnTargetPropertyChanged;
+                    _subscribedTargets.Remove(notifyPropertyChanged);
+                }
+            }
+        }
+        
+        // Register new types and subscribe to PropertyChanged events if items were added
         if (e.NewItems is not null && _effectiveProvider is not null)
         {
             var provider = _effectiveProvider as ReflectionSettingDescriptorProvider;
@@ -228,6 +250,7 @@ public class WpfAutoSettingPanel : Control
                 if (item is not null)
                 {
                     provider?.RegisterType(item.GetType());
+                    SubscribeToPropertyChangedEvents(item);
                 }
             }
         }
@@ -278,6 +301,78 @@ public class WpfAutoSettingPanel : Control
         }
     }
 
+    /// <summary>
+    /// Refreshes all dynamic states (IsEnabled for buttons with CanExecute, dynamic ReadOnly states).
+    /// Call this method when underlying data changes that affects CanExecute or ReadOnly conditions.
+    /// </summary>
+    public void Refresh()
+    {
+        // Update IsEnabled/IsReadOnly state for controls with dynamic conditions
+        foreach (var (control, isReadOnlyGetter) in _readOnlyControls)
+        {
+            var isReadOnly = isReadOnlyGetter();
+            if (control is TextBox textBox)
+            {
+                textBox.IsReadOnly = isReadOnly;
+            }
+            else if (control is CheckBox checkBox)
+            {
+                checkBox.IsEnabled = !isReadOnly;
+            }
+            else if (control is ComboBox comboBox)
+            {
+                comboBox.IsEnabled = !isReadOnly;
+            }
+            else if (control is Slider slider)
+            {
+                slider.IsEnabled = !isReadOnly;
+            }
+            else if (control is PasswordBox passwordBox)
+            {
+                passwordBox.IsEnabled = !isReadOnly;
+            }
+            else if (control is Button button)
+            {
+                button.IsEnabled = !isReadOnly;
+            }
+            else
+            {
+                // Generic fallback for FrameworkElement
+                control.IsEnabled = !isReadOnly;
+            }
+        }
+    }
+
+    private void OnReadOnlyControlCreated(FrameworkElement control, Func<bool> isReadOnlyGetter)
+    {
+        _readOnlyControls.Add((control, isReadOnlyGetter));
+    }
+
+    private void SubscribeToPropertyChangedEvents(object target)
+    {
+        if (target is INotifyPropertyChanged notifyPropertyChanged && !_subscribedTargets.Contains(notifyPropertyChanged))
+        {
+            notifyPropertyChanged.PropertyChanged += OnTargetPropertyChanged;
+            _subscribedTargets.Add(notifyPropertyChanged);
+        }
+    }
+
+    private void UnsubscribeFromPropertyChangedEvents()
+    {
+        foreach (var target in _subscribedTargets)
+        {
+            target.PropertyChanged -= OnTargetPropertyChanged;
+        }
+        _subscribedTargets.Clear();
+    }
+
+    private void OnTargetPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        // Refresh commands and ReadOnly states when any property changes
+        // This ensures UI updates when properties like Email or IsAdmin change
+        Refresh();
+    }
+
     private void OnNavigationItemSelected(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
         if (e.NewValue is NavigationNode node && _formScrollViewer is not null)
@@ -305,6 +400,7 @@ public class WpfAutoSettingPanel : Control
         // Clear previous data
         _formSections.Clear();
         _sectionControlMap.Clear();
+        _readOnlyControls.Clear();
         
         // Clear navigation nodes - do this before setting ItemsSource if not already set
         _navigationNodes.Clear();
@@ -340,6 +436,7 @@ public class WpfAutoSettingPanel : Control
 
             // Create factory with class descriptor for default factory support
             var factory = new WpfControlFactory(descriptor, PropertyAccessor);
+            factory.ReadOnlyControlCreated += OnReadOnlyControlCreated;
 
             var classSectionId = $"class_{classIndex}";
             

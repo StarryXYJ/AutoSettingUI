@@ -104,18 +104,36 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
             var rangeAttr = prop.GetCustomAttribute<RangeAttribute>();
             var itemsSourceAttr = prop.GetCustomAttribute<ItemsSourceAttribute>();
             var controlBindingAttr = prop.GetCustomAttribute<ControlBindingAttribute>();
+            var commandCanExecuteAttr = prop.GetCustomAttribute<CommandCanExecuteAttribute>();
+            var readOnlyAttr = prop.GetCustomAttribute<ReadOnlyAttribute>();
+            var collectionEditorAttr = prop.GetCustomAttribute<CollectionEditorAttribute>();
 
             // Pre-compute enum values to avoid runtime Enum.GetValues in non-AOT path
             string[]? enumValues = null;
             if (prop.PropertyType.IsEnum)
                 enumValues = Enum.GetNames(prop.PropertyType);
 
+            // Check if property type is a delegate (Action, Func, custom delegate)
+            var isDelegate = typeof(Delegate).IsAssignableFrom(prop.PropertyType) && prop.PropertyType != typeof(Delegate);
+
+            // Check if property is a collection
+            var isCollection = typeof(IEnumerable).IsAssignableFrom(prop.PropertyType) && prop.PropertyType != typeof(string);
+
+            // Get collection element type
+            string? collectionElementTypeName = null;
+            if (isCollection)
+            {
+                var elementType = GetCollectionElementType(prop.PropertyType);
+                if (elementType != null)
+                    collectionElementTypeName = elementType.FullName ?? elementType.Name;
+            }
+
             var propDescriptor = new PropertyDescriptor(
                 prop.Name,
                 titleAttr?.Name ?? prop.Name,
                 prop.PropertyType.FullName ?? prop.PropertyType.Name,
                 prop.PropertyType.IsEnum,
-                typeof(IEnumerable).IsAssignableFrom(prop.PropertyType) && prop.PropertyType != typeof(string),
+                isCollection,
                 rangeAttr is not null,
                 rangeAttr?.Minimum ?? 0,
                 rangeAttr?.Maximum ?? 0,
@@ -124,7 +142,17 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
                 controlBindingAttr?.ControlType.AssemblyQualifiedName,
                 controlBindingAttr?.BindingProperty,
                 controlBindingAttr?.FactoryMethod,
-                enumValues
+                enumValues,
+                isDelegate,
+                commandCanExecuteAttr?.MethodName,
+                readOnlyAttr?.IsReadOnly ?? false,
+                readOnlyAttr?.MethodName,
+                collectionEditorAttr?.EditorType?.AssemblyQualifiedName,
+                collectionEditorAttr?.FactoryMethod,
+                collectionEditorAttr?.AllowAdd ?? true,
+                collectionEditorAttr?.AllowRemove ?? true,
+                collectionEditorAttr?.AllowReorder ?? true,
+                collectionElementTypeName
             );
 
             if (currentSubProps is not null)
@@ -151,5 +179,36 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
             settingAttr.ControlFactory?.AssemblyQualifiedName,
             settingAttr.FactoryMethod
         );
+    }
+
+    /// <summary>
+    /// Gets the element type of a collection type.
+    /// </summary>
+    private static Type? GetCollectionElementType(Type collectionType)
+    {
+        // Handle array types
+        if (collectionType.IsArray)
+            return collectionType.GetElementType();
+
+        // Handle generic types (List<T>, IList<T>, IEnumerable<T>, etc.)
+        if (collectionType.IsGenericType)
+        {
+            var genericArgs = collectionType.GetGenericArguments();
+            if (genericArgs.Length > 0)
+                return genericArgs[0];
+        }
+
+        // Check interfaces for generic IEnumerable<T>
+        foreach (var iface in collectionType.GetInterfaces())
+        {
+            if (iface.IsGenericType && iface.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            {
+                var genericArgs = iface.GetGenericArguments();
+                if (genericArgs.Length > 0)
+                    return genericArgs[0];
+            }
+        }
+
+        return null;
     }
 }
