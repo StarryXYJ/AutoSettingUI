@@ -8,6 +8,7 @@
         <entry key="AutoSettingUI.Ursa.Demo/Views/MainWindow.axaml" value="AutoSettingUI.Ursa.Demo/AutoSettingUI.Ursa.Demo.csproj" />
         <entry key="AutoSettingUI.Ursa.Demo/Views/Overview.axaml" value="AutoSettingUI.Ursa.Demo/AutoSettingUI.Ursa.Demo.csproj" />
         <entry key="AutoSettingUI.Ursa/Themes/Generic.axaml" value="AutoSettingUI.Ursa.Demo/AutoSettingUI.Ursa.Demo.csproj" />
+        <entry key="Demo/AutoSettingUI.Ursa.Demo/Views/MainWindow.axaml" value="Demo/AutoSettingUI.Ursa.Demo/AutoSettingUI.Ursa.Demo.csproj" />
       </map>
     </option>
   </component>

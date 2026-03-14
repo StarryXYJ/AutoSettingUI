@@ -6,8 +6,6 @@
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-<PublishAot>true</PublishAot>
-<PublishTrimmed>true</PublishTrimmed>
     </PropertyGroup>
 
     <ItemGroup>
@@ -25,10 +23,12 @@
             <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
         </PackageReference>
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1"/>
+        <PackageReference Include="Irihi.Ursa" Version="1.13.0" />
+        <PackageReference Include="Irihi.Ursa.Themes.Semi" Version="1.13.0" />
+        <PackageReference Include="Semi.Avalonia" Version="11.2.1.10" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\AutoSettingUI.Core\AutoSettingUI.Core.csproj" />
-        <ProjectReference Include="..\AutoSettingUI.Avalonia\AutoSettingUI.Avalonia.csproj" />
+      <ProjectReference Include="..\..\src\Extensions\AutoSettingUI.Ursa\AutoSettingUI.Ursa.csproj" />
     </ItemGroup>
 </Project>

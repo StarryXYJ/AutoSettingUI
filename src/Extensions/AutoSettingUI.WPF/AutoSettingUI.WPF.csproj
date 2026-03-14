@@ -10,8 +10,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\AutoSettingUI.Core\AutoSettingUI.Core.csproj" />
-        <ProjectReference Include="..\AutoSettingUI\AutoSettingUI.csproj" />
+      <ProjectReference Include="..\..\AutoSettingUI.Core\AutoSettingUI.Core.csproj" />
+      <ProjectReference Include="..\..\AutoSettingUI\AutoSettingUI.csproj" />
     </ItemGroup>
 
 </Project>

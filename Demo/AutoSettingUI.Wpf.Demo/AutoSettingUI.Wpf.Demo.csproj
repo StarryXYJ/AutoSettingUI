@@ -11,8 +11,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\AutoSettingUI.Core\AutoSettingUI.Core.csproj" />
-        <ProjectReference Include="..\AutoSettingUI.WPF\AutoSettingUI.WPF.csproj" />
+        <ProjectReference Include="..\..\src\Extensions\AutoSettingUI.WPF\AutoSettingUI.WPF.csproj" />
     </ItemGroup>
 
 </Project>
