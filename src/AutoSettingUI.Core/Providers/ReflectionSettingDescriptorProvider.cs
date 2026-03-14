@@ -146,8 +146,6 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
             type.FullName ?? type.Name,
             type.Name,
             mainHeaderAttr?.Title,
-            settingAttr.Category,
-            settingAttr.Order,
             directProperties,
             subSections,
             settingAttr.ControlFactory?.AssemblyQualifiedName,

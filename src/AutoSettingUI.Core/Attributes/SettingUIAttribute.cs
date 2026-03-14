@@ -3,21 +3,11 @@ namespace AutoSettingUI.Core.Attributes;
 /// <summary>
 /// Marks a class to be automatically rendered as a settings UI form.
 /// This is the primary attribute that enables AutoSettingUI generation for a class.
+/// Rendering order follows the order of items in the Targets collection.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false, AllowMultiple = false)]
 public sealed class SettingUIAttribute : Attribute
 {
-    /// <summary>
-    /// Gets or sets the category name for grouping this setting class in navigation.
-    /// </summary>
-    public string? Category { get; set; }
-
-    /// <summary>
-    /// Gets or sets the display order of this setting class in navigation.
-    /// Lower values appear first.
-    /// </summary>
-    public int Order { get; set; }
-
     /// <summary>
     /// Gets or sets the icon identifier for this setting class (framework-specific).
     /// </summary>

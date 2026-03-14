@@ -223,8 +223,15 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
     {
         if (_effectiveProvider is not null) return;
 
-        // Try to use the source-generated provider first (AOT-compatible)
-        // If an accessor was injected and it implements ISettingDescriptorProvider, use it.
+        // 1. Priority: Global AOT Registry (Zero-code AOT support)
+        if (AutoSettingUI.Core.Registry.AotSettingRegistry.Provider != null)
+        {
+            _effectiveProvider = AutoSettingUI.Core.Registry.AotSettingRegistry.Provider;
+            _accessor = AutoSettingUI.Core.Registry.AotSettingRegistry.Accessor;
+            return;
+        }
+
+        // 2. Injected accessor that is also a provider
         if (_accessor is ISettingDescriptorProvider accessorProvider)
         {
             _effectiveProvider = accessorProvider;
@@ -360,7 +367,6 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
             var navNode = new NavigationNode(
                 headerTitle,
                 null, // icon
-                descriptor.Order,
                 classSectionId,
                 descriptor,
                 target);

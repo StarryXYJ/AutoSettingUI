@@ -2,6 +2,7 @@ namespace AutoSettingUI.Core.Models;
 
 /// <summary>
 /// Describes a class marked with [SettingUI] attribute.
+/// Rendering order follows the order of items in the Targets collection.
 /// </summary>
 public sealed class SettingClassDescriptor
 {
@@ -19,16 +20,6 @@ public sealed class SettingClassDescriptor
     /// Gets the main header title, if specified.
     /// </summary>
     public string? MainHeader { get; }
-
-    /// <summary>
-    /// Gets the category name for grouping.
-    /// </summary>
-    public string? Category { get; }
-
-    /// <summary>
-    /// Gets the display order.
-    /// </summary>
-    public int Order { get; }
 
     /// <summary>
     /// Gets the default control factory type name for this class.
@@ -57,8 +48,6 @@ public sealed class SettingClassDescriptor
         string typeName,
         string displayName,
         string? mainHeader,
-        string? category,
-        int order,
         IReadOnlyList<PropertyDescriptor> properties,
         IReadOnlyList<SubSectionInfo> subSections,
         string? defaultControlFactoryTypeName = null,
@@ -67,8 +56,6 @@ public sealed class SettingClassDescriptor
         TypeName = typeName;
         DisplayName = displayName;
         MainHeader = mainHeader;
-        Category = category;
-        Order = order;
         Properties = properties;
         SubSections = subSections;
         DefaultControlFactoryTypeName = defaultControlFactoryTypeName;

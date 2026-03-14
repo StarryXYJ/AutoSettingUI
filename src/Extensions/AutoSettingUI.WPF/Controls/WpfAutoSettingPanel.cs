@@ -348,7 +348,6 @@ public class WpfAutoSettingPanel : Control
             var navNode = new NavigationNode(
                 headerTitle,
                 null, // icon
-                descriptor.Order,
                 classSectionId,
                 descriptor,
                 target);

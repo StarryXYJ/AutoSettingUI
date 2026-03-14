@@ -8,7 +8,7 @@ namespace AutoSettingUI.Avalonia.CrossPlatform.Demo.Models;
 /// <summary>
 /// Sample application settings class demonstrating various AutoSettingUI features.
 /// </summary>
-[SettingUI(Category = "Application", Order = 1)]
+[SettingUI]
 [MainHeader("Application Settings")]
 public class ApplicationSettings
 {
@@ -50,7 +50,7 @@ public class ApplicationSettings
 /// <summary>
 /// Sample user preferences class.
 /// </summary>
-[SettingUI(Category = "User", Order = 2)]
+[SettingUI]
 [MainHeader("User Preferences")]
 public class UserPreferences
 {
@@ -79,7 +79,7 @@ public class UserPreferences
 /// <summary>
 /// Sample network settings class.
 /// </summary>
-[SettingUI(Category = "Network", Order = 3)]
+[SettingUI]
 [MainHeader("Network Configuration")]
 public class NetworkSettings
 {

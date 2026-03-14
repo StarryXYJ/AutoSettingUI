@@ -150,6 +150,8 @@ public class AutoSettingGenerator : IIncrementalGenerator
         sb.AppendLine("using System.Collections.Generic;");
         sb.AppendLine("using AutoSettingUI.Core.Interfaces;");
         sb.AppendLine("using AutoSettingUI.Core.Models;");
+        sb.AppendLine("using AutoSettingUI.Core.Registry;");
+        sb.AppendLine("using System.Runtime.CompilerServices;");
         sb.AppendLine();
         sb.AppendLine("namespace AutoSettingUI.Generated");
         sb.AppendLine("{");
@@ -158,6 +160,14 @@ public class AutoSettingGenerator : IIncrementalGenerator
         sb.AppendLine("    /// </summary>");
         sb.AppendLine("    public sealed class GeneratedSettingProvider : ISettingDescriptorProvider, IPropertyValueAccessor");
         sb.AppendLine("    {");
+        sb.AppendLine("        [ModuleInitializer]");
+        sb.AppendLine("        public static void Initialize()");
+        sb.AppendLine("        {");
+        sb.AppendLine("            var instance = new GeneratedSettingProvider();");
+        sb.AppendLine("            AotSettingRegistry.Provider = instance;");
+        sb.AppendLine("            AotSettingRegistry.Accessor = instance;");
+        sb.AppendLine("        }");
+        sb.AppendLine();
         sb.AppendLine("        private readonly Dictionary<string, SettingClassDescriptor> _descriptors");
         sb.AppendLine("            = new Dictionary<string, SettingClassDescriptor>();");
         sb.AppendLine();
@@ -168,7 +178,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
         foreach (var cls in classes)
             sb.AppendLine($"            Register_{EscapeName(cls.Name)}();");
         sb.AppendLine("        }");
-        sb.AppendLine();
+
 
         // ISettingDescriptorProvider
         sb.AppendLine("        public SettingClassDescriptor? GetDescriptor(Type type)");
@@ -251,6 +261,14 @@ public class AutoSettingGenerator : IIncrementalGenerator
 
         sb.AppendLine("    }");
         sb.AppendLine("}");
+        sb.AppendLine();
+        sb.AppendLine("namespace System.Runtime.CompilerServices");
+        sb.AppendLine("{");
+        sb.AppendLine("    #if !NET5_0_OR_GREATER");
+        sb.AppendLine("    [AttributeUsage(AttributeTargets.Method, Inherited = false)]");
+        sb.AppendLine("    internal sealed class ModuleInitializerAttribute : Attribute { }");
+        sb.AppendLine("    #endif");
+        sb.AppendLine("}");
         return sb.ToString();
     }
 
@@ -262,9 +280,6 @@ public class AutoSettingGenerator : IIncrementalGenerator
         var settingAttr = GetAttr(cls, SettingUIAttributeName);
         var mainHeaderAttr = GetAttr(cls, MainHeaderAttributeName);
 
-        var category = GetNamedArgString(settingAttr, "Category");
-        var orderRaw = settingAttr?.NamedArguments.FirstOrDefault(a => a.Key == "Order").Value.Value;
-        var order = orderRaw != null ? orderRaw.ToString() : "0";
         var mainHeader = GetConstructorArgString(mainHeaderAttr, 0);
 
         // Get factory info from SettingUI attribute (ControlFactory is a Type, FactoryMethod is string)
@@ -391,8 +406,6 @@ public class AutoSettingGenerator : IIncrementalGenerator
         sb.AppendLine($"                \"{fqn}\",");
         sb.AppendLine($"                \"{cls.Name}\",");
         sb.AppendLine($"                {mainHeader},");
-        sb.AppendLine($"                {category},");
-        sb.AppendLine($"                {order},");
         sb.AppendLine("                directProps,");
         sb.AppendLine("                subSections,");
         sb.AppendLine($"                {controlFactoryTypeName},");
