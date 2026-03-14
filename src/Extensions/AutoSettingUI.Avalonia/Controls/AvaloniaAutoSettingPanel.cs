@@ -1,8 +1,6 @@
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.ComponentModel;
-using System.Reflection;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
@@ -26,6 +24,7 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
     private ScrollViewer? _formScrollViewer;
     private global::Avalonia.Controls.TreeView? _navigationTree;
     private ISettingDescriptorProvider? _effectiveProvider;
+    private IPropertyValueAccessor? _accessor;
     private readonly List<FormSection> _formSections = new();
     private readonly ObservableCollection<NavigationNode> _navigationNodes = new();
     private IEnumerable? _previousTargets;
@@ -61,6 +60,12 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
     /// </summary>
     public static readonly StyledProperty<double> NavigationWidthProperty =
         AvaloniaProperty.Register<AvaloniaAutoSettingPanel, double>(nameof(NavigationWidth), 200);
+
+    /// <summary>
+    /// Defines the <see cref="PropertyAccessor"/> property.
+    /// </summary>
+    public static readonly StyledProperty<IPropertyValueAccessor?> PropertyAccessorProperty =
+        AvaloniaProperty.Register<AvaloniaAutoSettingPanel, IPropertyValueAccessor?>(nameof(PropertyAccessor));
 
     #endregion
 
@@ -121,6 +126,17 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
         set => SetValue(NavigationWidthProperty, value);
     }
 
+    /// <summary>
+    /// Gets or sets the property accessor used to get and set values on target objects.
+    /// Inject the source-generated <c>GeneratedSettingProvider</c> here for AOT compatibility.
+    /// Falls back to <see cref="ReflectionPropertyAccessor"/> if not set.
+    /// </summary>
+    public IPropertyValueAccessor? PropertyAccessor
+    {
+        get => GetValue(PropertyAccessorProperty);
+        set => SetValue(PropertyAccessorProperty, value);
+    }
+
     #endregion
 
     /// <summary>
@@ -158,6 +174,13 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
         if (change.Property == DescriptorProviderProperty && change.NewValue is ISettingDescriptorProvider provider)
         {
             _effectiveProvider = provider;
+            if (provider is IPropertyValueAccessor acc)
+                _accessor = acc;
+            BuildUI();
+        }
+        else if (change.Property == PropertyAccessorProperty && change.NewValue is IPropertyValueAccessor injectedAcc)
+        {
+            _accessor = injectedAcc;
             BuildUI();
         }
         else if (change.Property == TargetsProperty)
@@ -182,42 +205,34 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
     
     private void OnTargetsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        // Register new types if items were added
-        if (e.NewItems is not null && _effectiveProvider is not null)
+        if (e.NewItems is not null && _effectiveProvider is ReflectionSettingDescriptorProvider reflProvider)
         {
-            var provider = _effectiveProvider as ReflectionSettingDescriptorProvider;
             foreach (var item in e.NewItems)
             {
                 if (item is not null)
-                {
-                    provider?.RegisterType(item.GetType());
-                }
+                    reflProvider.RegisterType(item.GetType());
             }
         }
-        
-        // Rebuild UI
+
         if (_formScrollViewer is not null)
-        {
             BuildUI();
-        }
     }
 
     private void InitializeProvider()
     {
         if (_effectiveProvider is not null) return;
 
-        // Use reflection-based provider as fallback
-        _effectiveProvider = new ReflectionSettingDescriptorProvider();
-        
-        // Register all target types
+        // Use reflection-based provider + accessor as fallback (non-AOT)
+        var reflProvider = new ReflectionSettingDescriptorProvider();
+        _effectiveProvider = reflProvider;
+        _accessor ??= new ReflectionPropertyAccessor();
+
         if (Targets is not null)
         {
             foreach (var target in Targets)
             {
                 if (target is not null)
-                {
-                    ((ReflectionSettingDescriptorProvider)_effectiveProvider).RegisterType(target.GetType());
-                }
+                    reflProvider.RegisterType(target.GetType());
             }
         }
     }
@@ -436,7 +451,6 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
 
         // Control
         global::Avalonia.Controls.Control? control = null;
-        var propertyInfo = target.GetType().GetProperty(prop.PropertyName);
 
         if (!string.IsNullOrEmpty(prop.CustomControlBinding))
         {
@@ -445,24 +459,47 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
             {
                 if (!string.IsNullOrEmpty(prop.CustomControlFactoryMethod))
                 {
-                    var method = controlType.GetMethod(prop.CustomControlFactoryMethod, BindingFlags.Static | BindingFlags.Public);
+                    // First, try to find the factory method on the control type (static)
+                    var method = controlType.GetMethod(prop.CustomControlFactoryMethod,
+                        System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
                     if (method != null)
                     {
                         control = method.Invoke(null, null) as global::Avalonia.Controls.Control;
                     }
+                    else
+                    {
+                        // Then, try to find the factory method on the target/settings class (static or instance)
+                        var targetType = target.GetType();
+                        method = targetType.GetMethod(prop.CustomControlFactoryMethod,
+                            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
+                        if (method != null)
+                        {
+                            control = method.Invoke(null, null) as global::Avalonia.Controls.Control;
+                        }
+                        else
+                        {
+                            // Try instance method
+                            method = targetType.GetMethod(prop.CustomControlFactoryMethod,
+                                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+                            if (method != null)
+                            {
+                                control = method.Invoke(target, null) as global::Avalonia.Controls.Control;
+                            }
+                        }
+                    }
                 }
-                
-                if (control == null)
-                {
-                    control = Activator.CreateInstance(controlType) as global::Avalonia.Controls.Control;
-                }
+
+                control ??= Activator.CreateInstance(controlType) as global::Avalonia.Controls.Control;
 
                 if (control != null && !string.IsNullOrEmpty(prop.CustomControlBindingProperty))
                 {
-                    var propertyField = controlType.GetField(prop.CustomControlBindingProperty + "Property", BindingFlags.Static | BindingFlags.Public | BindingFlags.FlattenHierarchy);
-                    if (propertyField != null && propertyField.GetValue(null) is AvaloniaProperty avaloniaProperty)
+                    var propertyField = controlType.GetField(
+                        prop.CustomControlBindingProperty + "Property",
+                        System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.FlattenHierarchy);
+                    if (propertyField?.GetValue(null) is AvaloniaProperty avaloniaProperty)
                     {
-                        control.Bind(avaloniaProperty, new Binding(prop.PropertyName) { Source = target, Mode = BindingMode.TwoWay });
+                        control.Bind(avaloniaProperty,
+                            new Binding(prop.PropertyName) { Source = target, Mode = BindingMode.TwoWay });
                     }
                 }
             }
@@ -470,56 +507,55 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
 
         if (control == null)
         {
-            if (prop.IsEnum && propertyInfo != null)
+            if (prop.IsEnum)
             {
+                var enumType = Type.GetType(prop.PropertyTypeName);
+                var currentValue = _accessor?.GetValue(target, prop.PropertyName);
                 var comboBox = new ComboBox
                 {
-                    ItemsSource = Enum.GetValues(propertyInfo.PropertyType),
-                    SelectedItem = propertyInfo.GetValue(target),
+                    ItemsSource = enumType != null ? Enum.GetValues(enumType) : Array.Empty<object>(),
+                    SelectedItem = currentValue,
                     HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch
                 };
                 comboBox.SelectionChanged += (s, e) =>
                 {
-                    if (comboBox.SelectedItem != null && propertyInfo.CanWrite)
-                    {
-                        propertyInfo.SetValue(target, comboBox.SelectedItem);
-                    }
+                    if (comboBox.SelectedItem != null)
+                        _accessor?.SetValue(target, prop.PropertyName, comboBox.SelectedItem);
                 };
                 control = comboBox;
             }
-            else if (propertyInfo != null && propertyInfo.PropertyType == typeof(bool))
+            else if (prop.PropertyTypeName == "System.Boolean")
             {
+                var currentValue = _accessor?.GetValue(target, prop.PropertyName);
                 var checkBox = new global::Avalonia.Controls.Primitives.ToggleButton
                 {
-                    IsChecked = (bool?)propertyInfo.GetValue(target),
+                    IsChecked = currentValue is bool b ? b : false,
                     Content = prop.DisplayName,
                     HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Left
                 };
                 checkBox.IsCheckedChanged += (s, e) =>
                 {
-                    if (propertyInfo.CanWrite)
-                    {
-                        propertyInfo.SetValue(target, checkBox.IsChecked ?? false);
-                    }
+                    _accessor?.SetValue(target, prop.PropertyName, checkBox.IsChecked ?? false);
                 };
                 control = checkBox;
             }
             else
             {
-                var textBox = new TextBox 
-                { 
-                    Text = GetPropertyValue(target, prop.PropertyName)?.ToString() ?? ""
-                };
-                if (propertyInfo != null && propertyInfo.CanWrite)
+                var textBox = new TextBox
                 {
-                    textBox.TextChanged += (s, e) => 
+                    Text = _accessor?.GetValue(target, prop.PropertyName)?.ToString() ?? ""
+                };
+                textBox.TextChanged += (s, e) =>
+                {
+                    try
                     {
-                        try
-                        {
-                            propertyInfo.SetValue(target, Convert.ChangeType(textBox.Text, propertyInfo.PropertyType));
-                        } catch { }
-                    };
-                }
+                        var propType = Type.GetType(prop.PropertyTypeName);
+                        if (propType != null)
+                            _accessor?.SetValue(target, prop.PropertyName,
+                                Convert.ChangeType(textBox.Text, propType));
+                    }
+                    catch { }
+                };
                 control = textBox;
             }
         }
@@ -531,11 +567,5 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
         }
 
         return panel;
-    }
-
-    private static object? GetPropertyValue(object target, string propertyName)
-    {
-        var property = target.GetType().GetProperty(propertyName);
-        return property?.GetValue(target);
     }
 }

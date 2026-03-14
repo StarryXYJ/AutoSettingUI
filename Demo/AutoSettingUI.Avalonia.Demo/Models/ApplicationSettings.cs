@@ -1,5 +1,7 @@
 using System;
 using AutoSettingUI.Core.Attributes;
+using Avalonia.Controls;
+using Avalonia.Media;
 
 namespace AutoSettingUI.Avalonia.Demo.Models;
 
@@ -27,11 +29,22 @@ public class ApplicationSettings
     public int MaxLogSize { get; set; } = 10;
 
     [Title("Volume")]
-    [ControlBinding(typeof(global::Avalonia.Controls.Slider), BindingProperty = "Value")]
+    [ControlBinding(typeof(global::Avalonia.Controls.Slider), BindingProperty = "Value",FactoryMethod = nameof(VolumeFactory))]
     public double Volume { get; set; } = 50.0;
 
     [Hide]
     public string InternalId { get; set; } = Guid.NewGuid().ToString();
+    public Slider VolumeFactory()
+    {
+        var slider = new Slider
+        {
+            Minimum = 0,
+            Maximum = 100,
+            MaxWidth = 100,
+            Background = new SolidColorBrush(Colors.Aqua)
+        };
+        return slider;
+    }
 }
 
 /// <summary>

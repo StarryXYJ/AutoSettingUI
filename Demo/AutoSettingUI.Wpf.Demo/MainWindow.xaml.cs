@@ -1,7 +1,8 @@
 ﻿using System.Collections.ObjectModel;
 using System.Windows;
-using AutoSettingUI.Wpf.Demo.Models;
+
 using AutoSettingUI.WPF.Controls;
+using AutoSettingUI.Wpf.Demo.Models;
 
 namespace AutoSettingUI.Wpf.Demo;
 
