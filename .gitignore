@@ -1,8 +1,60 @@
+# Build outputs
 bin/
 obj/
+out/
+publish/
+
+# NuGet
 /packages/
+*.nupkg
+*.snupkg
+project.lock.json
+
+# IDE - JetBrains Rider
+.idea/
+*.sln.iml
 riderModule.iml
 /_ReSharper.Caches/
-.idea/
+*.DotSettings.user
+
+# IDE - Visual Studio
 .vs/
-Task.md
+*.user
+*.suo
+*.userprefs
+
+# IDE - VS Code
+.vscode/
+*.code-workspace
+
+# .NET
+*.dll
+*.exe
+*.pdb
+*.cache
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Local configuration files
+appsettings.Local.json
+appsettings.Development.json
+
+# Test results
+TestResults/
+
+# Coverage
+coverage/
+*.coverage
+*.opencover.xml
+
+# Source generator cache (if any)
+*.generated.cs
