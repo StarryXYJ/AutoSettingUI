@@ -31,7 +31,7 @@
                                       ItemTemplate="{StaticResource NavigationNodeTemplate}">
                                 <TreeView.ItemContainerTheme>
                                     <ControlTheme TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
-                                        <Setter Property="IsExpanded" Value="{Binding IsExpanded}"/>
+                                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, x:DataType=models:NavigationNode}"/>
                                     </ControlTheme>
                                 </TreeView.ItemContainerTheme>
                             </TreeView>

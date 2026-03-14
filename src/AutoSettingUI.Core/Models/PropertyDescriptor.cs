@@ -71,6 +71,12 @@ public sealed class PropertyDescriptor
     public string? CustomControlFactoryMethod { get; }
 
     /// <summary>
+    /// Gets the pre-computed enum values as string array, if the property is an enum.
+    /// This avoids runtime type resolution for AOT compatibility.
+    /// </summary>
+    public string[]? EnumValues { get; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="PropertyDescriptor"/> class.
     /// </summary>
     public PropertyDescriptor(
@@ -86,7 +92,8 @@ public sealed class PropertyDescriptor
         string? itemsSourcePropertyName,
         string? customControlBinding,
         string? customControlBindingProperty = null,
-        string? customControlFactoryMethod = null)
+        string? customControlFactoryMethod = null,
+        string[]? enumValues = null)
     {
         PropertyName = propertyName;
         DisplayName = displayName;
@@ -101,6 +108,7 @@ public sealed class PropertyDescriptor
         CustomControlBinding = customControlBinding;
         CustomControlBindingProperty = customControlBindingProperty;
         CustomControlFactoryMethod = customControlFactoryMethod;
+        EnumValues = enumValues;
     }
 }
 

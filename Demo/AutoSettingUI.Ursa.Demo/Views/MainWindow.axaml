@@ -55,7 +55,8 @@
         </Border>
 
         <!-- Settings Panel - Default Style -->
-        <controls:UrsaAutoSettingPanel Grid.Row="1"
+        <controls:UrsaAutoSettingPanel x:Name="DefaultSettingsPanel"
+                                       Grid.Row="1"
                                        IsVisible="{Binding !IsCustomView}"
                                        Title="{Binding Title}"
                                        ShowNavigation="{Binding ShowNavigation}"
@@ -66,7 +67,8 @@
         <Border Grid.Row="1"
                 IsVisible="{Binding IsCustomView}"
                 Background="#FFE8E8E8">
-            <controls:UrsaAutoSettingPanel Title="Custom Styled Settings"
+            <controls:UrsaAutoSettingPanel x:Name="CustomSettingsPanel"
+                                           Title="Custom Styled Settings"
                                            ShowNavigation="{Binding ShowNavigation}"
                                            NavigationWidth="250"
                                            Targets="{Binding Targets}">

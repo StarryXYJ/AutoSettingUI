@@ -3,11 +3,16 @@
         <OutputType>WinExe</OutputType>
         <TargetFramework>net9.0</TargetFramework>
         <Nullable>enable</Nullable>
-        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+        <BuiltInComInteropSupport>false</BuiltInComInteropSupport>
         <ApplicationManifest>app.manifest</ApplicationManifest>
+        <IsAotCompatible>true</IsAotCompatible>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-<PublishAot>true</PublishAot>
-<PublishTrimmed>true</PublishTrimmed>
+        <!-- Explicit AOT properties to help the SDK -->
+        <PublishAot>true</PublishAot>
+        <PublishSelfContained>true</PublishSelfContained>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <TrimMode>partial</TrimMode>
+        <StackTraceSupport>false</StackTraceSupport>
     </PropertyGroup>
 
     <ItemGroup>
@@ -28,6 +33,10 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\src\AutoSettingUI.Core\AutoSettingUI.Core.csproj" />
       <ProjectReference Include="..\..\src\Extensions\AutoSettingUI.Avalonia\AutoSettingUI.Avalonia.csproj" />
+      <ProjectReference Include="..\..\src\AutoSettingUI.Generator\AutoSettingUI.Generator.csproj" 
+                        OutputItemType="Analyzer" 
+                        ReferenceOutputAssembly="false" />
     </ItemGroup>
 </Project>

@@ -26,6 +26,7 @@ public class UrsaAutoSettingPanel : TemplatedControl
     private IPropertyValueAccessor? _accessor;
     private readonly List<FormSection> _formSections = new();
     private readonly ObservableCollection<NavigationNode> _navigationNodes = new();
+    private readonly Dictionary<string, global::Avalonia.Controls.Control> _sectionControlMap = new();
     private IEnumerable? _previousTargets;
 
     #region Styled Properties
@@ -236,6 +237,25 @@ public class UrsaAutoSettingPanel : TemplatedControl
     {
         if (_effectiveProvider is not null) return;
 
+        // Try to use the source-generated provider first (AOT-compatible)
+        // If an accessor was injected and it implements ISettingDescriptorProvider, use it.
+        if (_accessor is ISettingDescriptorProvider accessorProvider)
+        {
+            _effectiveProvider = accessorProvider;
+            return;
+        }
+
+        if (_accessor is null)
+        {
+            _accessor = TryCreateGeneratedProvider();
+            if (_accessor is ISettingDescriptorProvider genProvider)
+            {
+                _effectiveProvider = genProvider;
+                return;
+            }
+        }
+
+        // Fallback to reflection-based provider (non-AOT)
         var reflProvider = new ReflectionSettingDescriptorProvider();
         _effectiveProvider = reflProvider;
         _accessor ??= new ReflectionPropertyAccessor();
@@ -250,6 +270,33 @@ public class UrsaAutoSettingPanel : TemplatedControl
         }
     }
 
+    /// <summary>
+    /// Tries to create the source-generated provider via reflection.
+    /// This allows AOT-compatible usage without explicit reference to generated code.
+    /// </summary>
+    private static IPropertyValueAccessor? TryCreateGeneratedProvider()
+    {
+        try
+        {
+            // Look for the generated provider in all loaded assemblies
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var providerType = assembly.GetType("AutoSettingUI.Generated.GeneratedSettingProvider");
+                if (providerType is not null)
+                {
+                    var instance = Activator.CreateInstance(providerType);
+                    if (instance is IPropertyValueAccessor accessor)
+                        return accessor;
+                }
+            }
+        }
+        catch
+        {
+            // Ignore errors and fall back to reflection
+        }
+        return null;
+    }
+
     private void OnNavigationSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (_navigationTree?.SelectedItem is NavigationNode node)
@@ -262,31 +309,11 @@ public class UrsaAutoSettingPanel : TemplatedControl
     {
         if (_formScrollViewer is null) return;
         
-        // Find the element with the matching tag
-        var element = FindChildByTag(_formScrollViewer, sectionId);
-        if (element is global::Avalonia.Controls.Control control)
+        // O(1) lookup using the dictionary
+        if (_sectionControlMap.TryGetValue(sectionId, out var control))
         {
             control.BringIntoView();
         }
-    }
-
-    private static global::Avalonia.Visual? FindChildByTag(global::Avalonia.Visual parent, string tag)
-    {
-        if (parent is global::Avalonia.Controls.Control control && control.Tag?.ToString() == tag)
-        {
-            return control;
-        }
-
-        var children = parent.GetVisualChildren();
-        foreach (var child in children)
-        {
-            var result = FindChildByTag(child, tag);
-            if (result is not null)
-            {
-                return result;
-            }
-        }
-        return null;
     }
 
     private void BuildUI()
@@ -310,6 +337,7 @@ public class UrsaAutoSettingPanel : TemplatedControl
         // Clear previous data
         _formSections.Clear();
         _navigationNodes.Clear();
+        _sectionControlMap.Clear();
 
         var formPanel = new StackPanel
         {
@@ -413,7 +441,7 @@ public class UrsaAutoSettingPanel : TemplatedControl
         _formScrollViewer.Content = formPanel;
     }
 
-    private static global::Avalonia.Controls.Control CreateSectionHeader(string title, string sectionId, bool isMainHeader)
+    private global::Avalonia.Controls.Control CreateSectionHeader(string title, string sectionId, bool isMainHeader)
     {
         var textBlock = new TextBlock 
         { 
@@ -433,8 +461,8 @@ public class UrsaAutoSettingPanel : TemplatedControl
             textBlock.Foreground = Brushes.Gray;
         }
         
-        // Set the tag for scrolling
-        textBlock.Tag = sectionId;
+        // Store in dictionary for O(1) scroll lookup
+        _sectionControlMap[sectionId] = textBlock;
         
         return textBlock;
     }
@@ -521,24 +549,29 @@ public class UrsaAutoSettingPanel : TemplatedControl
 
         if (control == null)
         {
-            if (prop.IsEnum)
+            if (prop.IsEnum && prop.EnumValues != null)
             {
-                var enumType = Type.GetType(prop.PropertyTypeName);
-                var currentValue = _accessor?.GetValue(target, prop.PropertyName);
+                var currentValue = _accessor?.GetValue(target, prop.PropertyName)?.ToString();
                 var comboBox = new ComboBox
                 {
-                    ItemsSource = enumType != null ? Enum.GetValues(enumType) : Array.Empty<object>(),
+                    ItemsSource = prop.EnumValues,
                     SelectedItem = currentValue,
                     HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch
                 };
                 comboBox.SelectionChanged += (s, e) =>
                 {
-                    if (comboBox.SelectedItem != null)
-                        _accessor?.SetValue(target, prop.PropertyName, comboBox.SelectedItem);
+                    if (comboBox.SelectedItem is string selectedValue && _accessor != null)
+                    {
+                        var parsedValue = _accessor.GetEnumValue(prop.PropertyTypeName, selectedValue);
+                        if (parsedValue != null)
+                        {
+                            _accessor.SetValue(target, prop.PropertyName, parsedValue);
+                        }
+                    }
                 };
                 control = comboBox;
             }
-            else if (prop.PropertyTypeName == "System.Boolean")
+            else if (prop.PropertyTypeName == "System.Boolean" || prop.PropertyTypeName == "bool")
             {
                 var currentValue = _accessor?.GetValue(target, prop.PropertyName);
                 var checkBox = new global::Avalonia.Controls.Primitives.ToggleButton

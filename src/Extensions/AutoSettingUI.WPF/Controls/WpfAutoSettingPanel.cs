@@ -41,6 +41,10 @@ public class WpfAutoSettingPanel : Control
     public static readonly DependencyProperty NavigationWidthProperty = DependencyProperty.Register(
         nameof(NavigationWidth), typeof(double), typeof(WpfAutoSettingPanel), new PropertyMetadata(200.0));
 
+    public static readonly DependencyProperty PropertyAccessorProperty = DependencyProperty.Register(
+        nameof(PropertyAccessor), typeof(IPropertyValueAccessor), typeof(WpfAutoSettingPanel),
+        new PropertyMetadata(null, OnPropertyAccessorChanged));
+
     #endregion
 
     #region Properties
@@ -85,6 +89,17 @@ public class WpfAutoSettingPanel : Control
         set => SetValue(NavigationWidthProperty, value);
     }
 
+    /// <summary>
+    /// Gets or sets the property accessor used to get and set values on target objects.
+    /// Inject the source-generated <c>GeneratedSettingProvider</c> here for AOT compatibility.
+    /// Falls back to reflection if not set.
+    /// </summary>
+    public IPropertyValueAccessor? PropertyAccessor
+    {
+        get => (IPropertyValueAccessor?)GetValue(PropertyAccessorProperty);
+        set => SetValue(PropertyAccessorProperty, value);
+    }
+
     #endregion
 
     private ScrollViewer? _formScrollViewer;
@@ -92,6 +107,7 @@ public class WpfAutoSettingPanel : Control
     private ISettingDescriptorProvider? _effectiveProvider;
     private readonly List<FormSection> _formSections = new();
     private readonly ObservableCollection<NavigationNode> _navigationNodes = new();
+    private readonly Dictionary<string, FrameworkElement> _sectionControlMap = new();
     private IEnumerable? _previousTargets;
 
     public WpfAutoSettingPanel()
@@ -108,7 +124,16 @@ public class WpfAutoSettingPanel : Control
     {
         if (_effectiveProvider is not null) return;
 
-        // Use reflection-based provider as fallback
+        // Try to use the source-generated provider first (AOT-compatible)
+        // The generator creates AutoSettingUI.Generated.GeneratedSettingProvider
+        var generatedAccessor = TryCreateGeneratedProvider();
+        if (generatedAccessor is not null)
+        {
+            _effectiveProvider = generatedAccessor;
+            return;
+        }
+
+        // Fallback to reflection-based provider (non-AOT)
         _effectiveProvider = new ReflectionSettingDescriptorProvider();
         
         // Register all target types
@@ -122,6 +147,33 @@ public class WpfAutoSettingPanel : Control
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Tries to create the source-generated provider via reflection.
+    /// This allows AOT-compatible usage without explicit reference to generated code.
+    /// </summary>
+    private static ISettingDescriptorProvider? TryCreateGeneratedProvider()
+    {
+        try
+        {
+            // Look for the generated provider in all loaded assemblies
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var providerType = assembly.GetType("AutoSettingUI.Generated.GeneratedSettingProvider");
+                if (providerType is not null)
+                {
+                    var instance = Activator.CreateInstance(providerType);
+                    if (instance is ISettingDescriptorProvider provider)
+                        return provider;
+                }
+            }
+        }
+        catch
+        {
+            // Ignore errors and fall back to reflection
+        }
+        return null;
     }
 
     private static void OnTargetsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -196,6 +248,14 @@ public class WpfAutoSettingPanel : Control
         }
     }
 
+    private static void OnPropertyAccessorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is WpfAutoSettingPanel panel && e.NewValue is IPropertyValueAccessor)
+        {
+            panel.BuildUI();
+        }
+    }
+
     public override void OnApplyTemplate()
     {
         base.OnApplyTemplate();
@@ -231,33 +291,11 @@ public class WpfAutoSettingPanel : Control
     {
         if (_formScrollViewer is null) return;
         
-        // Find the element with the matching tag
-        var element = FindChildByTag(_formScrollViewer, sectionId);
-        if (element is not null)
+        // O(1) lookup using the dictionary
+        if (_sectionControlMap.TryGetValue(sectionId, out var element))
         {
             element.BringIntoView();
         }
-    }
-
-    private static FrameworkElement? FindChildByTag(DependencyObject parent, string tag)
-    {
-        int childCount = VisualTreeHelper.GetChildrenCount(parent);
-        for (int i = 0; i < childCount; i++)
-        {
-            var child = VisualTreeHelper.GetChild(parent, i);
-            
-            if (child is FrameworkElement element && element.Tag?.ToString() == tag)
-            {
-                return element;
-            }
-            
-            var result = FindChildByTag(child, tag);
-            if (result is not null)
-            {
-                return result;
-            }
-        }
-        return null;
     }
 
     private void BuildUI()
@@ -266,6 +304,7 @@ public class WpfAutoSettingPanel : Control
 
         // Clear previous data
         _formSections.Clear();
+        _sectionControlMap.Clear();
         
         // Clear navigation nodes - do this before setting ItemsSource if not already set
         _navigationNodes.Clear();
@@ -300,7 +339,7 @@ public class WpfAutoSettingPanel : Control
             if (descriptor is null) continue;
 
             // Create factory with class descriptor for default factory support
-            var factory = new WpfControlFactory(descriptor);
+            var factory = new WpfControlFactory(descriptor, PropertyAccessor);
 
             var classSectionId = $"class_{classIndex}";
             
@@ -358,7 +397,7 @@ public class WpfAutoSettingPanel : Control
         _formScrollViewer.Content = formPanel;
     }
 
-    private static FrameworkElement CreateSectionHeader(string title, string sectionId, bool isMainHeader)
+    private FrameworkElement CreateSectionHeader(string title, string sectionId, bool isMainHeader)
     {
         var textBlock = new TextBlock 
         { 
@@ -377,8 +416,8 @@ public class WpfAutoSettingPanel : Control
             textBlock.Foreground = Brushes.Gray;
         }
         
-        // Set the tag for scrolling
-        textBlock.Tag = sectionId;
+        // Store in dictionary for O(1) scroll lookup
+        _sectionControlMap[sectionId] = textBlock;
         
         return textBlock;
     }

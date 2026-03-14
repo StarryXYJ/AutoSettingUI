@@ -29,4 +29,15 @@ public class ReflectionPropertyAccessor : IPropertyValueAccessor
         if (prop?.CanWrite == true)
             prop.SetValue(target, value);
     }
+
+    /// <inheritdoc />
+    public object? GetEnumValue(string typeName, string value)
+    {
+        var type = Type.GetType(typeName);
+        if (type != null && type.IsEnum)
+        {
+            try { return Enum.Parse(type, value); } catch { }
+        }
+        return null;
+    }
 }

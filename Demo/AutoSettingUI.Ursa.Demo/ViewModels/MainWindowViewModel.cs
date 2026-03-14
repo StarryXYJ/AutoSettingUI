@@ -5,7 +5,7 @@ using Avalonia;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using AutoSettingUI.Wpf.Demo.Models;
+using AutoSettingUI.Ursa.Demo.Models;
 using Ursa.Themes.Semi;
 
 namespace AutoSettingUI.Ursa.Demo.ViewModels;

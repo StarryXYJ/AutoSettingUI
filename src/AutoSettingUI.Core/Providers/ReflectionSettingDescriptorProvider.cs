@@ -76,39 +76,39 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
 
         var mainHeaderAttr = type.GetCustomAttribute<MainHeaderAttribute>();
 
-        var subHeaderGroups = new Dictionary<string, List<PropertyDescriptor>>();
+        // Use ordered list to preserve declaration order of sub-sections
+        var subSectionList = new List<(string Title, List<PropertyDescriptor> Props)>();
         var directProperties = new List<PropertyDescriptor>();
+        List<PropertyDescriptor>? currentSubProps = null;
         string? currentSubHeader = null;
 
         foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
-            // Check for Hide attribute
+            // Skip hidden properties
             if (prop.GetCustomAttribute<HideAttribute>() is not null)
                 continue;
 
-            // Check for SubHeader attribute
+            // SubHeader: flush previous sub-section and start a new one.
+            // Do NOT skip the property itself — it should be the first item in the new group.
             var subHeader = prop.GetCustomAttribute<SubHeaderAttribute>();
             if (subHeader is not null)
             {
+                if (currentSubHeader is not null && currentSubProps is not null)
+                    subSectionList.Add((currentSubHeader, currentSubProps));
                 currentSubHeader = subHeader.Title;
-                if (!subHeaderGroups.ContainsKey(subHeader.Title))
-                {
-                    subHeaderGroups[subHeader.Title] = new List<PropertyDescriptor>();
-                }
-                continue;
-            }
-
-            // Check for MainHeader on property (starts a new section)
-            var propMainHeader = prop.GetCustomAttribute<MainHeaderAttribute>();
-            if (propMainHeader is not null)
-            {
-                currentSubHeader = null; // Reset subsection
+                currentSubProps = new List<PropertyDescriptor>();
+                // fall-through: the property itself is added below
             }
 
             var titleAttr = prop.GetCustomAttribute<TitleAttribute>();
             var rangeAttr = prop.GetCustomAttribute<RangeAttribute>();
             var itemsSourceAttr = prop.GetCustomAttribute<ItemsSourceAttribute>();
             var controlBindingAttr = prop.GetCustomAttribute<ControlBindingAttribute>();
+
+            // Pre-compute enum values to avoid runtime Enum.GetValues in non-AOT path
+            string[]? enumValues = null;
+            if (prop.PropertyType.IsEnum)
+                enumValues = Enum.GetNames(prop.PropertyType);
 
             var propDescriptor = new PropertyDescriptor(
                 prop.Name,
@@ -123,23 +123,23 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
                 itemsSourceAttr?.SourcePropertyName,
                 controlBindingAttr?.ControlType.AssemblyQualifiedName,
                 controlBindingAttr?.BindingProperty,
-                controlBindingAttr?.FactoryMethod
+                controlBindingAttr?.FactoryMethod,
+                enumValues
             );
 
-            if (currentSubHeader is not null)
-            {
-                subHeaderGroups[currentSubHeader].Add(propDescriptor);
-            }
+            if (currentSubProps is not null)
+                currentSubProps.Add(propDescriptor);
             else
-            {
                 directProperties.Add(propDescriptor);
-            }
         }
 
-        // Build subsections
-        var subSections = subHeaderGroups
-            .Where(g => g.Value.Count > 0)
-            .Select(g => new SubSectionInfo(g.Key, g.Value))
+        // Flush final sub-section
+        if (currentSubHeader is not null && currentSubProps is not null)
+            subSectionList.Add((currentSubHeader, currentSubProps));
+
+        var subSections = subSectionList
+            .Where(s => s.Props.Count > 0)
+            .Select(s => new SubSectionInfo(s.Title, s.Props))
             .ToList();
 
         return new SettingClassDescriptor(

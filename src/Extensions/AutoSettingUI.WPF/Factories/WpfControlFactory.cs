@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using AutoSettingUI.Core.Interfaces;
 using AutoSettingUI.Core.Models;
 
 namespace AutoSettingUI.WPF.Factories;
@@ -12,6 +13,7 @@ namespace AutoSettingUI.WPF.Factories;
 public class WpfControlFactory
 {
     private readonly SettingClassDescriptor? _classDescriptor;
+    private readonly IPropertyValueAccessor? _accessor;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WpfControlFactory"/> class.
@@ -27,6 +29,17 @@ public class WpfControlFactory
     public WpfControlFactory(SettingClassDescriptor? classDescriptor)
     {
         _classDescriptor = classDescriptor;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WpfControlFactory"/> class with class descriptor and property accessor.
+    /// </summary>
+    /// <param name="classDescriptor">The class descriptor containing default factory settings.</param>
+    /// <param name="accessor">The property accessor for getting/setting values (AOT-compatible).</param>
+    public WpfControlFactory(SettingClassDescriptor? classDescriptor, IPropertyValueAccessor? accessor)
+    {
+        _classDescriptor = classDescriptor;
+        _accessor = accessor;
     }
 
     public UIElement CreateControl(PropertyDescriptor prop, object target)
@@ -207,11 +220,10 @@ public class WpfControlFactory
             VerticalAlignment = VerticalAlignment.Center
         };
 
-        // Get enum values - search in all loaded assemblies
-        var enumType = GetTypeFromName(prop.PropertyTypeName);
-        if (enumType is not null && enumType.IsEnum)
+        // Use pre-computed enum values if available (AOT-compatible path)
+        if (prop.EnumValues != null)
         {
-            foreach (var name in Enum.GetNames(enumType))
+            foreach (var name in prop.EnumValues)
             {
                 comboBox.Items.Add(name);
             }
@@ -221,16 +233,48 @@ public class WpfControlFactory
             {
                 comboBox.SelectedItem = currentValue.ToString();
             }
-        }
 
-        comboBox.SelectionChanged += (s, e) =>
-        {
-            if (comboBox.SelectedItem is string selectedName && enumType is not null)
+            comboBox.SelectionChanged += (s, e) =>
             {
-                var newValue = Enum.Parse(enumType, selectedName);
-                SetValue(target, prop.PropertyName, newValue);
+                if (comboBox.SelectedItem is string selectedName)
+                {
+                    // Parse the enum value from string
+                    var enumType = GetTypeFromName(prop.PropertyTypeName);
+                    if (enumType is not null)
+                    {
+                        var newValue = Enum.Parse(enumType, selectedName);
+                        SetValue(target, prop.PropertyName, newValue);
+                    }
+                }
+            };
+        }
+        else
+        {
+            // Fallback to runtime type resolution
+            var enumType = GetTypeFromName(prop.PropertyTypeName);
+            if (enumType is not null && enumType.IsEnum)
+            {
+                foreach (var name in Enum.GetNames(enumType))
+                {
+                    comboBox.Items.Add(name);
+                }
+
+                var currentValue = GetValue(target, prop.PropertyName);
+                if (currentValue is not null)
+                {
+                    comboBox.SelectedItem = currentValue.ToString();
+                }
             }
-        };
+
+            comboBox.SelectionChanged += (s, e) =>
+            {
+                if (comboBox.SelectedItem is string selectedName && enumType is not null)
+                {
+                    var newValue = Enum.Parse(enumType, selectedName);
+                    SetValue(target, prop.PropertyName, newValue);
+                }
+            };
+        }
 
         return comboBox;
     }
@@ -351,12 +395,27 @@ public class WpfControlFactory
 
     private object? GetValue(object target, string propertyName)
     {
+        // Use the injected accessor if available (AOT-compatible path)
+        if (_accessor != null)
+        {
+            return _accessor.GetValue(target, propertyName);
+        }
+        
+        // Fallback to reflection
         var prop = target.GetType().GetProperty(propertyName);
         return prop?.GetValue(target);
     }
 
     private void SetValue(object target, string propertyName, object? value)
     {
+        // Use the injected accessor if available (AOT-compatible path)
+        if (_accessor != null)
+        {
+            _accessor.SetValue(target, propertyName, value);
+            return;
+        }
+        
+        // Fallback to reflection
         var prop = target.GetType().GetProperty(propertyName);
         if (prop is not null && prop.CanWrite)
         {
