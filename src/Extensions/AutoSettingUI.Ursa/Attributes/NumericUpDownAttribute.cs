@@ -32,6 +32,7 @@ public sealed class NumericUpDownAttribute : ControlBindingAttributeBase
     public Avalonia.Controls.Control CreateNumericUpDown(Type propertyType)
     {
         var controlType = GetUrsaNumericUpDownType(propertyType);
+        
         var control = (Avalonia.Controls.Control)Activator.CreateInstance(controlType)!;
 
         // Apply customization

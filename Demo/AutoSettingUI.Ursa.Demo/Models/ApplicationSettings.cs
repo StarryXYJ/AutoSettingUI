@@ -39,7 +39,7 @@ public class ApplicationSettings
     public int MaxLogSize { get; set; } = 10;
 
     [Title("Volume")]
-    [ControlBinding(typeof(global::Avalonia.Controls.Slider), BindingProperty = "Value",FactoryMethod = nameof(VolumeFactory))]
+    [ControlBinding(typeof(global::Avalonia.Controls.Slider),"Value",nameof(VolumeFactory))]
     public double Volume { get; set; } = 50.0;
 
     [Hide]
@@ -110,6 +110,7 @@ public class UserPreferences : INotifyPropertyChanged
     [ReadOnly(nameof(CanEdit))]
     public string DynamicReadOnlyField { get; set; } = "Only editable by admins";
 
+    [ControlBinding(typeof(CheckBox), "IsChecked")]
     public bool IsAdmin
     {
         get => _isAdmin;

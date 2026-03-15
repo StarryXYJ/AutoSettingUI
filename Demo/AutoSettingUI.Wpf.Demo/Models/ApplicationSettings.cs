@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Windows.Controls;
 using System.Windows.Media;
 using AutoSettingUI.Core.Attributes;
-using AutoSettingUI.Ursa.Attributes;
+using AutoSettingUI.WPF.Attributes;
 using AutoSettingUI.Wpf.Demo.Controls;
 using ReadOnlyAttribute = AutoSettingUI.Core.Attributes.ReadOnlyAttribute;
 using DescriptionAttribute = AutoSettingUI.Core.Attributes.DescriptionAttribute;
@@ -326,7 +326,7 @@ public enum Theme
 public class ExtendedControlsSettings
 {
     [Title("Background Color")]
-    [ColorPicker]
+    
     public Color ThemeColor { get; set; } = Colors.DodgerBlue;
 
     [Title("Release Date")]

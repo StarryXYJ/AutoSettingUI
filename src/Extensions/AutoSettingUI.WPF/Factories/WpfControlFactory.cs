@@ -54,34 +54,6 @@ public class WpfControlFactory
         // Check for custom control binding on property (highest priority)
         if (!string.IsNullOrEmpty(prop.CustomControlBinding))
         {
-            var attrName = prop.CustomControlBinding.Split('.').Last();
-            if (attrName == "CheckBoxAttribute" || attrName == "CheckBox")
-            {
-                var control = CreateCheckBoxControl(prop, target);
-                if (control is FrameworkElement fe) ApplyAttributes(fe, prop, target);
-                return control;
-            }
-            if (attrName == "ColorPickerAttribute" || attrName == "ColorPicker")
-            {
-                // WPF doesn't have ColorPicker, use TextBox fallback for now or custom implementation
-                var control = CreateTextBox(prop, target);
-                if (control is FrameworkElement fe) ApplyAttributes(fe, prop, target);
-                return control;
-            }
-            if (attrName == "TimePickerAttribute" || attrName == "TimePicker")
-            {
-                // WPF doesn't have TimePicker, use DatePicker as closest or TextBox
-                var control = CreateDateTimeControl(prop, target);
-                if (control is FrameworkElement fe) ApplyAttributes(fe, prop, target);
-                return control;
-            }
-            if (attrName == "DatePickerAttribute" || attrName == "DatePicker")
-            {
-                var control = CreateDateTimeControl(prop, target);
-                if (control is FrameworkElement fe) ApplyAttributes(fe, prop, target);
-                return control;
-            }
-
             return CreateCustomControl(prop, target, prop.CustomControlBinding, prop.CustomControlFactoryMethod);
         }
 

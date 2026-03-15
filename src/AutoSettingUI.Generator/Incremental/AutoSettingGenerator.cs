@@ -29,13 +29,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
     private const string ReadOnlyAttributeName = "ReadOnlyAttribute";
     private const string CollectionEditorAttributeName = "CollectionEditorAttribute";
     private const string ControlBindingAttributeBaseName = "ControlBindingAttributeBase";
-    private const string NumericUpDownAttributeName = "NumericUpDownAttribute";
-    private const string ColorPickerAttributeName = "ColorPickerAttribute";
-    private const string TimePickerAttributeName = "TimePickerAttribute";
-    private const string DatePickerAttributeName = "DatePickerAttribute";
-    private const string CheckBoxAttributeName = "CheckBoxAttribute";
-    private const string TagInputAttributeName = "TagInputAttribute";
-    private const string IPv4BoxAttributeName = "IPv4BoxAttribute";
+    private const string NumericUpDownAttributeName = "NumericUpDownAttribute"; // Special handling needed - type depends on property type
 
     // Diagnostic descriptors
     private static readonly DiagnosticDescriptor NonPublicClassWarning = new(
@@ -295,8 +289,16 @@ public class AutoSettingGenerator : IIncrementalGenerator
 
         // Get factory info from SettingUI attribute (ControlFactory is a Type, FactoryMethod is string)
         var factoryTypeArg = settingAttr?.NamedArguments.FirstOrDefault(a => a.Key == "ControlFactory").Value;
-        var controlFactoryTypeName = factoryTypeArg?.Value is INamedTypeSymbol factType
-            ? $"\"{factType.ToDisplayString()}\"" : "null";
+        string? controlFactoryTypeName = null;
+        if (factoryTypeArg?.Value is INamedTypeSymbol factType)
+        {
+            // Use AssemblyQualifiedName format for Type.GetType() to work correctly
+            var assemblyName = factType.ContainingAssembly?.Name;
+            var typeFullName = factType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", "");
+            controlFactoryTypeName = !string.IsNullOrEmpty(assemblyName) 
+                ? $"{typeFullName}, {assemblyName}" 
+                : typeFullName;
+        }
         var factoryMethod = GetNamedArgString(settingAttr, "FactoryMethod");
 
         sb.AppendLine($"        private void Register_{safeName}()");
@@ -366,6 +368,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
             
             if (cbAttr != null)
             {
+                // Try to get ControlType from constructor argument first (e.g., [ControlBinding(typeof(CheckBox)])
                 if (cbAttr.ConstructorArguments.Length > 0 && cbAttr.ConstructorArguments[0].Value is INamedTypeSymbol cbType)
                     cbTypeName = cbType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", "");
                 
@@ -381,46 +384,26 @@ public class AutoSettingGenerator : IIncrementalGenerator
                     if (cbTypeName == null)
                     {
                         // Map type based on property type for Ursa / Avalonia
+                        // Include assembly name for Type.GetType() to work correctly
                         cbTypeName = propTypeFqn switch
                         {
-                            "int" or "System.Int32" => "Ursa.Controls.NumericIntUpDown",
-                            "uint" or "System.UInt32" => "Ursa.Controls.NumericUIntUpDown",
-                            "double" or "System.Double" => "Ursa.Controls.NumericDoubleUpDown",
-                            "float" or "System.Single" => "Ursa.Controls.NumericFloatUpDown",
-                            "byte" or "System.Byte" => "Ursa.Controls.NumericByteUpDown",
-                            "sbyte" or "System.SByte" => "Ursa.Controls.NumericSByteUpDown",
-                            "short" or "System.Int16" => "Ursa.Controls.NumericShortUpDown",
-                            "ushort" or "System.UInt16" => "Ursa.Controls.NumericUShortUpDown",
-                            "long" or "System.Int64" => "Ursa.Controls.NumericLongUpDown",
-                            "ulong" or "System.UInt64" => "Ursa.Controls.NumericULongUpDown",
-                            _ => "Ursa.Controls.NumericIntUpDown"
+                            "int" or "System.Int32" => "Ursa.Controls.NumericIntUpDown, Ursa",
+                            "uint" or "System.UInt32" => "Ursa.Controls.NumericUIntUpDown, Ursa",
+                            "double" or "System.Double" => "Ursa.Controls.NumericDoubleUpDown, Ursa",
+                            "float" or "System.Single" => "Ursa.Controls.NumericFloatUpDown, Ursa",
+                            "byte" or "System.Byte" => "Ursa.Controls.NumericByteUpDown, Ursa",
+                            "sbyte" or "System.SByte" => "Ursa.Controls.NumericSByteUpDown, Ursa",
+                            "short" or "System.Int16" => "Ursa.Controls.NumericShortUpDown, Ursa",
+                            "ushort" or "System.UInt16" => "Ursa.Controls.NumericUShortUpDown, Ursa",
+                            "long" or "System.Int64" => "Ursa.Controls.NumericLongUpDown, Ursa",
+                            "ulong" or "System.UInt64" => "Ursa.Controls.NumericULongUpDown, Ursa",
+                            _ => "Ursa.Controls.NumericIntUpDown, Ursa"
                         };
                     }
                 }
-                else if (attrName == ColorPickerAttributeName || attrName == "ColorPicker")
-                {
-                    cbBindingProp ??= "Color";
-                }
-                else if (attrName == TimePickerAttributeName || attrName == "TimePicker")
-                {
-                    cbBindingProp ??= "SelectedTime";
-                }
-                else if (attrName == DatePickerAttributeName || attrName == "DatePicker")
-                {
-                    cbBindingProp ??= "SelectedDate";
-                }
-                else if (attrName == CheckBoxAttributeName || attrName == "CheckBox")
-                {
-                    cbBindingProp ??= "IsChecked";
-                }
-                else if (attrName == TagInputAttributeName || attrName == "TagInput")
-                {
-                    cbBindingProp ??= "Tags";
-                }
-                else if (attrName == IPv4BoxAttributeName || attrName == "IPv4Box")
-                {
-                    cbBindingProp ??= "IPAddress";
-                }
+                // Note: Other derived attributes (CheckBox, TagInput, IPv4Box, ColorPicker, TimePicker, DatePicker)
+                // set ControlType, BindingProperty, and FactoryMethod in their constructors,
+                // so they are automatically handled by the code above.
             }
 
             // Check if property type is a delegate
@@ -462,13 +445,27 @@ public class AutoSettingGenerator : IIncrementalGenerator
             {
                 var elementType = GetCollectionElementType(prop.Type);
                 if (elementType != null)
-                    collElementTypeName = elementType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", "");
+                {
+                    // Use AssemblyQualifiedName format for Type.GetType() to work correctly
+                    var assemblyName = elementType.ContainingAssembly?.Name;
+                    var typeFullName = elementType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", "");
+                    collElementTypeName = !string.IsNullOrEmpty(assemblyName) 
+                        ? $"{typeFullName}, {assemblyName}" 
+                        : typeFullName;
+                }
             }
 
             if (collEditorAttr != null)
             {
                 if (collEditorAttr.ConstructorArguments.Length > 0 && collEditorAttr.ConstructorArguments[0].Value is INamedTypeSymbol editorType)
-                    collEditorTypeName = editorType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", "");
+                {
+                    // Use AssemblyQualifiedName format for Type.GetType() to work correctly
+                    var assemblyName = editorType.ContainingAssembly?.Name;
+                    var typeFullName = editorType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", "");
+                    collEditorTypeName = !string.IsNullOrEmpty(assemblyName) 
+                        ? $"{typeFullName}, {assemblyName}" 
+                        : typeFullName;
+                }
                 collEditorFactoryMethod = GetNamedArgRaw(collEditorAttr, "FactoryMethod");
                 var allowAddVal = GetNamedArgRaw(collEditorAttr, "AllowAdd");
                 var allowRemoveVal = GetNamedArgRaw(collEditorAttr, "AllowRemove");
@@ -539,7 +536,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
         sb.AppendLine($"                {mainHeader},");
         sb.AppendLine("                directProps,");
         sb.AppendLine("                subSections,");
-        sb.AppendLine($"                {controlFactoryTypeName},");
+        sb.AppendLine($"                {(controlFactoryTypeName != null ? $"\"{controlFactoryTypeName}\"" : "null")},");
         sb.AppendLine($"                {factoryMethod});");
         sb.AppendLine($"            _descriptors[\"{fqn}\"] = descriptor;");
         sb.AppendLine("        }");
@@ -632,6 +629,18 @@ public class AutoSettingGenerator : IIncrementalGenerator
         {
             if (na.Key == key)
                 return na.Value.Value?.ToString();
+        }
+        return null;
+    }
+
+    /// <summary>Gets a named argument value as a Type symbol.</summary>
+    private static INamedTypeSymbol? GetNamedArgType(AttributeData? attr, string key)
+    {
+        if (attr == null) return null;
+        foreach (var na in attr.NamedArguments)
+        {
+            if (na.Key == key && na.Value.Value is INamedTypeSymbol typeSymbol)
+                return typeSymbol;
         }
         return null;
     }

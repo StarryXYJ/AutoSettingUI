@@ -567,7 +567,7 @@ public class UrsaAutoSettingPanel : TemplatedControl
 
         if (!string.IsNullOrEmpty(prop.CustomControlBinding))
         {
-            var controlType = Type.GetType(prop.CustomControlBinding);
+            var controlType = ResolveType(prop.CustomControlBinding);
             if (controlType != null)
             {
                 if (!string.IsNullOrEmpty(prop.CustomControlFactoryMethod))
@@ -581,7 +581,7 @@ public class UrsaAutoSettingPanel : TemplatedControl
                         if (parameters.Length == 0)
                             control = method.Invoke(null, null) as global::Avalonia.Controls.Control;
                         else if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Type))
-                            control = method.Invoke(null, new object[] { prop.PropertyType }) as global::Avalonia.Controls.Control;
+                            control = method.Invoke(null, [prop.PropertyType]) as global::Avalonia.Controls.Control;
                     }
                     else
                     {
@@ -1337,6 +1337,38 @@ public class UrsaAutoSettingPanel : TemplatedControl
                 }
             }
         }
+        return null;
+    }
+
+    /// <summary>
+    /// Resolves a type from its string representation.
+    /// First tries Type.GetType (works with assembly-qualified names),
+    /// then searches all loaded assemblies as a fallback.
+    /// </summary>
+    private static Type? ResolveType(string typeName)
+    {
+        if (string.IsNullOrEmpty(typeName))
+            return null;
+
+        // First, try Type.GetType (works with assembly-qualified names like "Namespace.Type, Assembly")
+        var type = Type.GetType(typeName);
+        if (type != null)
+            return type;
+
+        // If the type name contains a comma, it's already assembly-qualified but failed to resolve
+        // Try to extract just the type name and search in loaded assemblies
+        var typeNamePart = typeName.Contains(',') 
+            ? typeName.Substring(0, typeName.IndexOf(',')).Trim() 
+            : typeName;
+
+        // Search all loaded assemblies
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            type = assembly.GetType(typeNamePart);
+            if (type != null)
+                return type;
+        }
+
         return null;
     }
 
