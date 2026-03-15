@@ -28,6 +28,14 @@ public class AutoSettingGenerator : IIncrementalGenerator
     private const string CommandCanExecuteAttributeName = "CommandCanExecuteAttribute";
     private const string ReadOnlyAttributeName = "ReadOnlyAttribute";
     private const string CollectionEditorAttributeName = "CollectionEditorAttribute";
+    private const string ControlBindingAttributeBaseName = "ControlBindingAttributeBase";
+    private const string NumericUpDownAttributeName = "NumericUpDownAttribute";
+    private const string ColorPickerAttributeName = "ColorPickerAttribute";
+    private const string TimePickerAttributeName = "TimePickerAttribute";
+    private const string DatePickerAttributeName = "DatePickerAttribute";
+    private const string CheckBoxAttributeName = "CheckBoxAttribute";
+    private const string TagInputAttributeName = "TagInputAttribute";
+    private const string IPv4BoxAttributeName = "IPv4BoxAttribute";
 
     // Diagnostic descriptors
     private static readonly DiagnosticDescriptor NonPublicClassWarning = new(
@@ -350,16 +358,69 @@ public class AutoSettingGenerator : IIncrementalGenerator
             }
 
             // ControlBinding
-            var cbAttr = GetAttr(prop, ControlBindingAttributeName);
+            var cbAttr = GetAttr(prop, ControlBindingAttributeName) ?? 
+                         GetAttrInherited(prop, ControlBindingAttributeBaseName);
             string? cbTypeName = null;
             string? cbBindingProp = null;
             string? cbFactoryMethod = null;
+            
             if (cbAttr != null)
             {
                 if (cbAttr.ConstructorArguments.Length > 0 && cbAttr.ConstructorArguments[0].Value is INamedTypeSymbol cbType)
                     cbTypeName = cbType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", "");
+                
                 cbBindingProp = GetNamedArgRaw(cbAttr, "BindingProperty");
                 cbFactoryMethod = GetNamedArgRaw(cbAttr, "FactoryMethod");
+
+                // Special handling for custom attributes that set defaults in constructor
+                var attrName = cbAttr.AttributeClass?.Name;
+                if (attrName == NumericUpDownAttributeName || attrName == "NumericUpDown")
+                {
+                    cbFactoryMethod ??= "CreateNumericUpDown";
+                    cbBindingProp ??= "Value";
+                    if (cbTypeName == null)
+                    {
+                        // Map type based on property type for Ursa / Avalonia
+                        cbTypeName = propTypeFqn switch
+                        {
+                            "int" or "System.Int32" => "Ursa.Controls.NumericIntUpDown",
+                            "uint" or "System.UInt32" => "Ursa.Controls.NumericUIntUpDown",
+                            "double" or "System.Double" => "Ursa.Controls.NumericDoubleUpDown",
+                            "float" or "System.Single" => "Ursa.Controls.NumericFloatUpDown",
+                            "byte" or "System.Byte" => "Ursa.Controls.NumericByteUpDown",
+                            "sbyte" or "System.SByte" => "Ursa.Controls.NumericSByteUpDown",
+                            "short" or "System.Int16" => "Ursa.Controls.NumericShortUpDown",
+                            "ushort" or "System.UInt16" => "Ursa.Controls.NumericUShortUpDown",
+                            "long" or "System.Int64" => "Ursa.Controls.NumericLongUpDown",
+                            "ulong" or "System.UInt64" => "Ursa.Controls.NumericULongUpDown",
+                            _ => "Ursa.Controls.NumericIntUpDown"
+                        };
+                    }
+                }
+                else if (attrName == ColorPickerAttributeName || attrName == "ColorPicker")
+                {
+                    cbBindingProp ??= "Color";
+                }
+                else if (attrName == TimePickerAttributeName || attrName == "TimePicker")
+                {
+                    cbBindingProp ??= "SelectedTime";
+                }
+                else if (attrName == DatePickerAttributeName || attrName == "DatePicker")
+                {
+                    cbBindingProp ??= "SelectedDate";
+                }
+                else if (attrName == CheckBoxAttributeName || attrName == "CheckBox")
+                {
+                    cbBindingProp ??= "IsChecked";
+                }
+                else if (attrName == TagInputAttributeName || attrName == "TagInput")
+                {
+                    cbBindingProp ??= "Tags";
+                }
+                else if (attrName == IPv4BoxAttributeName || attrName == "IPv4Box")
+                {
+                    cbBindingProp ??= "IPAddress";
+                }
             }
 
             // Check if property type is a delegate
@@ -440,6 +501,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
             sb.AppendLine($"                \"{prop.Name}\",");
             sb.AppendLine($"                {displayName},");
             sb.AppendLine($"                \"{propTypeFqn}\",");
+            sb.AppendLine($"                typeof({prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}),");
             sb.AppendLine($"                {(isEnum ? "true" : "false")},");
             sb.AppendLine($"                {(isCollection ? "true" : "false")},");
             sb.AppendLine($"                {(hasRange ? "true" : "false")},");
@@ -523,6 +585,22 @@ public class AutoSettingGenerator : IIncrementalGenerator
             return attrName == name || 
                    attrName == name.Replace("Attribute", "") ||
                    attrFullName == $"AutoSettingUI.Core.Attributes.{name}";
+        });
+    }
+
+    private static AttributeData? GetAttrInherited(ISymbol symbol, string baseName)
+    {
+        return symbol.GetAttributes().FirstOrDefault(a => 
+        {
+            var baseType = a.AttributeClass?.BaseType;
+            while (baseType != null)
+            {
+                if (baseType.Name == baseName || 
+                    baseType.ToDisplayString() == $"AutoSettingUI.Core.Attributes.{baseName}")
+                    return true;
+                baseType = baseType.BaseType;
+            }
+            return false;
         });
     }
 

@@ -1,7 +1,9 @@
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Controls;
 using System.Windows.Media;
 using AutoSettingUI.Core.Attributes;
+using AutoSettingUI.Ursa.Attributes;
 using AutoSettingUI.Wpf.Demo.Controls;
 using ReadOnlyAttribute = AutoSettingUI.Core.Attributes.ReadOnlyAttribute;
 using DescriptionAttribute = AutoSettingUI.Core.Attributes.DescriptionAttribute;
@@ -315,4 +317,63 @@ public enum Theme
     Light,
     Dark,
     System
+}
+/// <summary>
+/// Sample class demonstrating extended controls in WPF.
+/// </summary>
+[SettingUI]
+[MainHeader("Extended UI Controls")]
+public class ExtendedControlsSettings
+{
+    [Title("Background Color")]
+    [ColorPicker]
+    public Color ThemeColor { get; set; } = Colors.DodgerBlue;
+
+    [Title("Release Date")]
+    [DatePicker]
+    public DateTime ReleaseDate { get; set; } = DateTime.Today;
+
+    [Title("Toggle Feature")]
+    [CheckBox]
+    public bool EnableAdvancedFeature { get; set; } = true;
+
+    [Title("Count")]
+    [Range(0, 100)]
+    public int ItemCount { get; set; } = 42;
+}
+
+/// <summary>
+/// Settings class for theme management within the form for WPF.
+/// </summary>
+[SettingUI]
+[MainHeader("Theme Personalization")]
+public class ThemeSettings : INotifyPropertyChanged    
+{
+    private string _selectedTheme = "Light";
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    [Title("Application Theme")]
+    [Description("Change the look and feel of the application")]
+    [ItemsSource(typeof(ThemeSettings), nameof(AvailableThemes))]
+    public string SelectedTheme
+    {
+        get => _selectedTheme;
+        set
+        {
+            if (_selectedTheme != value)
+            {
+                _selectedTheme = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedTheme)));
+            }
+        }
+    }
+
+    public static List<string> AvailableThemes => new()
+    {
+        "Light",
+        "Dark",
+        "Blue",
+        "High Contrast"
+    };
 }

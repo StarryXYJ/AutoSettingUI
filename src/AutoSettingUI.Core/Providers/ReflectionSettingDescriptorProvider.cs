@@ -132,6 +132,7 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
                 prop.Name,
                 titleAttr?.Name ?? prop.Name,
                 prop.PropertyType.FullName ?? prop.PropertyType.Name,
+                prop.PropertyType,
                 prop.PropertyType.IsEnum,
                 isCollection,
                 rangeAttr is not null,

@@ -54,6 +54,34 @@ public class WpfControlFactory
         // Check for custom control binding on property (highest priority)
         if (!string.IsNullOrEmpty(prop.CustomControlBinding))
         {
+            var attrName = prop.CustomControlBinding.Split('.').Last();
+            if (attrName == "CheckBoxAttribute" || attrName == "CheckBox")
+            {
+                var control = CreateCheckBoxControl(prop, target);
+                if (control is FrameworkElement fe) ApplyAttributes(fe, prop, target);
+                return control;
+            }
+            if (attrName == "ColorPickerAttribute" || attrName == "ColorPicker")
+            {
+                // WPF doesn't have ColorPicker, use TextBox fallback for now or custom implementation
+                var control = CreateTextBox(prop, target);
+                if (control is FrameworkElement fe) ApplyAttributes(fe, prop, target);
+                return control;
+            }
+            if (attrName == "TimePickerAttribute" || attrName == "TimePicker")
+            {
+                // WPF doesn't have TimePicker, use DatePicker as closest or TextBox
+                var control = CreateDateTimeControl(prop, target);
+                if (control is FrameworkElement fe) ApplyAttributes(fe, prop, target);
+                return control;
+            }
+            if (attrName == "DatePickerAttribute" || attrName == "DatePicker")
+            {
+                var control = CreateDateTimeControl(prop, target);
+                if (control is FrameworkElement fe) ApplyAttributes(fe, prop, target);
+                return control;
+            }
+
             return CreateCustomControl(prop, target, prop.CustomControlBinding, prop.CustomControlFactoryMethod);
         }
 
@@ -87,7 +115,8 @@ public class WpfControlFactory
 
         if (typeName == "system.boolean" || typeName == "bool")
         {
-            var control = CreateBooleanControl(prop, target);
+            // Use ToggleButton as default for bool in WPF as requested
+            var control = CreateToggleButtonControl(prop, target);
             if (control is FrameworkElement fe) ApplyAttributes(fe, prop, target);
             return control;
         }
@@ -123,10 +152,39 @@ public class WpfControlFactory
 
     private UIElement CreateBooleanControl(PropertyDescriptor prop, object target)
     {
+        return CreateCheckBoxControl(prop, target);
+    }
+
+    private UIElement CreateToggleButtonControl(PropertyDescriptor prop, object target)
+    {
+        var isReadOnly = IsEffectivelyReadOnly(prop, target);
+        var toggleButton = new System.Windows.Controls.Primitives.ToggleButton
+        {
+            VerticalAlignment = VerticalAlignment.Center,
+            Content = prop.DisplayName,
+            IsChecked = (bool?)GetValue(target, prop.PropertyName) ?? false,
+            IsEnabled = !isReadOnly,
+            Padding = new Thickness(10, 5, 10, 5)
+        };
+
+        toggleButton.Checked += (s, e) => SetValue(target, prop.PropertyName, true);
+        toggleButton.Unchecked += (s, e) => SetValue(target, prop.PropertyName, false);
+
+        if (prop.IsReadOnlyDynamic && !string.IsNullOrEmpty(prop.ReadOnlyMethodName))
+        {
+            ReadOnlyControlCreated?.Invoke(toggleButton, () => IsEffectivelyReadOnly(prop, target));
+        }
+
+        return toggleButton;
+    }
+
+    private UIElement CreateCheckBoxControl(PropertyDescriptor prop, object target)
+    {
         var isReadOnly = IsEffectivelyReadOnly(prop, target);
         var checkBox = new CheckBox 
         { 
             VerticalAlignment = VerticalAlignment.Center,
+            Content = prop.DisplayName,
             IsChecked = (bool?)GetValue(target, prop.PropertyName) ?? false,
             IsEnabled = !isReadOnly
         };
@@ -454,30 +512,27 @@ public class WpfControlFactory
     private UIElement CreateDateTimeControl(PropertyDescriptor prop, object target)
     {
         var isReadOnly = IsEffectivelyReadOnly(prop, target);
-        // WPF doesn't have a built-in DateTimePicker, use TextBox as fallback
-        var value = GetValue(target, prop.PropertyName);
-        var textBox = new TextBox
+        var datePicker = new DatePicker
         {
-            Text = value?.ToString() ?? DateTime.Now.ToString(),
             VerticalAlignment = VerticalAlignment.Center,
-            IsReadOnly = isReadOnly
+            SelectedDate = (DateTime?)GetValue(target, prop.PropertyName),
+            IsEnabled = !isReadOnly
         };
 
-        textBox.LostFocus += (s, e) =>
+        datePicker.SelectedDateChanged += (s, e) =>
         {
-            if (DateTime.TryParse(textBox.Text, out var date))
+            if (datePicker.SelectedDate.HasValue)
             {
-                SetValue(target, prop.PropertyName, date);
+                SetValue(target, prop.PropertyName, datePicker.SelectedDate.Value);
             }
         };
 
-        // Track dynamic ReadOnly controls for refresh
         if (prop.IsReadOnlyDynamic && !string.IsNullOrEmpty(prop.ReadOnlyMethodName))
         {
-            ReadOnlyControlCreated?.Invoke(textBox, () => IsEffectivelyReadOnly(prop, target));
+            ReadOnlyControlCreated?.Invoke(datePicker, () => IsEffectivelyReadOnly(prop, target));
         }
 
-        return textBox;
+        return datePicker;
     }
 
     private UIElement CreateCustomControl(PropertyDescriptor prop, object target, string controlTypeName, string? factoryMethodName)
@@ -493,7 +548,11 @@ public class WpfControlFactory
             var method = controlType.GetMethod(factoryMethodName, BindingFlags.Static | BindingFlags.Public);
             if (method != null)
             {
-                control = method.Invoke(null, null) as UIElement;
+                var parameters = method.GetParameters();
+                if (parameters.Length == 0)
+                    control = method.Invoke(null, null) as UIElement;
+                else if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Type))
+                    control = method.Invoke(null, new object[] { prop.PropertyType }) as UIElement;
             }
             else
             {
@@ -502,7 +561,11 @@ public class WpfControlFactory
                 method = targetType.GetMethod(factoryMethodName, BindingFlags.Static | BindingFlags.Public);
                 if (method != null)
                 {
-                    control = method.Invoke(null, null) as UIElement;
+                    var parameters = method.GetParameters();
+                    if (parameters.Length == 0)
+                        control = method.Invoke(null, null) as UIElement;
+                    else if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Type))
+                        control = method.Invoke(null, new object[] { prop.PropertyType }) as UIElement;
                 }
                 else
                 {
@@ -510,7 +573,11 @@ public class WpfControlFactory
                     method = targetType.GetMethod(factoryMethodName, BindingFlags.Instance | BindingFlags.Public);
                     if (method != null)
                     {
-                        control = method.Invoke(target, null) as UIElement;
+                        var parameters = method.GetParameters();
+                        if (parameters.Length == 0)
+                            control = method.Invoke(target, null) as UIElement;
+                        else if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Type))
+                            control = method.Invoke(target, new object[] { prop.PropertyType }) as UIElement;
                     }
                 }
             }

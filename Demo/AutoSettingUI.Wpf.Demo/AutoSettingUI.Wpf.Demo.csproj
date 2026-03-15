@@ -13,6 +13,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\src\Extensions\AutoSettingUI.Ursa\AutoSettingUI.Ursa.csproj" />
         <ProjectReference Include="..\..\src\Extensions\AutoSettingUI.WPF\AutoSettingUI.WPF.csproj" />
     </ItemGroup>
 

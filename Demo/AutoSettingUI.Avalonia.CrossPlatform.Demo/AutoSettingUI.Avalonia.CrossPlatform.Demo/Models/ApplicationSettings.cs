@@ -2,10 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using AutoSettingUI.Core.Attributes;
+using AutoSettingUI.Avalonia.Attributes;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Styling;
 using DescriptionAttribute = AutoSettingUI.Core.Attributes.DescriptionAttribute;
 using ReadOnlyAttribute = AutoSettingUI.Core.Attributes.ReadOnlyAttribute;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AutoSettingUI.Avalonia.CrossPlatform.Demo.Models;
 
@@ -308,4 +311,90 @@ public enum Theme
     Light,
     Dark,
     System
+}
+
+/// <summary>
+/// Sample class demonstrating extended controls like ColorPicker, DatePicker, etc.
+/// </summary>
+[SettingUI]
+[MainHeader("Extended UI Controls")]
+public class ExtendedControlsSettings
+{
+    [Title("Background Color")]
+    [ColorPicker]
+    public Color ThemeColor { get; set; } = Colors.DodgerBlue;
+
+    [Title("Release Date")]
+    [DatePicker]
+    public DateTime ReleaseDate { get; set; } = DateTime.Today;
+
+    [Title("Preferred Time")]
+    [TimePicker]
+    public TimeSpan PreferredTime { get; set; } = DateTime.Now.TimeOfDay;
+
+    [Title("Toggle Feature")]
+    [CheckBox]
+    public bool EnableAdvancedFeature { get; set; } = true;
+
+    [Title("Count (Step 10)")]
+    [NumericUpDown(Minimum = 0, Maximum = 100, Increment = 10)]
+    public int ItemCount { get; set; } = 40;
+}
+
+/// <summary>
+/// Theme enumeration for application theming.
+/// </summary>
+public enum AppTheme
+{
+    Default,
+    Light,
+    Dark
+}
+
+/// <summary>
+/// Settings class for theme management within the form.
+/// </summary>
+[SettingUI]
+[MainHeader("Theme Personalization")]
+public partial class ThemeSettings : ObservableObject
+{
+    private AppTheme _selectedTheme = AppTheme.Default;
+
+    public event EventHandler<AppTheme>? ThemeChanged;
+
+    [Title("Application Theme")]
+    [Description("Change the look and feel of the application")]
+    [ItemsSource(typeof(ThemeSettings), nameof(AvailableThemes))]
+    public AppTheme SelectedTheme
+    {
+        get => _selectedTheme;
+        set
+        {
+            if (SetProperty(ref _selectedTheme, value))
+            {
+                ApplyTheme(value);
+                ThemeChanged?.Invoke(this, value);
+            }
+        }
+    }
+
+    public static List<AppTheme> AvailableThemes => new()
+    {
+        AppTheme.Default,
+        AppTheme.Light,
+        AppTheme.Dark
+    };
+
+    private void ApplyTheme(AppTheme theme)
+    {
+        if (global::Avalonia.Application.Current is not null)
+        {
+            global::Avalonia.Application.Current.RequestedThemeVariant = theme switch
+            {
+                AppTheme.Light => ThemeVariant.Light,
+                AppTheme.Dark => ThemeVariant.Dark,
+                _ => ThemeVariant.Default
+            };
+        }
+    }
 }

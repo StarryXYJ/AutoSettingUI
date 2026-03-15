@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+
 namespace AutoSettingUI.Core.Models;
 
 /// <summary>
@@ -19,6 +22,11 @@ public sealed class PropertyDescriptor
     /// Gets the full type name of the property.
     /// </summary>
     public string PropertyTypeName { get; }
+
+    /// <summary>
+    /// Gets the actual type of the property.
+    /// </summary>
+    public Type PropertyType { get; }
 
     /// <summary>
     /// Gets a value indicating whether the property type is an enum.
@@ -138,6 +146,7 @@ public sealed class PropertyDescriptor
         string propertyName,
         string displayName,
         string propertyTypeName,
+        Type propertyType,
         bool isEnum,
         bool isCollection,
         bool hasRange,
@@ -163,6 +172,7 @@ public sealed class PropertyDescriptor
         PropertyName = propertyName;
         DisplayName = displayName;
         PropertyTypeName = propertyTypeName;
+        PropertyType = propertyType;
         IsEnum = isEnum;
         IsCollection = isCollection;
         HasRange = hasRange;

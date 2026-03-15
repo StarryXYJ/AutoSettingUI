@@ -570,16 +570,40 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
                             System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
                         if (method != null)
                         {
-                            control = method.Invoke(null, null) as global::Avalonia.Controls.Control;
+                            // Check for parameterless or single Type parameter
+                            var parameters = method.GetParameters();
+                            if (parameters.Length == 0)
+                            {
+                                control = method.Invoke(null, null) as global::Avalonia.Controls.Control;
+                            }
+                            else if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Type))
+                            {
+                                control = method.Invoke(null, new object[] { prop.PropertyType }) as global::Avalonia.Controls.Control;
+                            }
                         }
                         else
                         {
-                            // Try instance method
+                            // Try instance method on target
                             method = targetType.GetMethod(prop.CustomControlFactoryMethod,
                                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
                             if (method != null)
                             {
-                                control = method.Invoke(target, null) as global::Avalonia.Controls.Control;
+                                // Check for parameterless or single Type parameter
+                                var parameters = method.GetParameters();
+                                if (parameters.Length == 0)
+                                {
+                                    control = method.Invoke(target, null) as global::Avalonia.Controls.Control;
+                                }
+                                else if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Type))
+                                {
+                                    control = method.Invoke(target, new object[] { prop.PropertyType }) as global::Avalonia.Controls.Control;
+                                }
+                            }
+                            else
+                            {
+                                // Try to find the factory method on an attribute type
+                                // Look for an attribute that has this factory method
+                                control = TryCreateControlFromAttribute(prop, target);
                             }
                         }
                     }
@@ -599,6 +623,18 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
                     }
                 }
             }
+        }
+
+        // If still no control but there's a factory method, try attributes anyway (case where controlType was null)
+        if (control == null && !string.IsNullOrEmpty(prop.CustomControlFactoryMethod))
+        {
+            control = TryCreateControlFromAttribute(prop, target);
+        }
+
+        if (control == null)
+        {
+            // Try extended controls from core attributes
+            control = CreateExtendedControl(prop, target);
         }
 
         if (control == null)
@@ -669,7 +705,11 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
             }
             else
             {
-                control = CreateTextBoxWithFeatures(prop, target);
+                // Check for extended controls based on attributes
+                control = CreateExtendedControl(prop, target);
+                
+                if (control == null)
+                    control = CreateTextBoxWithFeatures(prop, target);
             }
         }
 
@@ -1262,6 +1302,90 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
                 return type;
         }
 
+        return null;
+    }
+
+    private global::Avalonia.Controls.Control? CreateExtendedControl(Core.Models.PropertyDescriptor prop, object target)
+    {
+        var attrName = prop.CustomControlBinding?.Split('.').Last();
+        if (string.IsNullOrEmpty(attrName)) return null;
+
+        var isReadOnly = IsEffectivelyReadOnly(prop, target);
+
+        if (attrName == "ColorPickerAttribute" || attrName == "ColorPicker")
+        {
+            var picker = new global::Avalonia.Controls.ColorPicker
+            {
+                HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
+                IsEnabled = !isReadOnly
+            };
+            picker.Bind(global::Avalonia.Controls.ColorPicker.ColorProperty, new Binding(prop.PropertyName) { Source = target, Mode = BindingMode.TwoWay });
+            return picker;
+        }
+
+        if (attrName == "TimePickerAttribute" || attrName == "TimePicker")
+        {
+            var picker = new global::Avalonia.Controls.TimePicker
+            {
+                HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
+                IsEnabled = !isReadOnly
+            };
+            picker.Bind(global::Avalonia.Controls.TimePicker.SelectedTimeProperty, new Binding(prop.PropertyName) { Source = target, Mode = BindingMode.TwoWay });
+            return picker;
+        }
+
+        if (attrName == "DatePickerAttribute" || attrName == "DatePicker")
+        {
+            var picker = new global::Avalonia.Controls.DatePicker
+            {
+                HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
+                IsEnabled = !isReadOnly
+            };
+            picker.Bind(global::Avalonia.Controls.DatePicker.SelectedDateProperty, new Binding(prop.PropertyName) { Source = target, Mode = BindingMode.TwoWay });
+            return picker;
+        }
+
+        if (attrName == "CheckBoxAttribute" || attrName == "CheckBox")
+        {
+            var checkBox = new CheckBox
+            {
+                Content = prop.DisplayName,
+                IsEnabled = !isReadOnly
+            };
+            checkBox.Bind(CheckBox.IsCheckedProperty, new Binding(prop.PropertyName) { Source = target, Mode = BindingMode.TwoWay });
+            return checkBox;
+        }
+
+        return null;
+    }
+
+    private global::Avalonia.Controls.Control? TryCreateControlFromAttribute(Core.Models.PropertyDescriptor prop, object target)
+    {
+        var targetType = target.GetType();
+        var propertyInfo = targetType.GetProperty(prop.PropertyName);
+        if (propertyInfo == null) return null;
+
+        var attributes = propertyInfo.GetCustomAttributes(true);
+        foreach (var attr in attributes)
+        {
+            if (string.IsNullOrEmpty(prop.CustomControlFactoryMethod)) continue;
+
+            var attrType = attr.GetType();
+            // Try to find factory method with property type parameter
+            var method = attrType.GetMethod(prop.CustomControlFactoryMethod, BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance);
+            if (method != null)
+            {
+                var parameters = method.GetParameters();
+                if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Type))
+                {
+                    return method.Invoke(attr, new object[] { propertyInfo.PropertyType }) as global::Avalonia.Controls.Control;
+                }
+                else if (parameters.Length == 0)
+                {
+                    return method.Invoke(attr, null) as global::Avalonia.Controls.Control;
+                }
+            }
+        }
         return null;
     }
 

@@ -2,6 +2,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AutoSettingUI.Avalonia.CrossPlatform.Demo.Models;
+using Avalonia;
+using Avalonia.Styling;
 
 namespace AutoSettingUI.Avalonia.CrossPlatform.Demo.ViewModels;
 
@@ -22,6 +24,12 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isCustomView = false;
 
+    [ObservableProperty]
+    private ExtendedControlsSettings _extendedSettings = new();
+
+    [ObservableProperty]
+    private ThemeSettings _themeSettings = new();
+
     public string ViewModeText => IsCustomView ? "Switch to Default View" : "Switch to Custom View";
 
     partial void OnIsCustomViewChanged(bool value)
@@ -32,9 +40,31 @@ public partial class MainViewModel : ViewModelBase
     public MainViewModel()
     {
         // Initialize with default settings
+        Targets.Add(ThemeSettings);
+        Targets.Add(ExtendedSettings);
         Targets.Add(new ApplicationSettings());
         Targets.Add(new UserPreferences());
         Targets.Add(new NetworkSettings());
+
+        // Subscribe to theme changes
+        ThemeSettings.PropertyChanged += OnThemeSettingsChanged;
+    }
+
+    private void OnThemeSettingsChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ThemeSettings.SelectedTheme))
+        {
+            var app = Application.Current;
+            if (app != null)
+            {
+                app.RequestedThemeVariant =  ThemeSettings.SelectedTheme switch
+                {
+                    AppTheme.Light => ThemeVariant.Light,
+                    AppTheme.Dark => ThemeVariant.Dark,
+                    _ => ThemeVariant.Default
+                };
+            }
+        }
     }
 
     [RelayCommand]

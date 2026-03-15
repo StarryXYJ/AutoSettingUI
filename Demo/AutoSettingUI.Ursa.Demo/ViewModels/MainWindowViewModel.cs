@@ -1,19 +1,9 @@
-﻿using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using Avalonia;
-using Avalonia.Styling;
+﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AutoSettingUI.Ursa.Demo.Models;
-using Ursa.Themes.Semi;
 
 namespace AutoSettingUI.Ursa.Demo.ViewModels;
-
-/// <summary>
-/// Represents a theme option with display name and ThemeVariant.
-/// </summary>
-public record ThemeInfo(string Name, ThemeVariant Theme);
 
 public partial class MainWindowViewModel : ViewModelBase
 {
@@ -33,47 +23,33 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _isCustomView = false;
 
     [ObservableProperty]
-    private ThemeInfo _selectedThemeInfo;
+    private ThemeSettings _themeSettings = new();
+
+    [ObservableProperty]
+    private ExtendedControlsSettings _extendedSettings = new();
 
     public string ViewModeText => IsCustomView ? "Switch to Default View" : "Switch to Custom View";
-
-    // Available themes for the ComboBox
-    public List<ThemeInfo> AvailableThemes { get; } = new()
-    {
-        new ThemeInfo("Light", ThemeVariant.Light),
-        new ThemeInfo("Dark", ThemeVariant.Dark),
-        new ThemeInfo("Dusk", SemiTheme.Dusk),
-        new ThemeInfo("NightSky", SemiTheme.NightSky),
-        new ThemeInfo("Aquatic", SemiTheme.Aquatic),
-        new ThemeInfo("Desert", SemiTheme.Desert),
-        new ThemeInfo("Default (System)", ThemeVariant.Default)
-    };
 
     partial void OnIsCustomViewChanged(bool value)
     {
         OnPropertyChanged(nameof(ViewModeText));
     }
 
-    partial void OnSelectedThemeInfoChanged(ThemeInfo value)
-    {
-        // Apply the theme to the application
-        var app = Application.Current;
-        if (app is null) return;
-
-        app.RequestedThemeVariant = value.Theme;
-
-        
-    }
-
     public MainWindowViewModel()
     {
         // Initialize with default settings
+        Targets.Add(ThemeSettings);
+        Targets.Add(ExtendedSettings);
         Targets.Add(new ApplicationSettings());
         Targets.Add(new UserPreferences());
         Targets.Add(new NetworkSettings());
 
-        // Set default theme (Dark)
-        SelectedThemeInfo = AvailableThemes[1];
+        // Subscribe to theme changes - the theme is now applied directly in ThemeSettings.ApplyTheme
+        ThemeSettings.ThemeChanged += (s, theme) =>
+        {
+            // Theme is already applied in ThemeSettings.ApplyTheme
+            // This event can be used for additional handling if needed
+        };
     }
 
     [RelayCommand]

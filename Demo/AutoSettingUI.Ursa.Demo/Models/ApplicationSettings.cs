@@ -1,13 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Threading.Tasks;
+using System.Net;
 using AutoSettingUI.Core.Attributes;
+using AutoSettingUI.Ursa.Attributes;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Ursa.Controls;
 using DescriptionAttribute = AutoSettingUI.Core.Attributes.DescriptionAttribute;
 using ReadOnlyAttribute = AutoSettingUI.Core.Attributes.ReadOnlyAttribute;
+using Avalonia.Styling;
+using Ursa.Themes.Semi;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AutoSettingUI.Ursa.Demo.Models;
 
@@ -78,7 +82,7 @@ public class UserPreferences : INotifyPropertyChanged
     public string Language { get; set; } = "English";
 
     [Title("Font Size")]
-    [Range(8, 32)]
+    [NumericUpDown(Minimum = 8, Maximum = 32, Increment = 1)]
     public int FontSize { get; set; } = 14;
 
     [SubHeader("Actions (Delegate Properties)")]
@@ -310,4 +314,109 @@ public enum Theme
     Light,
     Dark,
     System
+}
+/// <summary>
+/// Sample class demonstrating extended controls like ColorPicker, IPv4Box, etc.
+/// </summary>
+[SettingUI]
+[MainHeader("Extended UI Controls")]
+public class ExtendedControlsSettings
+{
+    [Title("Background Color")]
+    [ColorPicker]
+    public Color ThemeColor { get; set; } = Colors.DodgerBlue;
+
+    [Title("Server IP Address")]
+    [IPv4Box]
+    public IPAddress ServerIP { get; set; } = IPAddress.Parse("192.168.1.1");
+
+    [Title("Selection Tags")]
+    [TagInput]
+    public List<string> ProjectTags { get; set; } = new() { "Ursa", "Avalonia", "AutoSettingUI" };
+
+    [Title("Release Date")]
+    [DatePicker]
+    public DateTime ReleaseDate { get; set; } = DateTime.Today;
+
+    [Title("Preferred Time")]
+    [TimePicker]
+    public TimeSpan PreferredTime { get; set; } = DateTime.Now.TimeOfDay;
+
+    [Title("Toggle Feature")]
+    [CheckBox]
+    public bool EnableAdvancedFeature { get; set; } = true;
+
+    [Title("Count (Step 5)")]
+    [NumericUpDown(Minimum = 0, Maximum = 100, Increment = 5)]
+    public int ItemCount { get; set; } = 40;
+}
+
+/// <summary>
+/// Theme enumeration for application theming.
+/// </summary>
+public enum AppTheme
+{
+    Default,
+    Light,
+    Dark,
+    Dusk,
+    NightSky,
+    Aquatic,
+    Desert
+}
+
+/// <summary>
+/// Settings class for theme management within the form.
+/// </summary>
+[SettingUI]
+[MainHeader("Theme Personalization")]
+public partial class ThemeSettings : ObservableObject
+{
+    private AppTheme _selectedTheme = AppTheme.Default;
+
+    public event EventHandler<AppTheme>? ThemeChanged;
+
+    [Title("Application Theme")]
+    [Description("Change the look and feel of the application")]
+    [ItemsSource(typeof(ThemeSettings), nameof(AvailableThemes))]
+    public AppTheme SelectedTheme
+    {
+        get => _selectedTheme;
+        set
+        {
+            if (SetProperty(ref _selectedTheme, value))
+            {
+                ApplyTheme(value);
+                ThemeChanged?.Invoke(this, value);
+            }
+        }
+    }
+
+    public static List<AppTheme> AvailableThemes => new()
+    {
+        AppTheme.Default,
+        AppTheme.Light,
+        AppTheme.Dark,
+        AppTheme.Dusk,
+        AppTheme.NightSky,
+        AppTheme.Aquatic,
+        AppTheme.Desert
+    };
+
+    private void ApplyTheme(AppTheme theme)
+    {
+        if (Avalonia.Application.Current is not null)
+        {
+            Avalonia.Application.Current.RequestedThemeVariant = theme switch
+            {
+                AppTheme.Light => ThemeVariant.Light,
+                AppTheme.Dark => ThemeVariant.Dark,
+                AppTheme.Dusk => global::Ursa.Themes.Semi.SemiTheme.Dusk,
+                AppTheme.NightSky => global::Ursa.Themes.Semi.SemiTheme.NightSky,
+                AppTheme.Aquatic => global::Ursa.Themes.Semi.SemiTheme.Aquatic,
+                AppTheme.Desert => global::Ursa.Themes.Semi.SemiTheme.Desert,
+                _ => ThemeVariant.Default
+            };
+        }
+    }
 }

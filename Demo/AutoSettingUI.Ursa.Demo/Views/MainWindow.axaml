@@ -25,20 +25,7 @@
                            FontSize="20"
                            FontWeight="Bold"
                            VerticalAlignment="Center"/>
-                <!-- Theme Selector -->
-                <ComboBox Grid.Column="1"
-                          Width="140"
-                          Margin="10,0,5,0"
-                          VerticalAlignment="Center"
-                          ItemsSource="{Binding AvailableThemes}"
-                          SelectedItem="{Binding SelectedThemeInfo, Mode=TwoWay}"
-                          PlaceholderText="Theme">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate x:DataType="vm:ThemeInfo">
-                            <TextBlock Text="{Binding Name}"/>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                <!-- Navigation Toggle -->
                 <Button Grid.Column="2"
                         Command="{Binding ToggleNavigationCommand}"
                         Margin="5,0,5,0"

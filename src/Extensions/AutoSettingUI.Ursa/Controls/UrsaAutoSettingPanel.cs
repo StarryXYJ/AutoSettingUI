@@ -577,7 +577,11 @@ public class UrsaAutoSettingPanel : TemplatedControl
                         System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
                     if (method != null)
                     {
-                        control = method.Invoke(null, null) as global::Avalonia.Controls.Control;
+                        var parameters = method.GetParameters();
+                        if (parameters.Length == 0)
+                            control = method.Invoke(null, null) as global::Avalonia.Controls.Control;
+                        else if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Type))
+                            control = method.Invoke(null, new object[] { prop.PropertyType }) as global::Avalonia.Controls.Control;
                     }
                     else
                     {
@@ -587,7 +591,11 @@ public class UrsaAutoSettingPanel : TemplatedControl
                             System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
                         if (method != null)
                         {
-                            control = method.Invoke(null, null) as global::Avalonia.Controls.Control;
+                            var parameters = method.GetParameters();
+                            if (parameters.Length == 0)
+                                control = method.Invoke(null, null) as global::Avalonia.Controls.Control;
+                            else if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Type))
+                                control = method.Invoke(null, [prop.PropertyType]) as global::Avalonia.Controls.Control;
                         }
                         else
                         {
@@ -596,7 +604,16 @@ public class UrsaAutoSettingPanel : TemplatedControl
                                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
                             if (method != null)
                             {
-                                control = method.Invoke(target, null) as global::Avalonia.Controls.Control;
+                                var parameters = method.GetParameters();
+                                if (parameters.Length == 0)
+                                    control = method.Invoke(target, null) as global::Avalonia.Controls.Control;
+                                else if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Type))
+                                    control = method.Invoke(target, new object[] { prop.PropertyType }) as global::Avalonia.Controls.Control;
+                            }
+                            else
+                            {
+                                // Try to find the factory method on an attribute type
+                                control = TryCreateControlFromAttribute(prop, target);
                             }
                         }
                     }
@@ -614,6 +631,14 @@ public class UrsaAutoSettingPanel : TemplatedControl
                 }
             }
         }
+
+        // If still no control but there's a factory method, try attributes anyway (case where controlType was null)
+        if (control == null && !string.IsNullOrEmpty(prop.CustomControlFactoryMethod))
+        {
+            control = TryCreateControlFromAttribute(prop, target);
+        }
+
+
 
         if (control == null)
         {
@@ -683,7 +708,10 @@ public class UrsaAutoSettingPanel : TemplatedControl
             }
             else
             {
-                control = CreateTextBoxWithFeatures(prop, target);
+
+                
+                if (control == null)
+                    control = CreateTextBoxWithFeatures(prop, target);
             }
         }
 
@@ -1277,6 +1305,38 @@ public class UrsaAutoSettingPanel : TemplatedControl
                 return type;
         }
 
+        return null;
+    }
+
+    
+
+    private global::Avalonia.Controls.Control? TryCreateControlFromAttribute(Core.Models.PropertyDescriptor prop, object target)
+    {
+        var targetType = target.GetType();
+        var propertyInfo = targetType.GetProperty(prop.PropertyName);
+        if (propertyInfo == null) return null;
+
+        var attributes = propertyInfo.GetCustomAttributes(true);
+        foreach (var attr in attributes)
+        {
+            if (string.IsNullOrEmpty(prop.CustomControlFactoryMethod)) continue;
+
+            var attrType = attr.GetType();
+            // Try to find factory method with property type parameter
+            var method = attrType.GetMethod(prop.CustomControlFactoryMethod, BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance);
+            if (method != null)
+            {
+                var parameters = method.GetParameters();
+                if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Type))
+                {
+                    return method.Invoke(attr, [propertyInfo.PropertyType]) as global::Avalonia.Controls.Control;
+                }
+                else if (parameters.Length == 0)
+                {
+                    return method.Invoke(attr, null) as global::Avalonia.Controls.Control;
+                }
+            }
+        }
         return null;
     }
 
