@@ -4,6 +4,7 @@ using System.Windows.Media;
 using AutoSettingUI.Core.Attributes;
 using AutoSettingUI.Wpf.Demo.Controls;
 using ReadOnlyAttribute = AutoSettingUI.Core.Attributes.ReadOnlyAttribute;
+using DescriptionAttribute = AutoSettingUI.Core.Attributes.DescriptionAttribute;
 
 namespace AutoSettingUI.Wpf.Demo.Models;
 
@@ -121,6 +122,11 @@ public class UserPreferences : INotifyPropertyChanged
     [Title("Notification Sound")] public bool NotificationSound { get; set; } = true;
 
     [Title("Email Address")]
+    [Description("Your email address for notifications and account recovery")]
+    [Placeholder("example@domain.com")]
+    [Validation(Required = true, ErrorMessage = "Email is required")]
+    [Validation(Pattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$", ErrorMessage = "Invalid email format")]
+    [Layout(Width = 250, HorizontalAlignment = "Stretch")]
     public string Email
     {
         get => _email;
@@ -133,6 +139,45 @@ public class UserPreferences : INotifyPropertyChanged
             }
         }
     }
+
+    [SubHeader("Layout & Validation Examples")]
+    
+    // Username: Required, length validation, custom layout
+    [Title("Username")]
+    [Description("Your display name (3-20 characters)")]
+    [Placeholder("Enter username")]
+    [Validation(Required = true, MinLength = 3, MaxLength = 20, ErrorMessage = "Username must be 3-20 characters")]
+    [Layout(Width = 200, Height = 28, Margin = "0,2,0,2")]
+    public string Username { get; set; } = "";
+
+    // Password: Custom mask character
+    [Title("Password")]
+    [Password]  // Default mask character '•'
+    [Validation(Required = true, MinLength = 6, ErrorMessage = "Password must be at least 6 characters")]
+    [Layout(Width = 200)]
+    public string Password { get; set; } = "";
+
+    // API Key: Different mask character
+    [Title("API Key")]
+    [Password('*')]  // Custom mask character '*'
+    [Placeholder("Enter API key")]
+    [Layout(Width = 300)]
+    public string ApiKey { get; set; } = "";
+
+    // Age: Numeric range validation
+    [Title("Age")]
+    [Description("Your age in years")]
+    [Validation(MinValue = 0, MaxValue = 150, ErrorMessage = "Age must be between 0 and 150")]
+    [Layout(Width = 80)]
+    public int Age { get; set; } = 25;
+
+    // Website: Regex pattern validation
+    [Title("Website")]
+    [Description("Your personal website URL")]
+    [Placeholder("https://example.com")]
+    [Validation(Pattern = @"^https?://.*", ErrorMessage = "URL must start with http:// or https://")]
+    [Layout(MinWidth = 200, MaxWidth = 400, HorizontalAlignment = "Stretch")]
+    public string Website { get; set; } = "";
 
     [SubHeader("Collection Examples")]
     [Title("Tags (Default Collection Editor)")]
@@ -218,9 +263,6 @@ public class NetworkSettings
     [SubHeader("Authentication")]
     [Title("Username")]
     public string Username { get; set; } = "";
-
-    [Title("Password")]
-    public string Password { get; set; } = "";
 
     [Title("Timeout (seconds)")]
     [Range(1, 300)]

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Reflection;
 using Avalonia;
 using Avalonia.Controls;
@@ -12,9 +13,11 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.VisualTree;
+using AutoSettingUI.Core.Attributes;
 using AutoSettingUI.Core.Interfaces;
 using AutoSettingUI.Core.Models;
 using AutoSettingUI.Core.Providers;
+using AutoSettingUI.Avalonia;
 
 namespace AutoSettingUI.Avalonia.Controls;
 
@@ -32,6 +35,8 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
     private readonly Dictionary<string, global::Avalonia.Controls.Control> _sectionControlMap = new();
     private IEnumerable? _previousTargets;
     private readonly List<DelegateCommand> _commands = new();
+    private readonly List<INotifyPropertyChanged> _subscribedTargets = new();
+    private readonly List<(global::Avalonia.Controls.Control Control, Func<bool> IsReadOnlyGetter)> _readOnlyControls = new();
 
     #region Styled Properties
 
@@ -151,8 +156,8 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
     }
 
     /// <summary>
-    /// Refreshes all dynamic states (CanExecute for commands).
-    /// Call this method when underlying data changes that affects CanExecute conditions.
+    /// Refreshes all dynamic states (CanExecute for commands, dynamic ReadOnly states).
+    /// Call this method when underlying data changes that affects CanExecute or ReadOnly conditions.
     /// </summary>
     public void Refresh()
     {
@@ -161,6 +166,46 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
         {
             command.RaiseCanExecuteChanged();
         }
+
+        // Update IsEnabled/IsReadOnly state for controls with dynamic conditions
+        foreach (var (control, isReadOnlyGetter) in _readOnlyControls)
+        {
+            var isReadOnly = isReadOnlyGetter();
+            if (control is TextBox textBox)
+            {
+                textBox.IsReadOnly = isReadOnly;
+            }
+            else if (control is global::Avalonia.Controls.Primitives.ToggleButton toggleButton)
+            {
+                toggleButton.IsEnabled = !isReadOnly;
+            }
+            else if (control is ComboBox comboBox)
+            {
+                comboBox.IsEnabled = !isReadOnly;
+            }
+            else if (control is Slider slider)
+            {
+                slider.IsEnabled = !isReadOnly;
+            }
+            else if (control is Button button)
+            {
+                button.IsEnabled = !isReadOnly;
+            }
+            else
+            {
+                // Generic fallback
+                control.IsEnabled = !isReadOnly;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Handles PropertyChanged events from target objects to refresh commands.
+    /// </summary>
+    private void OnTargetPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        // Refresh all commands when any property changes
+        Refresh();
     }
 
     protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
@@ -343,11 +388,19 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
     {
         if (_formScrollViewer is null || Targets is null) return;
 
+        // Unsubscribe from old targets
+        foreach (var target in _subscribedTargets)
+        {
+            target.PropertyChanged -= OnTargetPropertyChanged;
+        }
+        _subscribedTargets.Clear();
+
         // Clear previous data
         _formSections.Clear();
         _navigationNodes.Clear();
         _sectionControlMap.Clear();
         _commands.Clear();
+        _readOnlyControls.Clear();
 
         var formPanel = new StackPanel
         {
@@ -373,6 +426,13 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
         foreach (var target in Targets)
         {
             if (target is null) continue;
+
+            // Subscribe to PropertyChanged events for command refresh
+            if (target is INotifyPropertyChanged notifyTarget)
+            {
+                notifyTarget.PropertyChanged += OnTargetPropertyChanged;
+                _subscribedTargets.Add(notifyTarget);
+            }
 
             var descriptor = _effectiveProvider?.GetDescriptor(target.GetType());
             if (descriptor is null) continue;
@@ -450,21 +510,9 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
     {
         var textBlock = new TextBlock 
         { 
-            Text = title, 
-            FontWeight = isMainHeader ? FontWeight.SemiBold : FontWeight.Normal,
-            Margin = isMainHeader ? new Thickness(0, 20, 0, 10) : new Thickness(0, 15, 0, 5)
+            Text = title
         };
         textBlock.Classes.Add(isMainHeader ? "main-header" : "sub-header");
-        
-        if (isMainHeader)
-        {
-            textBlock.FontSize = 20;
-        }
-        else
-        {
-            textBlock.FontSize = 16;
-            textBlock.Foreground = Brushes.Gray;
-        }
         
         // Store in dictionary for O(1) scroll lookup
         _sectionControlMap[sectionId] = textBlock;
@@ -491,9 +539,7 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
         // Label
         var label = new TextBlock 
         { 
-            Text = prop.DisplayName, 
-            VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center,
-            Margin = new Thickness(0, 0, 10, 0)
+            Text = prop.DisplayName
         };
         label.Classes.Add("label");
         global::Avalonia.Controls.Grid.SetColumn(label, 0);
@@ -589,50 +635,47 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
                         }
                     }
                 };
+
+                // Track dynamic ReadOnly controls for refresh
+                if (prop.IsReadOnlyDynamic && !string.IsNullOrEmpty(prop.ReadOnlyMethodName))
+                {
+                    _readOnlyControls.Add((comboBox, () => !IsEffectivelyReadOnly(prop, target)));
+                }
+
                 control = comboBox;
             }
             else if (prop.PropertyTypeName == "System.Boolean" || prop.PropertyTypeName == "bool")
             {
                 var currentValue = _accessor?.GetValue(target, prop.PropertyName);
                 var isReadOnly = IsEffectivelyReadOnly(prop, target);
-                var checkBox = new global::Avalonia.Controls.Primitives.ToggleButton
+                var toggleSwitch = new ToggleSwitch
                 {
                     IsChecked = currentValue is bool b ? b : false,
                     Content = prop.DisplayName,
-                    HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Left,
                     IsEnabled = !isReadOnly
                 };
-                checkBox.IsCheckedChanged += (s, e) =>
+                toggleSwitch.IsCheckedChanged += (s, e) =>
                 {
-                    _accessor?.SetValue(target, prop.PropertyName, checkBox.IsChecked ?? false);
+                    _accessor?.SetValue(target, prop.PropertyName, toggleSwitch.IsChecked ?? false);
                 };
-                control = checkBox;
+
+                // Track dynamic ReadOnly controls for refresh
+                if (prop.IsReadOnlyDynamic && !string.IsNullOrEmpty(prop.ReadOnlyMethodName))
+                {
+                    _readOnlyControls.Add((toggleSwitch, () => !IsEffectivelyReadOnly(prop, target)));
+                }
+
+                control = toggleSwitch;
             }
             else
             {
-                var isReadOnly = IsEffectivelyReadOnly(prop, target);
-                var textBox = new TextBox
-                {
-                    Text = _accessor?.GetValue(target, prop.PropertyName)?.ToString() ?? "",
-                    IsReadOnly = isReadOnly
-                };
-                textBox.TextChanged += (s, e) =>
-                {
-                    try
-                    {
-                        var propType = Type.GetType(prop.PropertyTypeName);
-                        if (propType != null)
-                            _accessor?.SetValue(target, prop.PropertyName,
-                                Convert.ChangeType(textBox.Text, propType));
-                    }
-                    catch { }
-                };
-                control = textBox;
+                control = CreateTextBoxWithFeatures(prop, target);
             }
         }
 
         if (control != null)
         {
+            ApplyControlAttributes(control, prop, target);
             global::Avalonia.Controls.Grid.SetColumn(control, 1);
             panel.Children.Add(control);
         }
@@ -658,18 +701,85 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
         // Get the delegate value
         var delegateValue = _accessor?.GetValue(target, prop.PropertyName) as Delegate;
 
-        // Create command with CanExecute support
-        var command = new DelegateCommand(
-            execute: () => delegateValue?.DynamicInvoke(),
-            canExecute: () => CanExecuteDelegate(prop, target)
-        );
+        // Use Click event instead of Command for better async support
+        button.Click += (s, e) =>
+        {
+            if (delegateValue != null)
+            {
+                delegateValue.DynamicInvoke();
+            }
+        };
 
-        button.Command = command;
+        // Determine if button has dynamic CanExecute condition
+        var hasCanExecuteCondition = !string.IsNullOrEmpty(prop.CanExecuteMethodName) ||
+                                      prop.IsReadOnlyDynamic ||
+                                      prop.IsReadOnly;
 
-        // Track command for Refresh
-        _commands.Add(command);
+        if (hasCanExecuteCondition)
+        {
+            // Set initial enabled state
+            button.IsEnabled = CanExecuteDelegate(prop, target);
+
+            // Track button for dynamic IsEnabled updates (similar to ReadOnly controls)
+            _readOnlyControls.Add((button, () => !CanExecuteDelegate(prop, target)));
+        }
 
         return button;
+    }
+
+    /// <summary>
+    /// Determines if a delegate is async (returns Task).
+    /// </summary>
+    private bool IsAsyncDelegate(Core.Models.PropertyDescriptor prop, Delegate? delegateValue)
+    {
+        if (delegateValue == null) return false;
+        
+        var method = delegateValue.Method;
+        return method.ReturnType == typeof(Task) || 
+               method.ReturnType == typeof(ValueTask) ||
+               (method.ReturnType.IsGenericType && method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>));
+    }
+
+    /// <summary>
+    /// Executes a delegate, handling async delegates properly.
+    /// </summary>
+    private void ExecuteDelegate(Delegate? delegateValue, bool isAsync)
+    {
+        if (delegateValue == null) return;
+
+        if (isAsync)
+        {
+            // Execute async and handle exceptions
+            _ = ExecuteAsync(delegateValue);
+        }
+        else
+        {
+            delegateValue.DynamicInvoke();
+        }
+    }
+
+    /// <summary>
+    /// Executes an async delegate.
+    /// </summary>
+    private async Task ExecuteAsync(Delegate delegateValue)
+    {
+        try
+        {
+            var result = delegateValue.DynamicInvoke();
+            if (result is Task task)
+            {
+                await task;
+            }
+            else if (result is ValueTask valueTask)
+            {
+                await valueTask;
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log or handle exception
+            System.Diagnostics.Debug.WriteLine($"Async delegate error: {ex}");
+        }
     }
 
     /// <summary>
@@ -702,6 +812,115 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
 
     #endregion
 
+    #region Attribute Helpers
+
+    /// <summary>
+    /// Gets the PropertyInfo for a property from the target object.
+    /// </summary>
+    private PropertyInfo? GetPropertyInfo(object target, string propertyName)
+    {
+        return target.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+    }
+
+    /// <summary>
+    /// Applies layout, placeholder, and description attributes to a control.
+    /// </summary>
+    private void ApplyControlAttributes(global::Avalonia.Controls.Control control, Core.Models.PropertyDescriptor prop, object target)
+    {
+        var propertyInfo = GetPropertyInfo(target, prop.PropertyName);
+        if (propertyInfo == null) return;
+
+        // Apply layout attributes
+        control.ApplyLayout(propertyInfo);
+
+        // Apply placeholder to TextBox
+        if (control is TextBox textBox)
+        {
+            textBox.ApplyPlaceholder(propertyInfo);
+        }
+
+        // Apply description (tooltip)
+        control.ApplyDescription(propertyInfo);
+    }
+
+    /// <summary>
+    /// Creates a TextBox with password support and validation.
+    /// </summary>
+    private global::Avalonia.Controls.Control CreateTextBoxWithFeatures(Core.Models.PropertyDescriptor prop, object target)
+    {
+        var isReadOnly = IsEffectivelyReadOnly(prop, target);
+        var propertyInfo = GetPropertyInfo(target, prop.PropertyName);
+        
+        // Check for PasswordAttribute
+        var passwordAttr = propertyInfo?.GetCustomAttribute<PasswordAttribute>();
+        var isPassword = passwordAttr != null || 
+            prop.PropertyName.ToLowerInvariant().Contains("password") ||
+            prop.PropertyName.ToLowerInvariant().Contains("pwd");
+        
+        var textBox = new TextBox
+        {
+            Text = _accessor?.GetValue(target, prop.PropertyName)?.ToString() ?? "",
+            IsReadOnly = isReadOnly
+        };
+
+        // Apply password masking if needed
+        if (isPassword)
+        {
+            textBox.PasswordChar = passwordAttr?.MaskChar ?? '•';
+        }
+
+        // Track dynamic ReadOnly controls for refresh
+        if (prop.IsReadOnlyDynamic && !string.IsNullOrEmpty(prop.ReadOnlyMethodName))
+        {
+            _readOnlyControls.Add((textBox, () => IsEffectivelyReadOnly(prop, target)));
+        }
+
+        // Helper function to convert and set value
+        void SetConvertedValue(string? textValue)
+        {
+            try
+            {
+                var propType = propertyInfo?.PropertyType ?? Type.GetType(prop.PropertyTypeName);
+                if (propType == null) return;
+
+                if (propType == typeof(string))
+                {
+                    _accessor?.SetValue(target, prop.PropertyName, textValue ?? "");
+                }
+                else if (!string.IsNullOrEmpty(textValue))
+                {
+                    var convertedValue = Convert.ChangeType(textValue, propType);
+                    _accessor?.SetValue(target, prop.PropertyName, convertedValue);
+                }
+            }
+            catch { /* Ignore conversion errors */ }
+        }
+
+        // Add validation if attributes exist
+        if (propertyInfo != null && AutoSettingUI.Avalonia.ControlLayoutHelper.GetValidations(propertyInfo).Length > 0)
+        {
+            textBox.TextChanged += (s, e) =>
+            {
+                var newValue = textBox.Text;
+                if (AutoSettingUI.Avalonia.ControlLayoutHelper.ValidateAndUpdateVisual(textBox, newValue, propertyInfo, target))
+                {
+                    SetConvertedValue(newValue);
+                }
+            };
+        }
+        else
+        {
+            textBox.TextChanged += (s, e) =>
+            {
+                SetConvertedValue(textBox.Text);
+            };
+        }
+
+        return textBox;
+    }
+
+    #endregion
+
     #region Collection Controls
 
     /// <summary>
@@ -718,7 +937,19 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
     /// </summary>
     private global::Avalonia.Controls.Control CreateDefaultCollectionEditor(Core.Models.PropertyDescriptor prop, object target)
     {
+        var elementType = GetElementTypeFromName(prop.CollectionElementTypeName);
         var collection = _accessor?.GetValue(target, prop.PropertyName) as IList;
+        if (collection == null)
+        {
+            // Try to create a new list if the property is null
+            var propInfo = target.GetType().GetProperty(prop.PropertyName);
+            if (propInfo != null && propInfo.CanWrite)
+            {
+                var listType = typeof(List<>).MakeGenericType(elementType ?? typeof(object));
+                collection = (IList?)Activator.CreateInstance(listType);
+                propInfo.SetValue(target, collection);
+            }
+        }
 
         var panel = new StackPanel();
 
@@ -726,10 +957,15 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
         var listBox = new ListBox
         {
             MinHeight = 60,
-            MaxHeight = 150,
+            MaxHeight = 200,
             Margin = new Thickness(0, 0, 0, 5),
             ItemsSource = collection as IEnumerable
         };
+
+        if (elementType != null)
+        {
+            listBox.ItemTemplate = CreateCollectionItemTemplate(elementType);
+        }
 
         panel.Children.Add(listBox);
 
@@ -746,34 +982,63 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
             var addBtn = new Button
             {
                 Content = "+",
-                Width = 25
+                Width = 30,
+                Height = 30,
+                MinWidth = 0,
+                MinHeight = 0,
+                FontSize = 18,
+                FontWeight = FontWeight.Bold,
+                Padding = new Thickness(0),
+                HorizontalContentAlignment = HorizontalAlignment.Center,
+                VerticalContentAlignment = VerticalAlignment.Center
             };
             ToolTip.SetTip(addBtn, "Add item");
             addBtn.Click += (s, e) =>
             {
-                if (collection != null && !string.IsNullOrEmpty(prop.CollectionElementTypeName))
+                if (collection != null && elementType != null)
                 {
-                    var elementType = Type.GetType(prop.CollectionElementTypeName);
-                    if (elementType != null)
+                    try
                     {
-                        try
+                        object? newItem;
+                        if (elementType.IsValueType)
                         {
-                            var newItem = elementType.IsValueType
-                                ? Activator.CreateInstance(elementType)
-                                : (elementType.GetConstructor(Type.EmptyTypes) != null
-                                    ? Activator.CreateInstance(elementType)
-                                    : null);
-
-                            if (newItem != null || elementType.IsValueType)
-                            {
-                                collection.Add(newItem);
-                                // Refresh the ListBox
-                                listBox.ItemsSource = null;
-                                listBox.ItemsSource = collection as IEnumerable;
-                            }
+                            newItem = Activator.CreateInstance(elementType);
                         }
-                        catch { }
+                        else if (elementType == typeof(string))
+                        {
+                            newItem = "";
+                        }
+                        else if (elementType.GetConstructor(Type.EmptyTypes) != null)
+                        {
+                            newItem = Activator.CreateInstance(elementType);
+                        }
+                        else
+                        {
+                            var ctor = elementType.GetConstructors().FirstOrDefault();
+                            if (ctor != null)
+                            {
+                                var parameters = ctor.GetParameters();
+                                var args = new object?[parameters.Length];
+                                for (int i = 0; i < parameters.Length; i++)
+                                {
+                                    args[i] = parameters[i].ParameterType.IsValueType
+                                        ? Activator.CreateInstance(parameters[i].ParameterType)
+                                        : null;
+                                }
+                                newItem = ctor.Invoke(args);
+                            }
+                            else newItem = null;
+                        }
+
+                        if (newItem != null || elementType.IsValueType)
+                        {
+                            collection.Add(newItem);
+                            // Refresh
+                            listBox.ItemsSource = null;
+                            listBox.ItemsSource = collection as IEnumerable;
+                        }
                     }
+                    catch { }
                 }
             };
             buttonPanel.Children.Add(addBtn);
@@ -785,7 +1050,15 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
             var removeBtn = new Button
             {
                 Content = "-",
-                Width = 25
+                Width = 30,
+                Height = 30,
+                MinWidth = 0,
+                MinHeight = 0,
+                FontSize = 18,
+                FontWeight = FontWeight.Bold,
+                Padding = new Thickness(0),
+                HorizontalContentAlignment = HorizontalAlignment.Center,
+                VerticalContentAlignment = VerticalAlignment.Center
             };
             ToolTip.SetTip(removeBtn, "Remove selected item");
             removeBtn.Click += (s, e) =>
@@ -800,13 +1073,21 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
             buttonPanel.Children.Add(removeBtn);
         }
 
-        // Move up button
+        // Move up/down buttons
         if (prop.CollectionAllowReorder)
         {
-            var upBtn = new Button
-            {
-                Content = "↑",
-                Width = 25
+            var upBtn = new Button 
+            { 
+                Content = "↑", 
+                Width = 30, 
+                Height = 30,
+                MinWidth = 0,
+                MinHeight = 0,
+                FontSize = 18,
+                FontWeight = FontWeight.Bold,
+                Padding = new Thickness(0),
+                HorizontalContentAlignment = HorizontalAlignment.Center,
+                VerticalContentAlignment = VerticalAlignment.Center
             };
             ToolTip.SetTip(upBtn, "Move up");
             upBtn.Click += (s, e) =>
@@ -824,11 +1105,18 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
             };
             buttonPanel.Children.Add(upBtn);
 
-            // Move down button
-            var downBtn = new Button
-            {
-                Content = "↓",
-                Width = 25
+            var downBtn = new Button 
+            { 
+                Content = "↓", 
+                Width = 30, 
+                Height = 30,
+                MinWidth = 0,
+                MinHeight = 0,
+                FontSize = 18,
+                FontWeight = FontWeight.Bold,
+                Padding = new Thickness(0),
+                HorizontalContentAlignment = HorizontalAlignment.Center,
+                VerticalContentAlignment = VerticalAlignment.Center
             };
             ToolTip.SetTip(downBtn, "Move down");
             downBtn.Click += (s, e) =>
@@ -850,6 +1138,65 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
         panel.Children.Add(buttonPanel);
 
         return panel;
+    }
+
+    private IDataTemplate CreateCollectionItemTemplate(Type elementType)
+    {
+        return new FuncDataTemplate<object>((item, scope) =>
+        {
+            if (item == null) return new TextBlock { Text = "Null" };
+
+            // Simple types
+            if (elementType == typeof(string) || elementType == typeof(int) || elementType == typeof(double) ||
+                elementType == typeof(float) || elementType == typeof(decimal) || elementType == typeof(bool))
+            {
+                var tb = new TextBox { HorizontalAlignment = HorizontalAlignment.Stretch };
+                tb.Bind(TextBox.TextProperty, new Binding(".") { Mode = BindingMode.TwoWay });
+                return tb;
+            }
+
+            // Complex types
+            var panel = new StackPanel { Spacing = 5, Margin = new Thickness(5) };
+            var props = elementType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(p => p.CanRead && p.CanWrite);
+
+            foreach (var p in props)
+            {
+                var row = new global::Avalonia.Controls.Grid();
+                row.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(100)));
+                row.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+
+                var label = new TextBlock { Text = p.Name + ":", VerticalAlignment = VerticalAlignment.Center };
+                global::Avalonia.Controls.Grid.SetColumn(label, 0);
+
+                global::Avalonia.Controls.Control editor;
+                if (p.PropertyType == typeof(bool))
+                {
+                    var ts = new ToggleSwitch();
+                    ts.Bind(ToggleSwitch.IsCheckedProperty, new Binding(p.Name) { Mode = BindingMode.TwoWay });
+                    editor = ts;
+                }
+                else
+                {
+                    var tb = new TextBox { HorizontalAlignment = HorizontalAlignment.Stretch };
+                    tb.Bind(TextBox.TextProperty, new Binding(p.Name) { Mode = BindingMode.TwoWay });
+                    editor = tb;
+                }
+
+                global::Avalonia.Controls.Grid.SetColumn(editor, 1);
+                row.Children.Add(label);
+                row.Children.Add(editor);
+                panel.Children.Add(row);
+            }
+
+            return new Border
+            {
+                BorderBrush = Brushes.LightGray,
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(5),
+                Child = panel
+            };
+        }, true);
     }
 
     #endregion
@@ -875,6 +1222,47 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
         }
 
         return prop.IsReadOnly;
+    }
+
+    /// <summary>
+    /// Gets a type from its name, searching in all loaded assemblies.
+    /// </summary>
+    private Type? GetElementTypeFromName(string? typeName)
+    {
+        if (string.IsNullOrEmpty(typeName))
+            return null;
+
+        // Try direct type resolution first
+        var type = Type.GetType(typeName);
+        if (type is not null)
+            return type;
+
+        // Common type fallbacks
+        type = typeName.ToLowerInvariant() switch
+        {
+            "string" => typeof(string),
+            "system.string" => typeof(string),
+            "int" => typeof(int),
+            "system.int32" => typeof(int),
+            "bool" => typeof(bool),
+            "system.boolean" => typeof(bool),
+            "double" => typeof(double),
+            "system.double" => typeof(double),
+            "float" => typeof(float),
+            "system.single" => typeof(float),
+            _ => null
+        };
+        if (type is not null) return type;
+
+        // Search in all loaded assemblies
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            type = assembly.GetType(typeName);
+            if (type is not null)
+                return type;
+        }
+
+        return null;
     }
 
     #endregion

@@ -8,16 +8,8 @@
     <Application.DataTemplates>
         <local:ViewLocator/>
     </Application.DataTemplates>
-
-    <Application.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceInclude Source="avares://AutoSettingUI.Avalonia/Themes/Generic.axaml"/>
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </Application.Resources>
-
     <Application.Styles>
         <FluentTheme />
+        <StyleInclude Source="avares://AutoSettingUI.Avalonia/Themes/Generic.axaml"/>
     </Application.Styles>
 </Application>

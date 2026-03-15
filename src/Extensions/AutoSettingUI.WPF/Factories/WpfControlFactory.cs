@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using AutoSettingUI.Core.Attributes;
 using AutoSettingUI.Core.Interfaces;
 using AutoSettingUI.Core.Models;
 
@@ -77,35 +78,47 @@ public class WpfControlFactory
         // Create control based on type
         if (prop.IsEnum)
         {
-            return CreateEnumControl(prop, target);
+            var control = CreateEnumControl(prop, target);
+            if (control is FrameworkElement fe) ApplyAttributes(fe, prop, target);
+            return control;
         }
 
         var typeName = prop.PropertyTypeName.ToLowerInvariant();
 
         if (typeName == "system.boolean" || typeName == "bool")
         {
-            return CreateBooleanControl(prop, target);
+            var control = CreateBooleanControl(prop, target);
+            if (control is FrameworkElement fe) ApplyAttributes(fe, prop, target);
+            return control;
         }
 
         if (typeName == "system.int32" || typeName == "int" ||
             typeName == "system.single" || typeName == "float" ||
             typeName == "system.double" || typeName == "double")
         {
-            return CreateNumericControl(prop, target);
+            var control = CreateNumericControl(prop, target);
+            if (control is FrameworkElement fe) ApplyAttributes(fe, prop, target);
+            return control;
         }
 
         if (typeName == "system.string" || typeName == "string")
         {
-            return CreateStringControl(prop, target);
+            var control = CreateStringControl(prop, target);
+            if (control is FrameworkElement fe) ApplyAttributes(fe, prop, target);
+            return control;
         }
 
         if (typeName == "system.datetime" || typeName.Contains("datetime"))
         {
-            return CreateDateTimeControl(prop, target);
+            var control = CreateDateTimeControl(prop, target);
+            if (control is FrameworkElement fe) ApplyAttributes(fe, prop, target);
+            return control;
         }
 
         // Default to text box
-        return CreateTextBox(prop, target);
+        var textBoxControl = CreateTextBox(prop, target);
+        if (textBoxControl is FrameworkElement textBoxFe) ApplyAttributes(textBoxFe, prop, target);
+        return textBoxControl;
     }
 
     private UIElement CreateBooleanControl(PropertyDescriptor prop, object target)
@@ -171,12 +184,18 @@ public class WpfControlFactory
                 IsReadOnly = isReadOnly
             };
 
+            var (propertyInfo, _) = GetValidationInfo(target, prop.PropertyName);
+
             textBox.LostFocus += (s, e) =>
             {
                 if (double.TryParse(textBox.Text, out var num))
                 {
                     var newValue = ConvertValue(num, prop.PropertyTypeName);
-                    SetValue(target, prop.PropertyName, newValue);
+                    
+                    if (propertyInfo != null && ValidateAndUpdateVisual(textBox, newValue, propertyInfo, target))
+                    {
+                        SetValue(target, prop.PropertyName, newValue);
+                    }
                 }
             };
 
@@ -195,8 +214,12 @@ public class WpfControlFactory
         var value = GetValue(target, prop.PropertyName)?.ToString() ?? "";
         var isReadOnly = IsEffectivelyReadOnly(prop, target);
 
-        // Check if it looks like a password field
-        if (prop.PropertyName.ToLowerInvariant().Contains("password") ||
+        // Check for PasswordAttribute first, then fall back to name-based detection
+        var propertyInfo = GetPropertyInfo(target, prop.PropertyName);
+        var passwordAttr = propertyInfo?.GetCustomAttribute<PasswordAttribute>();
+        
+        if (passwordAttr != null || 
+            prop.PropertyName.ToLowerInvariant().Contains("password") ||
             prop.PropertyName.ToLowerInvariant().Contains("pwd"))
         {
             var passwordBox = new PasswordBox
@@ -205,6 +228,14 @@ public class WpfControlFactory
                 VerticalAlignment = VerticalAlignment.Center,
                 IsEnabled = !isReadOnly
             };
+
+            // Apply password-specific settings from attribute
+            if (passwordAttr != null)
+            {
+                passwordBox.PasswordChar = passwordAttr.MaskChar;
+                // Note: WPF PasswordBox doesn't support unmasked display
+                // If Mask=false, we would need to use a TextBox instead
+            }
 
             passwordBox.PasswordChanged += (s, e) =>
             {
@@ -263,9 +294,16 @@ public class WpfControlFactory
             IsReadOnly = isReadOnly
         };
 
+        var (propertyInfo, _) = GetValidationInfo(target, prop.PropertyName);
+
         textBox.TextChanged += (s, e) =>
         {
-            SetValue(target, prop.PropertyName, textBox.Text);
+            var newValue = textBox.Text;
+            
+            if (propertyInfo != null && ValidateAndUpdateVisual(textBox, newValue, propertyInfo, target))
+            {
+                SetValue(target, prop.PropertyName, newValue);
+            }
         };
 
         // Track dynamic ReadOnly controls for refresh
@@ -275,6 +313,68 @@ public class WpfControlFactory
         }
 
         return textBox;
+    }
+
+    /// <summary>
+    /// Gets the PropertyInfo for a property from the target object.
+    /// </summary>
+    private PropertyInfo? GetPropertyInfo(object target, string propertyName)
+    {
+        return target.GetType().GetProperty(propertyName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+    }
+
+    /// <summary>
+    /// Applies layout, placeholder, and description attributes to a framework element.
+    /// </summary>
+    private void ApplyAttributes(FrameworkElement element, PropertyDescriptor prop, object target)
+    {
+        var propertyInfo = GetPropertyInfo(target, prop.PropertyName);
+        if (propertyInfo == null) return;
+
+        // Apply layout attributes
+        element.ApplyLayout(propertyInfo);
+
+        // Apply placeholder to controls that support it
+        if (element is Control control)
+        {
+            control.ApplyPlaceholder(propertyInfo);
+        }
+
+        // Apply description (tooltip)
+        element.ApplyDescription(propertyInfo);
+    }
+
+    /// <summary>
+    /// Validates a value and updates the control's visual state.
+    /// Returns true if valid or no validations exist.
+    /// </summary>
+    private bool ValidateAndUpdateVisual(Control control, object? value, PropertyInfo propertyInfo, object target)
+    {
+        var validations = ControlLayoutHelper.GetValidations(propertyInfo);
+        if (validations.Length == 0) return true;
+
+        var isValid = ControlLayoutHelper.ValidateValue(propertyInfo, value, target, out var errorMessage);
+        if (!isValid)
+        {
+            control.BorderBrush = System.Windows.Media.Brushes.Red;
+            control.ToolTip = errorMessage;
+        }
+        else
+        {
+            control.ClearValue(Control.BorderBrushProperty);
+            control.ToolTip = null;
+        }
+        return isValid;
+    }
+
+    /// <summary>
+    /// Gets validation info for a property, caching the results.
+    /// </summary>
+    private (PropertyInfo? PropertyInfo, ValidationAttribute[] Validations) GetValidationInfo(object target, string propertyName)
+    {
+        var propertyInfo = GetPropertyInfo(target, propertyName);
+        var validations = propertyInfo != null ? ControlLayoutHelper.GetValidations(propertyInfo) : Array.Empty<ValidationAttribute>();
+        return (propertyInfo, validations);
     }
 
     private UIElement CreateEnumControl(PropertyDescriptor prop, object target)

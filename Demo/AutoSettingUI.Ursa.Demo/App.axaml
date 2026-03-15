@@ -13,13 +13,6 @@
         <local:ViewLocator/>
     </Application.DataTemplates>
   
-    <Application.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceInclude Source="avares://AutoSettingUI.Ursa/Themes/Generic.axaml"/>
-            </ResourceDictionary.MergedDictionaries>
-        </ResourceDictionary>
-    </Application.Resources>
 
     <Application.Styles>
         <u-semi:SemiTheme Locale="zh-CN" />
@@ -28,6 +21,7 @@
         <!-- Semi and Ursa Themes -->
         
         
+        <StyleInclude Source="avares://AutoSettingUI.Ursa/Themes/Generic.axaml"/>
     </Application.Styles>
 
 </Application>

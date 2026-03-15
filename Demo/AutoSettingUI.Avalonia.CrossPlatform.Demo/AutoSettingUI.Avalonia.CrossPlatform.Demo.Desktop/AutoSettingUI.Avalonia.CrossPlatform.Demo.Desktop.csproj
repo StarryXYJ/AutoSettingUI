@@ -6,6 +6,11 @@
         <TargetFramework>net9.0</TargetFramework>
         <Nullable>enable</Nullable>
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+
+  <PublishAot>true</PublishAot>
+  <SelfContained>true</SelfContained>
+  <PublishTrimmed>true</PublishTrimmed>
+  <TrimMode>link</TrimMode>
     </PropertyGroup>
 
     <PropertyGroup>

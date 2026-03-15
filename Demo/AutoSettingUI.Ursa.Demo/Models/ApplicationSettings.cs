@@ -1,7 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Threading.Tasks;
 using AutoSettingUI.Core.Attributes;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Ursa.Controls;
+using DescriptionAttribute = AutoSettingUI.Core.Attributes.DescriptionAttribute;
+using ReadOnlyAttribute = AutoSettingUI.Core.Attributes.ReadOnlyAttribute;
 
 namespace AutoSettingUI.Ursa.Demo.Models;
 
@@ -48,12 +54,22 @@ public class ApplicationSettings
 }
 
 /// <summary>
-/// Sample user preferences class.
+/// Sample user preferences class demonstrating delegate properties and collection editors.
 /// </summary>
 [SettingUI]
 [MainHeader("User Preferences")]
-public class UserPreferences
+public class UserPreferences : INotifyPropertyChanged
 {
+    private bool _isAdmin = true;
+    private string _email = "";
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    protected virtual void OnPropertyChanged(string propertyName)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
     [SubHeader("Display")]
     [Title("Theme")]
     public Theme Theme { get; set; } = Theme.Light;
@@ -65,6 +81,44 @@ public class UserPreferences
     [Range(8, 32)]
     public int FontSize { get; set; } = 14;
 
+    [SubHeader("Actions (Delegate Properties)")]
+    [Title("Reset Settings")]
+    public Action? ResetSettingsCommand { get; set; }
+
+    [Title("Export Settings")]
+    [CommandCanExecute(nameof(CanExport))]
+    public Action? ExportSettingsCommand { get; set; }
+
+    [Title("Import Settings")]
+    [CommandCanExecute(nameof(CanImport))]
+    public Action? ImportSettingsCommand { get; set; }
+
+    [Title("Admin Action")]
+    [CommandCanExecute(nameof(IsAdmin))]
+    public Action? AdminActionCommand { get; set; }
+
+    [SubHeader("ReadOnly Examples")]
+    [Title("Read-Only Field")]
+    [ReadOnly(true)]
+    public string ReadOnlyField { get; set; } = "This field is read-only";
+
+    [Title("Dynamic ReadOnly")]
+    [ReadOnly(nameof(CanEdit))]
+    public string DynamicReadOnlyField { get; set; } = "Only editable by admins";
+
+    public bool IsAdmin
+    {
+        get => _isAdmin;
+        set
+        {
+            if (_isAdmin != value)
+            {
+                _isAdmin = value;
+                OnPropertyChanged(nameof(IsAdmin));
+            }
+        }
+    }
+
     [SubHeader("Notifications")]
     [Title("Enable Notifications")]
     public bool EnableNotifications { get; set; } = true;
@@ -73,7 +127,114 @@ public class UserPreferences
     public bool NotificationSound { get; set; } = true;
 
     [Title("Email Address")]
-    public string Email { get; set; } = "";
+    [Description("Your email address for notifications and account recovery")]
+    [Placeholder("example@domain.com")]
+    [Validation(Required = true, ErrorMessage = "Email is required")]
+    [Validation(Pattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$", ErrorMessage = "Invalid email format")]
+    [Layout(Width = 250, HorizontalAlignment = "Stretch")]
+    public string Email
+    {
+        get => _email;
+        set
+        {
+            if (_email != value)
+            {
+                _email = value;
+                OnPropertyChanged(nameof(Email));
+            }
+        }
+    }
+
+    [SubHeader("Layout & Validation Examples")]
+
+    // Username: Required, length validation, custom layout
+    [Title("Username")]
+    [Description("Your display name (3-20 characters)")]
+    [Placeholder("Enter username")]
+    [Validation(Required = true, MinLength = 3, MaxLength = 20, ErrorMessage = "Username must be 3-20 characters")]
+    [Layout(Width = 200, Height = 28, Margin = "0,2,0,2")]
+    public string Username { get; set; } = "";
+
+    // Password: Custom mask character
+    [Title("Password")]
+    [Password]  // Default mask character '•'
+    [Validation(Required = true, MinLength = 6, ErrorMessage = "Password must be at least 6 characters")]
+    [Layout(Width = 200)]
+    public string Password { get; set; } = "";
+
+    // API Key: Different mask character
+    [Title("API Key")]
+    [Password('*')]  // Custom mask character '*'
+    [Placeholder("Enter API key")]
+    [Layout(Width = 300)]
+    public string ApiKey { get; set; } = "";
+
+    // Age: Numeric range validation
+    [Title("Age")]
+    [Description("Your age in years")]
+    [Validation(MinValue = 0, MaxValue = 150, ErrorMessage = "Age must be between 0 and 150")]
+    [Layout(Width = 80)]
+    public int Age { get; set; } = 25;
+
+    // Website: Regex pattern validation
+    [Title("Website")]
+    [Description("Your personal website URL")]
+    [Placeholder("https://example.com")]
+    [Validation(Pattern = @"^https?://.*", ErrorMessage = "URL must start with http:// or https://")]
+    [Layout(MinWidth = 200, MaxWidth = 400, HorizontalAlignment = "Stretch")]
+    public string Website { get; set; } = "";
+
+    [SubHeader("Collection Examples")]
+    [Title("Tags (Default Collection Editor)")]
+    public List<string> Tags { get; set; } = new List<string> { "Important", "Work" };
+
+    [Title("Versions (Read-Only Collection)")]
+    [CollectionEditor(AllowAdd = false, AllowRemove = false, AllowReorder = false)]
+    public List<string> Versions { get; set; } = new List<string> { "1.0.0", "1.1.0", "2.0.0" };
+
+    [Title("People (Complex Collection)")]
+    public List<Person> People { get; set; } = new List<Person>
+    {
+        new Person { Name = "John Doe", Age = 30, Email = "john@example.com" },
+        new Person { Name = "Jane Smith", Age = 25, Email = "jane@example.com" }
+    };
+
+    public UserPreferences()
+    {
+        ResetSettingsCommand = ResetSettings;
+        ExportSettingsCommand = ExportSettings;
+        ImportSettingsCommand = ImportSettings;
+        AdminActionCommand = AdminAction;
+    }
+
+    private void ResetSettings()
+    {
+        Theme = Theme.Light;
+        Language = "English";
+        FontSize = 14;
+        EnableNotifications = true;
+        NotificationSound = true;
+        Console.WriteLine("Settings have been reset!");
+    }
+
+    private async void ExportSettings()
+    {
+        await MessageBox.ShowAsync("Exporting settings...", "Export");
+    }
+
+    private async void ImportSettings()
+    {
+        await MessageBox.ShowAsync( "Importing settings...", "Import");
+    }
+
+    private async void AdminAction()
+    {
+        await MessageBox.ShowAsync( "Performing admin action...", "Admin Action");
+    }
+
+    public bool CanExport() => EnableNotifications;
+    public bool CanImport() => !string.IsNullOrEmpty(Email);
+    public bool CanEdit() => !IsAdmin;
 }
 
 /// <summary>
@@ -98,12 +259,35 @@ public class NetworkSettings
     [Title("Username")]
     public string Username { get; set; } = "";
 
-    [Title("Password")]
-    public string Password { get; set; } = "";
-
     [Title("Timeout (seconds)")]
     [Range(1, 300)]
     public int Timeout { get; set; } = 30;
+
+    [SubHeader("Actions")]
+    [Title("Test Connection")]
+    [CommandCanExecute(nameof(CanTestConnection))]
+    public Action? TestConnectionCommand { get; set; }
+
+    [Title("Ping Server")]
+    public Action? PingServerCommand { get; set; }
+
+    public NetworkSettings()
+    {
+        TestConnectionCommand = TestConnection;
+        PingServerCommand = PingServer;
+    }
+
+    private void TestConnection()
+    {
+        Console.WriteLine($"Testing connection to {ServerAddress}:{Port}...");
+    }
+
+    private void PingServer()
+    {
+        Console.WriteLine($"Pinging {ServerAddress}...");
+    }
+
+    public bool CanTestConnection() => !string.IsNullOrEmpty(ServerAddress) && Port > 0;
 }
 
 /// <summary>

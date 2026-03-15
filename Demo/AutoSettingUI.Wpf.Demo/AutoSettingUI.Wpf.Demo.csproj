@@ -8,6 +8,8 @@
         <UseWPF>true</UseWPF>
         <AssemblyName>AutoSettingUI.WPF.Demo</AssemblyName>
         <RootNamespace>AutoSettingUI.WPF.Demo</RootNamespace>
+
+
     </PropertyGroup>
 
     <ItemGroup>

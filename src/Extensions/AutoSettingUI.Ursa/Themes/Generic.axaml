@@ -1,53 +1,75 @@
-<ResourceDictionary xmlns="https://github.com/avaloniaui"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:local="using:AutoSettingUI.Ursa.Controls"
-                    xmlns:models="clr-namespace:AutoSettingUI.Core.Models;assembly=AutoSettingUI.Core">
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:u="https://irihi.tech/ursa"
+        xmlns:local="using:AutoSettingUI.Ursa.Controls"
+        xmlns:models="clr-namespace:AutoSettingUI.Core.Models;assembly=AutoSettingUI.Core">
 
-    <!-- Hierarchical DataTemplate for Navigation Tree -->
-    <TreeDataTemplate x:Key="NavigationNodeTemplate"
-                      DataType="models:NavigationNode"
-                      ItemsSource="{Binding Children}">
-        <TextBlock Text="{Binding Title}"/>
-    </TreeDataTemplate>
+    <Styles.Resources>
+        <!-- Hierarchical DataTemplate for Navigation Tree -->
+        <TreeDataTemplate x:Key="NavigationNodeTemplate"
+                          DataType="models:NavigationNode"
+                          ItemsSource="{Binding Children}">
+            <TextBlock Text="{Binding Title}"/>
+        </TreeDataTemplate>
+        <ControlTheme x:Key="{x:Type local:UrsaAutoSettingPanel}" TargetType="local:UrsaAutoSettingPanel">
+                <Setter Property="Template">
+                    <ControlTemplate>
+                        <!-- <u:OverlaySharedHost> -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" MinWidth="{TemplateBinding NavigationWidth}"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+        
+                            <!-- Navigation Panel -->
+                            <Border Grid.Column="0"
+                                    Margin="5"
+                                    Padding="10"
+                                    IsVisible="{TemplateBinding ShowNavigation}">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <TreeView x:Name="PART_Navigation"
+                                              BorderThickness="0"
+                                              Background="Transparent"
+                                              ItemTemplate="{StaticResource NavigationNodeTemplate}">
+                                        <TreeView.ItemContainerTheme>
+                                            <ControlTheme TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
+                                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, x:DataType=models:NavigationNode}"/>
+                                            </ControlTheme>
+                                        </TreeView.ItemContainerTheme>
+                                    </TreeView>
+                                </ScrollViewer>
+                            </Border>
+        
+                            <!-- Form Panel -->
+                            <ScrollViewer x:Name="PART_FormScrollViewer"
+                                          Grid.Column="1"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled">
+                                <ContentControl Content="{TemplateBinding Targets}"/>
+                            </ScrollViewer>
+                        </Grid>
+                        <!-- </u:OverlaySharedHost> -->
+                    </ControlTemplate>
+                </Setter>
+            </ControlTheme>
+    </Styles.Resources>
 
-    <ControlTheme x:Key="{x:Type local:UrsaAutoSettingPanel}" TargetType="local:UrsaAutoSettingPanel">
-        <Setter Property="Template">
-            <ControlTemplate>
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" MinWidth="{TemplateBinding NavigationWidth}"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
+    
 
-                    <!-- Navigation Panel -->
-                    <Border Grid.Column="0"
-                            Margin="5"
-                            Padding="10"
-                            IsVisible="{TemplateBinding ShowNavigation}">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <TreeView x:Name="PART_Navigation"
-                                      BorderThickness="0"
-                                      Background="Transparent"
-                                      ItemTemplate="{StaticResource NavigationNodeTemplate}">
-                                <TreeView.ItemContainerTheme>
-                                    <ControlTheme TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
-                                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, x:DataType=models:NavigationNode}"/>
-                                    </ControlTheme>
-                                </TreeView.ItemContainerTheme>
-                            </TreeView>
-                        </ScrollViewer>
-                    </Border>
+    <Style Selector="local|UrsaAutoSettingPanel TextBlock.main-header">
+        <Setter Property="FontSize" Value="20"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Margin" Value="0,20,0,10"/>
+    </Style>
 
-                    <!-- Form Panel -->
-                    <ScrollViewer x:Name="PART_FormScrollViewer"
-                                  Grid.Column="1"
-                                  VerticalScrollBarVisibility="Auto"
-                                  HorizontalScrollBarVisibility="Disabled">
-                        <ContentControl Content="{TemplateBinding Targets}"/>
-                    </ScrollViewer>
-                </Grid>
-            </ControlTemplate>
-        </Setter>
-    </ControlTheme>
+    <Style Selector="local|UrsaAutoSettingPanel TextBlock.sub-header">
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="Foreground" Value="Gray"/>
+        <Setter Property="Margin" Value="0,15,0,5"/>
+    </Style>
 
-</ResourceDictionary>
+    <Style Selector="local|UrsaAutoSettingPanel TextBlock.label">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="0,0,10,0"/>
+    </Style>
+</Styles>
