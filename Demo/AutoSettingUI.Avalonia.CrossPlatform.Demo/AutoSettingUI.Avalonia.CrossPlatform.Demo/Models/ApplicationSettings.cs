@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using AutoSettingUI.Core.Attributes;
 using AutoSettingUI.Avalonia.Attributes;
@@ -187,18 +188,18 @@ public class UserPreferences : INotifyPropertyChanged
 
     [SubHeader("Collection Examples")]
     [Title("Tags (Default Collection Editor)")]
-    public List<string> Tags { get; set; } = new List<string> { "Important", "Work" };
+    public ObservableCollection<string> Tags { get; set; } = ["Important", "Work"];
 
     [Title("Versions (Read-Only Collection)")]
     [CollectionEditor(AllowAdd = false, AllowRemove = false, AllowReorder = false)]
-    public List<string> Versions { get; set; } = new List<string> { "1.0.0", "1.1.0", "2.0.0" };
+    public ObservableCollection<string> Versions { get; set; } = ["1.0.0", "1.1.0", "2.0.0"];
 
     [Title("People (Complex Collection)")]
-    public List<Person> People { get; set; } = new List<Person>
-    {
+    public ObservableCollection<Person> People { get; set; } =
+    [
         new Person { Name = "John Doe", Age = 30, Email = "john@example.com" },
         new Person { Name = "Jane Smith", Age = 25, Email = "jane@example.com" }
-    };
+    ];
 
     public UserPreferences()
     {
@@ -378,7 +379,7 @@ public partial class ThemeSettings : ObservableObject
         }
     }
 
-    public static List<AppTheme> AvailableThemes => new()
+    public static ObservableCollection<AppTheme> AvailableThemes => new()
     {
         AppTheme.Default,
         AppTheme.Light,

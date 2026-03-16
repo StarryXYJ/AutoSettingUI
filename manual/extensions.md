@@ -99,3 +99,64 @@ The WPF panel delegates control creation to `WpfControlFactory`. It automaticall
 - `TextBox` (multi-line) for properties named `description`, `notes`, or `comment`.
 - `TextBox` (single-line) for all other strings and types.
 - Custom controls via `[ControlBinding]`.
+
+---
+
+## Creating Custom Control Attributes
+
+You can create custom control attributes by inheriting from `ControlBindingAttribute`:
+
+```csharp
+// Example: Custom DatePicker attribute for Avalonia
+[AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
+public sealed class DatePickerAttribute : ControlBindingAttribute
+{
+    public DatePickerAttribute() 
+        : base(typeof(CalendarDatePicker), "SelectedDate") 
+    {
+    }
+    
+    public string Format { get; set; } = "yyyy-MM-dd";
+}
+```
+
+### How It Works
+
+1. **ControlType**: Specifies the control type to instantiate.
+2. **BindingProperty**: The property on the control to bind to (without "Property" suffix).
+3. **FactoryMethod** (optional): Name of a method to create the control instance.
+
+### Factory Method Pattern
+
+For complex controls, define a factory method:
+
+```csharp
+public sealed class NumericUpDownAttribute : ControlBindingAttribute
+{
+    public double Minimum { get; set; } = double.MinValue;
+    public double Maximum { get; set; } = double.MaxValue;
+    
+    public NumericUpDownAttribute() 
+        : base(typeof(NumericUpDown), "Value", nameof(CreateNumericUpDown)) 
+    {
+    }
+    
+    // Instance method on the attribute - called automatically
+    public Control CreateNumericUpDown(Type propertyType)
+    {
+        return new NumericUpDown
+        {
+            Minimum = (decimal)Minimum,
+            Maximum = (decimal)Maximum
+        };
+    }
+}
+```
+
+### Automatic Control Creation
+
+The `CreateExtendedControl` method in Avalonia/Ursa panels:
+1. Checks for `ControlBindingAttribute` on the property
+2. If `FactoryMethod` is specified, tries to invoke it (static on control type, then instance on attribute)
+3. Falls back to `Activator.CreateInstance` if no factory method
+4. Automatically binds to the specified `BindingProperty`

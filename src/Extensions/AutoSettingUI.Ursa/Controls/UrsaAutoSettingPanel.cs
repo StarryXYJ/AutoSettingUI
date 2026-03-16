@@ -638,7 +638,11 @@ public class UrsaAutoSettingPanel : TemplatedControl
             control = TryCreateControlFromAttribute(prop, target);
         }
 
-
+        if (control == null)
+        {
+            // Try extended controls from core attributes
+            control = CreateExtendedControl(prop, target);
+        }
 
         if (control == null)
         {
@@ -1309,6 +1313,69 @@ public class UrsaAutoSettingPanel : TemplatedControl
     }
 
     
+
+    private global::Avalonia.Controls.Control? CreateExtendedControl(Core.Models.PropertyDescriptor prop, object target)
+    {
+        var propertyInfo = GetPropertyInfo(target, prop.PropertyName);
+        if (propertyInfo == null) return null;
+
+        var controlBindingAttr = propertyInfo.GetCustomAttribute<ControlBindingAttribute>();
+        if (controlBindingAttr?.ControlType == null) return null;
+
+        var isReadOnly = IsEffectivelyReadOnly(prop, target);
+        var controlType = controlBindingAttr.ControlType;
+
+        global::Avalonia.Controls.Control? control = null;
+
+        if (!string.IsNullOrEmpty(controlBindingAttr.FactoryMethod))
+        {
+            var method = controlType.GetMethod(controlBindingAttr.FactoryMethod!, 
+                BindingFlags.Static | BindingFlags.Public);
+            if (method != null)
+            {
+                var parameters = method.GetParameters();
+                if (parameters.Length == 0)
+                    control = method.Invoke(null, null) as global::Avalonia.Controls.Control;
+                else if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Type))
+                    control = method.Invoke(null, [prop.PropertyType]) as global::Avalonia.Controls.Control;
+            }
+            
+            if (control == null)
+            {
+                var attrMethod = controlBindingAttr.GetType().GetMethod(controlBindingAttr.FactoryMethod!, 
+                    BindingFlags.Instance | BindingFlags.Public);
+                if (attrMethod != null)
+                {
+                    var parameters = attrMethod.GetParameters();
+                    if (parameters.Length == 0)
+                        control = attrMethod.Invoke(controlBindingAttr, null) as global::Avalonia.Controls.Control;
+                    else if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Type))
+                        control = attrMethod.Invoke(controlBindingAttr, [prop.PropertyType]) as global::Avalonia.Controls.Control;
+                }
+            }
+        }
+
+        control ??= Activator.CreateInstance(controlType) as global::Avalonia.Controls.Control;
+
+        if (control == null) return null;
+
+        control.IsEnabled = !isReadOnly;
+
+
+        if (!string.IsNullOrEmpty(controlBindingAttr.BindingProperty))
+        {
+            var propertyField = controlType.GetField(
+                controlBindingAttr.BindingProperty + "Property",
+                BindingFlags.Static | BindingFlags.Public | BindingFlags.FlattenHierarchy);
+            
+            if (propertyField?.GetValue(null) is AvaloniaProperty avaloniaProperty)
+            {
+                control.Bind(avaloniaProperty, new Binding(prop.PropertyName) { Source = target, Mode = BindingMode.TwoWay });
+            }
+        }
+
+        return control;
+    }
 
     private global::Avalonia.Controls.Control? TryCreateControlFromAttribute(Core.Models.PropertyDescriptor prop, object target)
     {

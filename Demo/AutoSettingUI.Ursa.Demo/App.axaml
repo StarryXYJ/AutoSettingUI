@@ -19,8 +19,7 @@
         <semi:SemiTheme></semi:SemiTheme>
         <!-- <FluentTheme /> -->
         <!-- Semi and Ursa Themes -->
-        
-        
+        <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml"/>
         <StyleInclude Source="avares://AutoSettingUI.Ursa/Themes/Generic.axaml"/>
     </Application.Styles>
 

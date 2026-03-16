@@ -28,7 +28,6 @@ public class AutoSettingGenerator : IIncrementalGenerator
     private const string CommandCanExecuteAttributeName = "CommandCanExecuteAttribute";
     private const string ReadOnlyAttributeName = "ReadOnlyAttribute";
     private const string CollectionEditorAttributeName = "CollectionEditorAttribute";
-    private const string ControlBindingAttributeBaseName = "ControlBindingAttributeBase";
     private const string NumericUpDownAttributeName = "NumericUpDownAttribute"; // Special handling needed - type depends on property type
 
     // Diagnostic descriptors
@@ -210,7 +209,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
         sb.AppendLine("        {");
         foreach (var cls in classes)
         {
-            var fqn = cls.ToDisplayString();
+            var fqn = cls.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
             sb.AppendLine($"            if (target is {fqn} t_{EscapeName(cls.Name)})");
             sb.AppendLine("            {");
             sb.AppendLine("                switch (propertyName)");
@@ -229,7 +228,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
         sb.AppendLine("        {");
         foreach (var cls in classes)
         {
-            var fqn = cls.ToDisplayString();
+            var fqn = cls.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
             var escapedName = EscapeName(cls.Name);
             sb.AppendLine($"            if (target is {fqn} s_{escapedName})");
             sb.AppendLine("            {");
@@ -239,7 +238,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
             {
                 if (prop.SetMethod != null && prop.SetMethod.DeclaredAccessibility == Accessibility.Public)
                 {
-                    var typeFqn = prop.Type.ToDisplayString();
+                    var typeFqn = prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                     sb.AppendLine($"                    case \"{prop.Name}\": s_{escapedName}.{prop.Name} = ({typeFqn})value!; return;");
                 }
             }
@@ -361,7 +360,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
 
             // ControlBinding
             var cbAttr = GetAttr(prop, ControlBindingAttributeName) ?? 
-                         GetAttrInherited(prop, ControlBindingAttributeBaseName);
+                         GetAttrInherited(prop, ControlBindingAttributeName);
             string? cbTypeName = null;
             string? cbBindingProp = null;
             string? cbFactoryMethod = null;
@@ -370,10 +369,26 @@ public class AutoSettingGenerator : IIncrementalGenerator
             {
                 // Try to get ControlType from constructor argument first (e.g., [ControlBinding(typeof(CheckBox)])
                 if (cbAttr.ConstructorArguments.Length > 0 && cbAttr.ConstructorArguments[0].Value is INamedTypeSymbol cbType)
-                    cbTypeName = cbType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", "");
+                {
+                    // Use AssemblyQualifiedName format for Type.GetType() to work correctly
+                    var assemblyName = cbType.ContainingAssembly?.Name;
+                    var typeFullName = cbType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", "");
+                    cbTypeName = !string.IsNullOrEmpty(assemblyName) 
+                        ? $"{typeFullName}, {assemblyName}" 
+                        : typeFullName;
+                }
                 
-                cbBindingProp = GetNamedArgRaw(cbAttr, "BindingProperty");
-                cbFactoryMethod = GetNamedArgRaw(cbAttr, "FactoryMethod");
+                // Get BindingProperty from constructor argument (2nd param) or named argument
+                if (cbAttr.ConstructorArguments.Length > 1 && cbAttr.ConstructorArguments[1].Value is string bindingPropFromCtor)
+                    cbBindingProp = bindingPropFromCtor;
+                else
+                    cbBindingProp = GetNamedArgRaw(cbAttr, "BindingProperty");
+                
+                // Get FactoryMethod from constructor argument (3rd param) or named argument
+                if (cbAttr.ConstructorArguments.Length > 2 && cbAttr.ConstructorArguments[2].Value is string factoryMethodFromCtor)
+                    cbFactoryMethod = factoryMethodFromCtor;
+                else
+                    cbFactoryMethod = GetNamedArgRaw(cbAttr, "FactoryMethod");
 
                 // Special handling for custom attributes that set defaults in constructor
                 var attrName = cbAttr.AttributeClass?.Name;
@@ -663,7 +678,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
                     var typeFqn = prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).Replace("global::", "");
                     if (processedEnums.Add(typeFqn))
                     {
-                        sb.AppendLine($"                case \"{typeFqn}\": return Enum.Parse(typeof({prop.Type.ToDisplayString()}), value);");
+                        sb.AppendLine($"                case \"{typeFqn}\": return Enum.Parse(typeof({prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}), value);");
                     }
                 }
             }

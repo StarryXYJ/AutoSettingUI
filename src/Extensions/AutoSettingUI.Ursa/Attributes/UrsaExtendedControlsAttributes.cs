@@ -7,13 +7,10 @@ namespace AutoSettingUI.Ursa.Attributes;
 /// Specifies that a collection of strings should be edited using a TagInput control.
 /// </summary>
 [AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
-public sealed class TagInputAttribute : ControlBindingAttributeBase
+public sealed class TagInputAttribute : ControlBindingAttribute
 {
-    public TagInputAttribute()
+    public TagInputAttribute():base(typeof(global::Ursa.Controls.TagInput), "Tags")
     {
-        ControlType = typeof(global::Ursa.Controls.TagInput);
-        BindingProperty = "Tags";
-        FactoryMethod = "CreateTagInput";
     }
 }
 
@@ -21,68 +18,28 @@ public sealed class TagInputAttribute : ControlBindingAttributeBase
 /// Specifies that an IPAddress property should be edited using an IPv4Box control.
 /// </summary>
 [AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
-public sealed class IPv4BoxAttribute : ControlBindingAttributeBase
-{
-    public IPv4BoxAttribute()
-    {
-        ControlType = typeof(global::Ursa.Controls.IPv4Box);
-        BindingProperty = "IPAddress";
-        FactoryMethod = "CreateIPv4Box";
-    }
-}
+public sealed class IPv4BoxAttribute() : ControlBindingAttribute(typeof(global::Ursa.Controls.IPv4Box), "IPAddress");
 
 /// <summary>
 /// Specifies that a boolean property should be edited using a CheckBox control.
 /// </summary>
 [AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
-public sealed class CheckBoxAttribute : ControlBindingAttributeBase
-{
-    public CheckBoxAttribute()
-    {
-        ControlType = typeof(global::Avalonia.Controls.CheckBox);
-        BindingProperty = "IsChecked";
-        FactoryMethod = "CreateCheckBox";
-    }
-}
+public sealed class CheckBoxAttribute() : ControlBindingAttribute(typeof(CheckBox), "IsChecked");
 
 /// <summary>
 /// Specifies that a TimeSpan property should be edited using a TimePicker control.
 /// </summary>
 [AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
-public sealed class TimePickerAttribute : ControlBindingAttributeBase
-{
-    public TimePickerAttribute()
-    {
-        ControlType = typeof(global::Avalonia.Controls.TimePicker);
-        BindingProperty = "SelectedTime";
-        FactoryMethod = "CreateTimePicker";
-    }
-}
+public sealed class TimePickerAttribute() : ControlBindingAttribute(typeof(TimePicker), "SelectedTime");
 
 /// <summary>
 /// Specifies that a DateTime property should be edited using a CalendarDatePicker control.
 /// </summary>
 [AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
-public sealed class DatePickerAttribute : ControlBindingAttributeBase
-{
-    public DatePickerAttribute()
-    {
-        ControlType = typeof(global::Avalonia.Controls.CalendarDatePicker);
-        BindingProperty = "SelectedDate";
-        FactoryMethod = "CreateDatePicker";
-    }
-}
+public sealed class DatePickerAttribute() : ControlBindingAttribute(typeof(CalendarDatePicker), "SelectedDate");
 
 /// <summary>
 /// Specifies that a Color property should be edited using a ColorPicker control.
 /// </summary>
 [AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
-public sealed class ColorPickerAttribute : ControlBindingAttributeBase
-{
-    public ColorPickerAttribute()
-    {
-        ControlType = typeof(global::Avalonia.Controls.ColorPicker);
-        BindingProperty = "Color";
-        FactoryMethod = "CreateColorPicker";
-    }
-}
+public sealed class ColorPickerAttribute() : ControlBindingAttribute(typeof(ColorPicker), "Color");

@@ -1307,56 +1307,65 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
 
     private global::Avalonia.Controls.Control? CreateExtendedControl(Core.Models.PropertyDescriptor prop, object target)
     {
-        var attrName = prop.CustomControlBinding?.Split('.').Last();
-        if (string.IsNullOrEmpty(attrName)) return null;
+        var propertyInfo = GetPropertyInfo(target, prop.PropertyName);
+        if (propertyInfo == null) return null;
+
+        var controlBindingAttr = propertyInfo.GetCustomAttribute<ControlBindingAttribute>();
+        if (controlBindingAttr?.ControlType == null) return null;
 
         var isReadOnly = IsEffectivelyReadOnly(prop, target);
+        var controlType = controlBindingAttr.ControlType;
 
-        if (attrName == "ColorPickerAttribute" || attrName == "ColorPicker")
+        global::Avalonia.Controls.Control? control = null;
+
+        if (!string.IsNullOrEmpty(controlBindingAttr.FactoryMethod))
         {
-            var picker = new global::Avalonia.Controls.ColorPicker
+            var method = controlType.GetMethod(controlBindingAttr.FactoryMethod!, 
+                BindingFlags.Static | BindingFlags.Public);
+            if (method != null)
             {
-                HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
-                IsEnabled = !isReadOnly
-            };
-            picker.Bind(global::Avalonia.Controls.ColorPicker.ColorProperty, new Binding(prop.PropertyName) { Source = target, Mode = BindingMode.TwoWay });
-            return picker;
+                var parameters = method.GetParameters();
+                if (parameters.Length == 0)
+                    control = method.Invoke(null, null) as global::Avalonia.Controls.Control;
+                else if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Type))
+                    control = method.Invoke(null, new object[] { prop.PropertyType }) as global::Avalonia.Controls.Control;
+            }
+            
+            if (control == null)
+            {
+                var attrMethod = controlBindingAttr.GetType().GetMethod(controlBindingAttr.FactoryMethod!, 
+                    BindingFlags.Instance | BindingFlags.Public);
+                if (attrMethod != null)
+                {
+                    var parameters = attrMethod.GetParameters();
+                    if (parameters.Length == 0)
+                        control = attrMethod.Invoke(controlBindingAttr, null) as global::Avalonia.Controls.Control;
+                    else if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Type))
+                        control = attrMethod.Invoke(controlBindingAttr, [prop.PropertyType]) as global::Avalonia.Controls.Control;
+                }
+            }
         }
 
-        if (attrName == "TimePickerAttribute" || attrName == "TimePicker")
+        control ??= Activator.CreateInstance(controlType) as global::Avalonia.Controls.Control;
+
+        if (control == null) return null;
+
+        control.IsEnabled = !isReadOnly;
+
+
+        if (!string.IsNullOrEmpty(controlBindingAttr.BindingProperty))
         {
-            var picker = new global::Avalonia.Controls.TimePicker
+            var propertyField = controlType.GetField(
+                controlBindingAttr.BindingProperty + "Property",
+                BindingFlags.Static | BindingFlags.Public | BindingFlags.FlattenHierarchy);
+            
+            if (propertyField?.GetValue(null) is AvaloniaProperty avaloniaProperty)
             {
-                HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
-                IsEnabled = !isReadOnly
-            };
-            picker.Bind(global::Avalonia.Controls.TimePicker.SelectedTimeProperty, new Binding(prop.PropertyName) { Source = target, Mode = BindingMode.TwoWay });
-            return picker;
+                control.Bind(avaloniaProperty, new Binding(prop.PropertyName) { Source = target, Mode = BindingMode.TwoWay });
+            }
         }
 
-        if (attrName == "DatePickerAttribute" || attrName == "DatePicker")
-        {
-            var picker = new global::Avalonia.Controls.DatePicker
-            {
-                HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
-                IsEnabled = !isReadOnly
-            };
-            picker.Bind(global::Avalonia.Controls.DatePicker.SelectedDateProperty, new Binding(prop.PropertyName) { Source = target, Mode = BindingMode.TwoWay });
-            return picker;
-        }
-
-        if (attrName == "CheckBoxAttribute" || attrName == "CheckBox")
-        {
-            var checkBox = new CheckBox
-            {
-                Content = prop.DisplayName,
-                IsEnabled = !isReadOnly
-            };
-            checkBox.Bind(CheckBox.IsCheckedProperty, new Binding(prop.PropertyName) { Source = target, Mode = BindingMode.TwoWay });
-            return checkBox;
-        }
-
-        return null;
+        return control;
     }
 
     private global::Avalonia.Controls.Control? TryCreateControlFromAttribute(Core.Models.PropertyDescriptor prop, object target)
