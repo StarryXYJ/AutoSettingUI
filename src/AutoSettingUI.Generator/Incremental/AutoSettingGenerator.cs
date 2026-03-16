@@ -416,6 +416,36 @@ public class AutoSettingGenerator : IIncrementalGenerator
                         };
                     }
                 }
+                else if (attrName == "TagInputAttribute" || attrName == "TagInput")
+                {
+                    cbTypeName ??= "Ursa.Controls.TagInput, Ursa";
+                    cbBindingProp ??= "Tags";
+                }
+                else if (attrName == "IPv4BoxAttribute" || attrName == "IPv4Box")
+                {
+                    cbTypeName ??= "Ursa.Controls.IPv4Box, Ursa";
+                    cbBindingProp ??= "IPAddress";
+                }
+                else if (attrName == "CheckBoxAttribute" || attrName == "CheckBox")
+                {
+                    cbTypeName ??= "Avalonia.Controls.CheckBox, Avalonia.Controls";
+                    cbBindingProp ??= "IsChecked";
+                }
+                else if (attrName == "TimePickerAttribute" || attrName == "TimePicker")
+                {
+                    cbTypeName ??= "Avalonia.Controls.TimePicker, Avalonia.Controls";
+                    cbBindingProp ??= "SelectedTime";
+                }
+                else if (attrName == "DatePickerAttribute" || attrName == "DatePicker")
+                {
+                    cbTypeName ??= "Avalonia.Controls.CalendarDatePicker, Avalonia.Controls";
+                    cbBindingProp ??= "SelectedDate";
+                }
+                else if (attrName == "ColorPickerAttribute" || attrName == "ColorPicker")
+                {
+                    cbTypeName ??= "Avalonia.Controls.ColorPicker, Avalonia.Controls";
+                    cbBindingProp ??= "Color";
+                }
                 // Note: Other derived attributes (CheckBox, TagInput, IPv4Box, ColorPicker, TimePicker, DatePicker)
                 // set ControlType, BindingProperty, and FactoryMethod in their constructors,
                 // so they are automatically handled by the code above.

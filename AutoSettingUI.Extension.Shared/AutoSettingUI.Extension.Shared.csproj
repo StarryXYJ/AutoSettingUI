@@ -1,13 +1,32 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <IsAotCompatible>true</IsAotCompatible>
+        <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+        
+        <!-- NuGet Packaging -->
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PackageId>AutoSettingUI.Extension.Shared</PackageId>
+        <Version>1.0.0</Version>
+        <Authors>AutoSettingUI Contributors</Authors>
+        <Description>Shared utilities and helpers for AutoSettingUI framework extensions</Description>
+        <PackageTags>settings;configuration;ui;shared;helpers</PackageTags>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/StarryXYJ/AutoSettingUI</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/StarryXYJ/AutoSettingUI.git</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\src\AutoSettingUI.Core\AutoSettingUI.Core.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\" />
     </ItemGroup>
 
 </Project>

@@ -15,14 +15,14 @@
         <Description>Core library for AutoSettingUI - A declarative settings UI framework for .NET</Description>
         <PackageTags>settings;configuration;ui;avalonia;wpf;ursa</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <PackageProjectUrl>https://github.com/yourusername/AutoSettingUI</PackageProjectUrl>
-        <RepositoryUrl>https://github.com/yourusername/AutoSettingUI.git</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/StarryXYJ/AutoSettingUI</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/StarryXYJ/AutoSettingUI.git</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>
-        <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+        <None Include="README.md" Pack="true" PackagePath="\" />
     </ItemGroup>
 
 </Project>

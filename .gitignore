@@ -9,6 +9,7 @@ publish/
 *.nupkg
 *.snupkg
 project.lock.json
+artifacts/
 
 # IDE - JetBrains Rider
 .idea/

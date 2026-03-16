@@ -16,15 +16,20 @@
         <Description>WPF UI implementation for AutoSettingUI - Declarative settings UI controls for WPF</Description>
         <PackageTags>settings;configuration;ui;wpf;windows</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <PackageProjectUrl>https://github.com/yourusername/AutoSettingUI</PackageProjectUrl>
-        <RepositoryUrl>https://github.com/yourusername/AutoSettingUI.git</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/StarryXYJ/AutoSettingUI</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/StarryXYJ/AutoSettingUI.git</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\..\AutoSettingUI.Core\AutoSettingUI.Core.csproj" />
       <ProjectReference Include="..\..\..\AutoSettingUI.Extension.Shared\AutoSettingUI.Extension.Shared.csproj" />
       <ProjectReference Include="..\..\AutoSettingUI.Generator\AutoSettingUI.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="\" />
     </ItemGroup>
 
 </Project>

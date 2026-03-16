@@ -18,9 +18,10 @@
         <Description>Roslyn source generator for AutoSettingUI - Generates AOT-compatible setting descriptors at compile time</Description>
         <PackageTags>settings;configuration;ui;source-generator;roslyn;aot</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
-        <PackageProjectUrl>https://github.com/yourusername/AutoSettingUI</PackageProjectUrl>
-        <RepositoryUrl>https://github.com/yourusername/AutoSettingUI.git</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/StarryXYJ/AutoSettingUI</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/StarryXYJ/AutoSettingUI.git</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>
@@ -28,10 +29,9 @@
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.12.0" PrivateAssets="all" />
     </ItemGroup>
 
-    
-
     <ItemGroup>
         <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+        <None Include="README.md" Pack="true" PackagePath="\" />
     </ItemGroup>
 
 </Project>
