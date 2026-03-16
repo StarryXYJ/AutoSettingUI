@@ -1,7 +1,9 @@
 ﻿using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Windows;
-using AutoSettingUI.Wpf.Demo.Models;
+using System.Windows.Media;
 using AutoSettingUI.WPF.Controls;
+using AutoSettingUI.Wpf.Demo.Models;
 
 namespace AutoSettingUI.Wpf.Demo;
 
@@ -13,23 +15,57 @@ public partial class MainWindow : Window
     private bool _isCustomView = false;
     private ObservableCollection<object> _targets = [];
 
+    private ThemeSettings _themeSettings = new();
+    private ExtendedControlsSettings _extendedSettings = new();
+
     public MainWindow()
     {
         InitializeComponent();
-        Loaded += OnLoaded;
+
+        // Default settings
+        SettingsPanel.Targets = _targets;
+        SettingsPanel.Targets.Add(_themeSettings);
+        SettingsPanel.Targets.Add(_extendedSettings);
+        SettingsPanel.Targets.Add(new ApplicationSettings());
+        SettingsPanel.Targets.Add(new UserPreferences());
+        SettingsPanel.Targets.Add(new NetworkSettings());
+
+        CustomSettingsPanel.Targets= _targets;
+        CustomSettingsPanel.Targets.Add(_themeSettings);
+        CustomSettingsPanel.Targets.Add(_extendedSettings);
+        CustomSettingsPanel.Targets.Add(new ApplicationSettings());
+        CustomSettingsPanel.Targets.Add(new UserPreferences());
+        CustomSettingsPanel.Targets.Add(new NetworkSettings());
+
+        _themeSettings.PropertyChanged += OnThemeSettingsChanged;
     }
 
-    private void OnLoaded(object sender, RoutedEventArgs e)
+    private void OnThemeSettingsChanged(object? sender, PropertyChangedEventArgs e)
     {
-        // Create sample settings instances
-        var appSettings = new ApplicationSettings();
-        var userPreferences = new UserPreferences();
-        var networkSettings = new NetworkSettings();
+        if (e.PropertyName == nameof(ThemeSettings.SelectedTheme))
+        {
+            ApplyTheme(_themeSettings.SelectedTheme);
+        }
+    }
 
-        // Set the targets for both panels
-        _targets = [appSettings, userPreferences, networkSettings];
-        SettingsPanel.Targets = _targets;
-        CustomSettingsPanel.Targets = _targets;
+    private void ApplyTheme(string themeName)
+    {
+        // Simple theme switching via colors for premium look
+        switch (themeName)
+        {
+            case "Dark":
+                this.Background = new SolidColorBrush(Color.FromRgb(30, 30, 30));
+                this.Foreground = Brushes.White;
+                break;
+            case "Blue":
+                this.Background = new SolidColorBrush(Color.FromRgb(41, 128, 185));
+                this.Foreground = Brushes.White;
+                break;
+            default:
+                this.Background = Brushes.White;
+                this.Foreground = Brushes.Black;
+                break;
+        }
     }
 
     private void ToggleView_Click(object sender, RoutedEventArgs e)

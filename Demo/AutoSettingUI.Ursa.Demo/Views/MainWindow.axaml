@@ -25,20 +25,7 @@
                            FontSize="20"
                            FontWeight="Bold"
                            VerticalAlignment="Center"/>
-                <!-- Theme Selector -->
-                <ComboBox Grid.Column="1"
-                          Width="140"
-                          Margin="10,0,5,0"
-                          VerticalAlignment="Center"
-                          ItemsSource="{Binding AvailableThemes}"
-                          SelectedItem="{Binding SelectedThemeInfo, Mode=TwoWay}"
-                          PlaceholderText="Theme">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate x:DataType="vm:ThemeInfo">
-                            <TextBlock Text="{Binding Name}"/>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                <!-- Navigation Toggle -->
                 <Button Grid.Column="2"
                         Command="{Binding ToggleNavigationCommand}"
                         Margin="5,0,5,0"
@@ -55,7 +42,8 @@
         </Border>
 
         <!-- Settings Panel - Default Style -->
-        <controls:UrsaAutoSettingPanel Grid.Row="1"
+        <controls:UrsaAutoSettingPanel x:Name="DefaultSettingsPanel"
+                                       Grid.Row="1"
                                        IsVisible="{Binding !IsCustomView}"
                                        Title="{Binding Title}"
                                        ShowNavigation="{Binding ShowNavigation}"
@@ -66,7 +54,8 @@
         <Border Grid.Row="1"
                 IsVisible="{Binding IsCustomView}"
                 Background="#FFE8E8E8">
-            <controls:UrsaAutoSettingPanel Title="Custom Styled Settings"
+            <controls:UrsaAutoSettingPanel x:Name="CustomSettingsPanel"
+                                           Title="Custom Styled Settings"
                                            ShowNavigation="{Binding ShowNavigation}"
                                            NavigationWidth="250"
                                            Targets="{Binding Targets}">

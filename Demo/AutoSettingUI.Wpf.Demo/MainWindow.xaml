@@ -7,15 +7,133 @@
         xmlns:controls="clr-namespace:AutoSettingUI.WPF.Controls;assembly=AutoSettingUI.WPF"
         xmlns:models="clr-namespace:AutoSettingUI.Core.Models;assembly=AutoSettingUI.Core"
         mc:Ignorable="d"
-        Title="AutoSettingUI WPF Demo" Height="600" Width="900">
+        Title="AutoSettingUI Premium WPF Demo" Height="700" Width="1000"
+        WindowStartupLocation="CenterScreen"
+        Background="#F0F2F5">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
         
+        <!-- Modern ScrollBar Style -->
+        <Style TargetType="ScrollBar">
+            <Setter Property="Width" Value="8"/>
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+
         <HierarchicalDataTemplate x:Key="NavigationNodeTemplate"
-                                  DataType="{x:Type models:NavigationNode}"
-                                  ItemsSource="{Binding Children}">
-            <TextBlock Text="{Binding Title}" />
+                                   DataType="{x:Type models:NavigationNode}"
+                                   ItemsSource="{Binding Children}">
+            <TextBlock Text="{Binding Title}" VerticalAlignment="Center" Margin="5,2"/>
         </HierarchicalDataTemplate>
+        
+        <!-- Premium Navigation Style -->
+        <Style x:Key="ModernTreeViewStyle" TargetType="TreeView">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10"/>
+        </Style>
+
+        <Style TargetType="TreeViewItem">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Margin" Value="0,1"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TreeViewItem">
+                        <StackPanel>
+                            <Border x:Name="Selection_Border"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="6"
+                                    Padding="{TemplateBinding Padding}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="20"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ToggleButton x:Name="Expander" 
+                                                 VerticalAlignment="Center"
+                                                 ClickMode="Press"
+                                                 IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}">
+                                        <ToggleButton.Style>
+                                            <Style TargetType="ToggleButton">
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="ToggleButton">
+                                                            <Path x:Name="Arrow" Data="M0,0 L4,4 L0,8 Z" Fill="#888" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                                <Path.RenderTransform>
+                                                                    <RotateTransform Angle="0" CenterX="2" CenterY="4"/>
+                                                                </Path.RenderTransform>
+                                                            </Path>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsChecked" Value="True">
+                                                                    <Setter TargetName="Arrow" Property="RenderTransform">
+                                                                        <Setter.Value>
+                                                                            <RotateTransform Angle="90" CenterX="2" CenterY="4"/>
+                                                                        </Setter.Value>
+                                                                    </Setter>
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </ToggleButton.Style>
+                                    </ToggleButton>
+                                    <ContentPresenter x:Name="PART_Header" Grid.Column="1" ContentSource="Header"/>
+                                </Grid>
+                            </Border>
+                            <ItemsPresenter x:Name="ItemsHost" Margin="20,0,0,0" Visibility="Collapsed"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="HasItems" Value="False">
+                                <Setter TargetName="Expander" Property="Visibility" Value="Hidden"/>
+                            </Trigger>
+                            <Trigger Property="IsExpanded" Value="True">
+                                <Setter TargetName="ItemsHost" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Selection_Border" Property="Background" Value="#3498DB"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsSelected" Value="True"/>
+                                    <Condition Property="Selector.IsSelectionActive" Value="False"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="Selection_Border" Property="Background" Value="#BDC3C7"/>
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Premium Button Style -->
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="#3498DB"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Margin" Value="5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="6" 
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#2980B9"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
         
         <!-- Custom Style for the Custom View Panel -->
         <Style x:Key="CustomSettingsPanelStyle" TargetType="controls:WpfAutoSettingPanel">
@@ -30,36 +148,28 @@
 
                             <!-- Navigation Panel -->
                             <Border Grid.Column="0"
-                                    Background="#FF2C3E50"
-                                    BorderBrush="#FF34495E"
-                                    BorderThickness="0,0,1,0"
+                                    Background="#2C3E50"
                                     Visibility="{TemplateBinding ShowNavigation, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                                     <TreeView x:Name="PART_Navigation"
-                                              Margin="10"
-                                              BorderThickness="0"
-                                              Background="Transparent"
-                                              Foreground="White"
+                                              Style="{StaticResource ModernTreeViewStyle}"
                                               ItemTemplate="{StaticResource NavigationNodeTemplate}">
-                                        <TreeView.ItemContainerStyle>
-                                            <Style TargetType="TreeViewItem">
-                                                <Setter Property="IsExpanded" Value="{Binding IsExpanded}"/>
-                                                <Setter Property="IsSelected" Value="{Binding IsSelected}"/>
-                                                <Setter Property="Foreground" Value="White"/>
-                                                <Setter Property="Padding" Value="5"/>
-                                            </Style>
-                                        </TreeView.ItemContainerStyle>
                                     </TreeView>
                                 </ScrollViewer>
                             </Border>
 
                             <!-- Form Panel -->
-                            <Border Grid.Column="1" Background="#FFF5F5F5">
-                                <ScrollViewer x:Name="PART_FormScrollViewer"
-                                              VerticalScrollBarVisibility="Auto"
-                                              HorizontalScrollBarVisibility="Disabled">
-                                    <ContentControl Content="{TemplateBinding Targets}"/>
-                                </ScrollViewer>
+                            <Border Grid.Column="1" Background="#ECF0F1" Padding="20">
+                                <Border Background="White" CornerRadius="12" Padding="20">
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="15" ShadowDepth="2" Opacity="0.1"/>
+                                    </Border.Effect>
+                                    <ScrollViewer x:Name="PART_FormScrollViewer"
+                                                  VerticalScrollBarVisibility="Auto"
+                                                  HorizontalScrollBarVisibility="Disabled">
+                                        <ContentControl Content="{TemplateBinding Targets}"/>
+                                    </ScrollViewer>
+                                </Border>
                             </Border>
                         </Grid>
                     </ControlTemplate>
@@ -76,23 +186,33 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="#FF2D2D30" Padding="15">
+        <Border Grid.Row="0" Padding="20">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#2C3E50" Offset="0"/>
+                    <GradientStop Color="#34495E" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="AutoSettingUI WPF Demo" 
-                           Foreground="White" 
-                           FontSize="20" 
-                           FontWeight="Bold"
-                           VerticalAlignment="Center"/>
-                <Button Grid.Column="1" x:Name="ToggleNavButton" Content="Nav: True" 
-                        Padding="10,5" Margin="10,0,5,0"
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Ellipse Width="15" Height="15" Fill="#E74C3C" Margin="0,0,10,0"/>
+                    <TextBlock Text="AutoSettingUI Premium" 
+                               Foreground="White" 
+                               FontSize="22" 
+                               FontWeight="Bold"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                
+                <Button Grid.Column="1" x:Name="ToggleNavButton" Content="Navigation" 
+                        Background="#16A085"
                         Click="ToggleNav_Click"/>
-                <Button Grid.Column="2" x:Name="ToggleViewButton" Content="Switch to Custom View" 
-                        Padding="10,5" Margin="5,0,0,0"
+                <Button Grid.Column="2" x:Name="ToggleViewButton" Content="Switch View" 
+                        Background="#9B59B6"
                         Click="ToggleView_Click"/>
             </Grid>
         </Border>
@@ -102,27 +222,30 @@
                                       Grid.Row="1"
                                       Title="Settings"
                                       ShowNavigation="True"
-                                      NavigationWidth="200"/>
+                                      NavigationWidth="200"
+                                      Margin="10"/>
 
         <!-- Settings Panel - Custom Style -->
         <controls:WpfAutoSettingPanel x:Name="CustomSettingsPanel"
                                       Grid.Row="1"
-                                      Title="Custom Styled Settings"
+                                      Title="Custom Premium Settings"
                                       ShowNavigation="True"
                                       NavigationWidth="250"
                                       Style="{StaticResource CustomSettingsPanelStyle}"
                                       Visibility="Collapsed"/>
         
-        <Grid Grid.Row="2">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"></ColumnDefinition>
-                <ColumnDefinition Width="*"></ColumnDefinition>
-                <ColumnDefinition Width="*"></ColumnDefinition>
-            </Grid.ColumnDefinitions>
-            <Button Grid.Column="0" Click="AddApp">Add App</Button>
-            <Button Grid.Column="1" Click="AddUser">Add User</Button>
-            <Button Grid.Column="2" Click="AddNetworkConfig">Add Network Config</Button>
-        </Grid>
+        <Border Grid.Row="2" Background="White" Padding="10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"></ColumnDefinition>
+                    <ColumnDefinition Width="*"></ColumnDefinition>
+                    <ColumnDefinition Width="*"></ColumnDefinition>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Click="AddApp" Content="+ Add App" />
+                <Button Grid.Column="1" Click="AddUser" Content="+ Add User"/>
+                <Button Grid.Column="2" Click="AddNetworkConfig" Content="+ Add Network"/>
+            </Grid>
+        </Border>
         
     </Grid>
 </Window>

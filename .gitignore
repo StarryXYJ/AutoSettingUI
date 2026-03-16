@@ -58,3 +58,12 @@ coverage/
 
 # Source generator cache (if any)
 *.generated.cs
+
+# Secure
+.env
+*.env
+
+# dev
+AgentHelper/
+Task.md
+manual/dev

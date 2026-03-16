@@ -1,0 +1,34 @@
+<UserControl x:Class="AutoSettingUI.Wpf.Demo.Controls.PersonCollectionEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:AutoSettingUI.Wpf.Demo.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="200" d:DesignWidth="400">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        
+        <TextBlock Grid.Row="0" Text="Custom Person Editor" FontWeight="Bold" Margin="0,0,0,5"/>
+        
+        <DataGrid Grid.Row="1" 
+                   ItemsSource="{Binding}" 
+                   AutoGenerateColumns="False"
+                   CanUserAddRows="True"
+                   CanUserDeleteRows="True">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Name" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+                <DataGridTextColumn Header="Age" Binding="{Binding Age, UpdateSourceTrigger=PropertyChanged}" Width="60"/>
+                <DataGridTextColumn Header="Email" Binding="{Binding Email, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+        
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,5,0,0">
+            <TextBlock Text="Tip: Edit directly in the grid above" FontStyle="Italic" Foreground="Gray"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

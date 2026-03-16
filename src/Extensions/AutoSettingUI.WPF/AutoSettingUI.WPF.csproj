@@ -7,11 +7,24 @@
         <UseWPF>true</UseWPF>
         <IsAotCompatible>true</IsAotCompatible>
         <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+        
+        <!-- NuGet Packaging -->
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PackageId>AutoSettingUI.WPF</PackageId>
+        <Version>1.0.0</Version>
+        <Authors>AutoSettingUI Contributors</Authors>
+        <Description>WPF UI implementation for AutoSettingUI - Declarative settings UI controls for WPF</Description>
+        <PackageTags>settings;configuration;ui;wpf;windows</PackageTags>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/yourusername/AutoSettingUI</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/yourusername/AutoSettingUI.git</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
     </PropertyGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\..\AutoSettingUI.Core\AutoSettingUI.Core.csproj" />
-      <ProjectReference Include="..\..\AutoSettingUI\AutoSettingUI.csproj" />
+      <ProjectReference Include="..\..\..\AutoSettingUI.Extension.Shared\AutoSettingUI.Extension.Shared.csproj" />
+      <ProjectReference Include="..\..\AutoSettingUI.Generator\AutoSettingUI.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     </ItemGroup>
 
 </Project>

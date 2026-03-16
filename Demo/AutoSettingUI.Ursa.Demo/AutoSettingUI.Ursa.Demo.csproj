@@ -3,9 +3,15 @@
         <OutputType>WinExe</OutputType>
         <TargetFramework>net9.0</TargetFramework>
         <Nullable>enable</Nullable>
-        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+        <BuiltInComInteropSupport>false</BuiltInComInteropSupport>
         <ApplicationManifest>app.manifest</ApplicationManifest>
+        <IsAotCompatible>true</IsAotCompatible>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+
+        <PublishAot>true</PublishAot>
+        <SelfContained>true</SelfContained>
+        <PublishTrimmed>true</PublishTrimmed>
+        <TrimMode>link</TrimMode>
     </PropertyGroup>
 
     <ItemGroup>
@@ -30,5 +36,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\src\Extensions\AutoSettingUI.Ursa\AutoSettingUI.Ursa.csproj" />
+      <!-- 直接引用Generator以确保为Demo项目中的Models生成AOT代码 -->
+      <ProjectReference Include="..\..\src\AutoSettingUI.Generator\AutoSettingUI.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     </ItemGroup>
 </Project>

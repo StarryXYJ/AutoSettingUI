@@ -4,6 +4,7 @@ namespace AutoSettingUI.Core.Models;
 
 /// <summary>
 /// Represents a node in the hierarchical navigation tree.
+/// Rendering order follows the order of items in the Targets collection.
 /// </summary>
 public sealed class NavigationNode
 {
@@ -16,11 +17,6 @@ public sealed class NavigationNode
     /// Gets the icon identifier (optional).
     /// </summary>
     public string? Icon { get; }
-
-    /// <summary>
-    /// Gets the order for sorting.
-    /// </summary>
-    public int Order { get; }
 
     /// <summary>
     /// Gets whether this is a main header (class level).
@@ -68,14 +64,12 @@ public sealed class NavigationNode
     public NavigationNode(
         string title,
         string? icon,
-        int order,
         string sectionId,
         SettingClassDescriptor classDescriptor,
         object targetInstance)
     {
         Title = title;
         Icon = icon;
-        Order = order;
         IsMainHeader = true;
         SectionId = sectionId;
         ClassDescriptor = classDescriptor;
@@ -93,7 +87,6 @@ public sealed class NavigationNode
         NavigationNode parent)
     {
         Title = title;
-        Order = order;
         IsMainHeader = false;
         SectionId = sectionId;
         SubSection = subSection;

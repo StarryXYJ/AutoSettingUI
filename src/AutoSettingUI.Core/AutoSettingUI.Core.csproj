@@ -6,6 +6,23 @@
         <Nullable>enable</Nullable>
         <IsAotCompatible>true</IsAotCompatible>
         <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+        
+        <!-- NuGet Packaging -->
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PackageId>AutoSettingUI.Core</PackageId>
+        <Version>1.0.0</Version>
+        <Authors>AutoSettingUI Contributors</Authors>
+        <Description>Core library for AutoSettingUI - A declarative settings UI framework for .NET</Description>
+        <PackageTags>settings;configuration;ui;avalonia;wpf;ursa</PackageTags>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/yourusername/AutoSettingUI</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/yourusername/AutoSettingUI.git</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
 
 </Project>
