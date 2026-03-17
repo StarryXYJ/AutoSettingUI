@@ -496,8 +496,8 @@ public class AutoSettingGenerator : IIncrementalGenerator
                 if (maskCharArg is char c)
                     passwordMaskChar = c;
                 var namedMaskChar = GetNamedArgRaw(passwordAttr, "MaskChar");
-                if (!string.IsNullOrEmpty(namedMaskChar) && namedMaskChar.Length > 0)
-                    passwordMaskChar = namedMaskChar[0];
+                if (!string.IsNullOrEmpty(namedMaskChar))
+                    passwordMaskChar = namedMaskChar![0];
                 var maskFlag = GetNamedArgRaw(passwordAttr, "Mask");
                 if (maskFlag == "False")
                     isPassword = false;

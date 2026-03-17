@@ -32,7 +32,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoSettingUI.Avalonia.Cros
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoSettingUI.Avalonia.CrossPlatform.Demo.iOS", "Demo\AutoSettingUI.Avalonia.CrossPlatform.Demo\AutoSettingUI.Avalonia.CrossPlatform.Demo.iOS\AutoSettingUI.Avalonia.CrossPlatform.Demo.iOS.csproj", "{770DA765-6AF7-41EE-A390-11072AB7AADE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoSettingUI.Extension.Shared", "AutoSettingUI.Extension.Shared\AutoSettingUI.Extension.Shared.csproj", "{7DC3E7DE-A099-4741-BEB8-519263BC5378}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoSettingUI.Extension.Shared", "src\Extensions\AutoSettingUI.Extension.Shared\AutoSettingUI.Extension.Shared.csproj", "{9A1EBB9B-6D6C-40BC-AD22-C911DF448004}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -88,10 +88,10 @@ Global
 		{770DA765-6AF7-41EE-A390-11072AB7AADE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{770DA765-6AF7-41EE-A390-11072AB7AADE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{770DA765-6AF7-41EE-A390-11072AB7AADE}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7DC3E7DE-A099-4741-BEB8-519263BC5378}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7DC3E7DE-A099-4741-BEB8-519263BC5378}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7DC3E7DE-A099-4741-BEB8-519263BC5378}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7DC3E7DE-A099-4741-BEB8-519263BC5378}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9A1EBB9B-6D6C-40BC-AD22-C911DF448004}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9A1EBB9B-6D6C-40BC-AD22-C911DF448004}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9A1EBB9B-6D6C-40BC-AD22-C911DF448004}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9A1EBB9B-6D6C-40BC-AD22-C911DF448004}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -110,6 +110,6 @@ Global
 		{6AA39E2F-349F-4D85-B9A3-034357B24C88} = {62B1B8AC-AF4B-444C-BDD0-86BE0BB0F6C1}
 		{8962BC40-338D-4FFE-AD6E-F072B033F091} = {62B1B8AC-AF4B-444C-BDD0-86BE0BB0F6C1}
 		{770DA765-6AF7-41EE-A390-11072AB7AADE} = {62B1B8AC-AF4B-444C-BDD0-86BE0BB0F6C1}
-		{7DC3E7DE-A099-4741-BEB8-519263BC5378} = {FEC5DFBE-67B3-44C8-81C9-90C4213BF940}
+		{9A1EBB9B-6D6C-40BC-AD22-C911DF448004} = {FEC5DFBE-67B3-44C8-81C9-90C4213BF940}
 	EndGlobalSection
 EndGlobal
