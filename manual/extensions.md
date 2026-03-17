@@ -160,3 +160,91 @@ The `CreateExtendedControl` method in Avalonia/Ursa panels:
 2. If `FactoryMethod` is specified, tries to invoke it (static on control type, then instance on attribute)
 3. Falls back to `Activator.CreateInstance` if no factory method
 4. Automatically binds to the specified `BindingProperty`
+
+---
+
+## Using ControlBinding Directly on Properties
+
+You can use `[ControlBinding]` directly on a property without creating a custom attribute. This is useful for one-off customizations:
+
+### Basic Usage (No Factory Method)
+
+```csharp
+[SettingUI]
+public class ThemeSettings
+{
+    [Title("Accent Color")]
+    [ControlBinding(typeof(ColorPicker), BindingProperty = "Color")]
+    public Color AccentColor { get; set; } = Colors.DodgerBlue;
+}
+```
+
+### With Factory Method for Custom Configuration
+
+Define a factory method in your settings class to customize the control:
+
+```csharp
+[SettingUI]
+public class AudioSettings
+{
+    [Title("Volume")]
+    [ControlBinding(typeof(Slider), BindingProperty = "Value", FactoryMethod = nameof(VolumeFactory))]
+    public double Volume { get; set; } = 50.0;
+
+    // Factory method - must be public and return the control type
+    public Slider VolumeFactory()
+    {
+        return new Slider
+        {
+            Minimum = 0,
+            Maximum = 100,
+            MaxWidth = 200,
+            TickFrequency = 10,
+            IsSnapToTickEnabled = true
+        };
+    }
+}
+```
+
+### WPF Example
+
+```csharp
+[SettingUI]
+public class AudioSettings
+{
+    [Title("Volume")]
+    [ControlBinding(typeof(Slider), BindingProperty = "Value", FactoryMethod = nameof(VolumeFactory))]
+    public double Volume { get; set; } = 50.0;
+
+    public Slider VolumeFactory()
+    {
+        return new Slider
+        {
+            Minimum = 0,
+            Maximum = 100,
+            Width = 200,
+            TickFrequency = 10,
+            IsSnapToTickEnabled = true
+        };
+    }
+}
+```
+
+### Factory Method Rules
+
+1. **Return Type**: Must match `ControlType` specified in the attribute
+2. **Parameters**: Can be parameterless or accept `Type` (property type)
+3. **Location**: Can be in the settings class or a separate static class
+4. **Visibility**: Must be `public`
+
+```csharp
+// Parameterless factory
+public Slider CreateSlider() => new Slider { Minimum = 0, Maximum = 100 };
+
+// Factory with property type parameter (useful for generic controls)
+public Control CreateNumericInput(Type propertyType)
+{
+    // propertyType is the type of the property being bound
+    return new NumericUpDown();
+}
+```

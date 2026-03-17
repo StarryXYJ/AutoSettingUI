@@ -135,9 +135,54 @@ public sealed class PropertyDescriptor
     public bool CollectionAllowReorder { get; }
 
     /// <summary>
+    /// Gets whether users can edit items in the collection.
+    /// </summary>
+    public bool CollectionAllowEditItems { get; }
+
+    /// <summary>
     /// Gets the element type name for collection properties.
     /// </summary>
     public string? CollectionElementTypeName { get; }
+
+    /// <summary>
+    /// Gets the placeholder text for input controls, if specified.
+    /// </summary>
+    public string? PlaceholderText { get; }
+
+    /// <summary>
+    /// Gets the description/tooltip text for the property, if specified.
+    /// </summary>
+    public string? DescriptionText { get; }
+
+    /// <summary>
+    /// Gets whether the property should be treated as a password field.
+    /// </summary>
+    public bool IsPassword { get; }
+
+    /// <summary>
+    /// Gets the password masking character, if specified.
+    /// </summary>
+    public char PasswordMaskChar { get; }
+
+    /// <summary>
+    /// Gets whether the property uses NumericUpDown settings.
+    /// </summary>
+    public bool IsNumericUpDown { get; }
+
+    /// <summary>
+    /// Gets the minimum value for NumericUpDown.
+    /// </summary>
+    public double NumericMinimum { get; }
+
+    /// <summary>
+    /// Gets the maximum value for NumericUpDown.
+    /// </summary>
+    public double NumericMaximum { get; }
+
+    /// <summary>
+    /// Gets the increment/step value for NumericUpDown.
+    /// </summary>
+    public double NumericIncrement { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PropertyDescriptor"/> class.
@@ -167,7 +212,16 @@ public sealed class PropertyDescriptor
         bool collectionAllowAdd = true,
         bool collectionAllowRemove = true,
         bool collectionAllowReorder = true,
-        string? collectionElementTypeName = null)
+        bool collectionAllowEditItems = true,
+        string? collectionElementTypeName = null,
+        string? placeholderText = null,
+        string? descriptionText = null,
+        bool isPassword = false,
+        char passwordMaskChar = '•',
+        bool isNumericUpDown = false,
+        double numericMinimum = 0,
+        double numericMaximum = 0,
+        double numericIncrement = 0)
     {
         PropertyName = propertyName;
         DisplayName = displayName;
@@ -193,7 +247,16 @@ public sealed class PropertyDescriptor
         CollectionAllowAdd = collectionAllowAdd;
         CollectionAllowRemove = collectionAllowRemove;
         CollectionAllowReorder = collectionAllowReorder;
+        CollectionAllowEditItems = collectionAllowEditItems;
         CollectionElementTypeName = collectionElementTypeName;
+        PlaceholderText = placeholderText;
+        DescriptionText = descriptionText;
+        IsPassword = isPassword;
+        PasswordMaskChar = passwordMaskChar;
+        IsNumericUpDown = isNumericUpDown;
+        NumericMinimum = numericMinimum;
+        NumericMaximum = numericMaximum;
+        NumericIncrement = numericIncrement;
     }
 }
 

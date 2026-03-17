@@ -559,9 +559,7 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
                     var method = controlType.GetMethod(prop.CustomControlFactoryMethod,
                         System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
                     if (method != null)
-                    {
-                        control = method.Invoke(null, null) as global::Avalonia.Controls.Control;
-                    }
+                        control = TryInvokeFactoryMethod(method, null, prop.PropertyType);
                     else
                     {
                         // Then, try to find the factory method on the target/settings class (static or instance)
@@ -569,36 +567,14 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
                         method = targetType.GetMethod(prop.CustomControlFactoryMethod,
                             System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
                         if (method != null)
-                        {
-                            // Check for parameterless or single Type parameter
-                            var parameters = method.GetParameters();
-                            if (parameters.Length == 0)
-                            {
-                                control = method.Invoke(null, null) as global::Avalonia.Controls.Control;
-                            }
-                            else if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Type))
-                            {
-                                control = method.Invoke(null, new object[] { prop.PropertyType }) as global::Avalonia.Controls.Control;
-                            }
-                        }
+                            control = TryInvokeFactoryMethod(method, null, prop.PropertyType);
                         else
                         {
                             // Try instance method on target
                             method = targetType.GetMethod(prop.CustomControlFactoryMethod,
                                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
                             if (method != null)
-                            {
-                                // Check for parameterless or single Type parameter
-                                var parameters = method.GetParameters();
-                                if (parameters.Length == 0)
-                                {
-                                    control = method.Invoke(target, null) as global::Avalonia.Controls.Control;
-                                }
-                                else if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Type))
-                                {
-                                    control = method.Invoke(target, new object[] { prop.PropertyType }) as global::Avalonia.Controls.Control;
-                                }
-                            }
+                                control = TryInvokeFactoryMethod(method, target, prop.PropertyType);
                             else
                             {
                                 // Try to find the factory method on an attribute type
@@ -609,7 +585,7 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
                     }
                 }
 
-                control ??= Activator.CreateInstance(controlType) as global::Avalonia.Controls.Control;
+                control ??= TryCreateControlInstance(controlType);
 
                 if (control != null && !string.IsNullOrEmpty(prop.CustomControlBindingProperty))
                 {
@@ -715,6 +691,8 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
 
         if (control != null)
         {
+            if (prop.IsNumericUpDown)
+                ApplyNumericUpDownSettings(control, prop);
             ApplyControlAttributes(control, prop, target);
             global::Avalonia.Controls.Grid.SetColumn(control, 1);
             panel.Children.Add(control);
@@ -868,19 +846,31 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
     private void ApplyControlAttributes(global::Avalonia.Controls.Control control, Core.Models.PropertyDescriptor prop, object target)
     {
         var propertyInfo = GetPropertyInfo(target, prop.PropertyName);
-        if (propertyInfo == null) return;
-
-        // Apply layout attributes
-        control.ApplyLayout(propertyInfo);
-
-        // Apply placeholder to TextBox
-        if (control is TextBox textBox)
+        if (propertyInfo != null)
         {
-            textBox.ApplyPlaceholder(propertyInfo);
+            // Apply layout attributes
+            control.ApplyLayout(propertyInfo);
+
+            // Apply placeholder to TextBox
+            if (control is TextBox textBox)
+            {
+                textBox.ApplyPlaceholder(propertyInfo);
+            }
+
+            // Apply description (tooltip)
+            control.ApplyDescription(propertyInfo);
         }
 
-        // Apply description (tooltip)
-        control.ApplyDescription(propertyInfo);
+        // AOT-safe fallback using generated metadata
+        if (control is TextBox tb && !string.IsNullOrEmpty(prop.PlaceholderText))
+        {
+            tb.Watermark = prop.PlaceholderText;
+        }
+
+        if (!string.IsNullOrEmpty(prop.DescriptionText))
+        {
+            ToolTip.SetTip(control, prop.DescriptionText);
+        }
     }
 
     /// <summary>
@@ -893,7 +883,8 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
         
         // Check for PasswordAttribute
         var passwordAttr = propertyInfo?.GetCustomAttribute<PasswordAttribute>();
-        var isPassword = passwordAttr != null || 
+        var isPassword = prop.IsPassword ||
+            passwordAttr != null ||
             prop.PropertyName.ToLowerInvariant().Contains("password") ||
             prop.PropertyName.ToLowerInvariant().Contains("pwd");
         
@@ -906,7 +897,7 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
         // Apply password masking if needed
         if (isPassword)
         {
-            textBox.PasswordChar = passwordAttr?.MaskChar ?? '•';
+            textBox.PasswordChar = passwordAttr?.MaskChar ?? prop.PasswordMaskChar;
         }
 
         // Track dynamic ReadOnly controls for refresh
@@ -968,7 +959,44 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
     /// </summary>
     private global::Avalonia.Controls.Control CreateCollectionControl(Core.Models.PropertyDescriptor prop, object target)
     {
+        // Check if a custom editor is specified
+        if (!string.IsNullOrEmpty(prop.CollectionEditorTypeName))
+        {
+            return CreateCustomCollectionEditor(prop, target);
+        }
+
         // Default collection editor
+        return CreateDefaultCollectionEditor(prop, target);
+    }
+
+    /// <summary>
+    /// Creates a custom collection editor.
+    /// </summary>
+    private global::Avalonia.Controls.Control CreateCustomCollectionEditor(Core.Models.PropertyDescriptor prop, object target)
+    {
+        var editorType = ResolveType(prop.CollectionEditorTypeName!);
+        if (editorType == null)
+            return CreateDefaultCollectionEditor(prop, target);
+
+        global::Avalonia.Controls.Control? editor = null;
+
+        // Try factory method first
+        if (!string.IsNullOrEmpty(prop.CollectionEditorFactoryMethod))
+        {
+            var method = editorType.GetMethod(prop.CollectionEditorFactoryMethod, BindingFlags.Static | BindingFlags.Public);
+            if (method != null)
+                editor = TryInvokeFactoryMethod(method, null, prop.PropertyType);
+        }
+
+        // Try to create instance
+        editor ??= TryCreateControlInstance(editorType);
+
+        if (editor != null)
+        {
+            editor.DataContext = _accessor?.GetValue(target, prop.PropertyName);
+            return editor;
+        }
+
         return CreateDefaultCollectionEditor(prop, target);
     }
 
@@ -979,6 +1007,10 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
     {
         var elementType = GetElementTypeFromName(prop.CollectionElementTypeName);
         var collection = _accessor?.GetValue(target, prop.PropertyName) as IList;
+        if (elementType == null && collection != null)
+        {
+            elementType = GetCollectionElementType(collection.GetType());
+        }
         if (collection == null)
         {
             // Try to create a new list if the property is null
@@ -1004,7 +1036,7 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
 
         if (elementType != null)
         {
-            listBox.ItemTemplate = CreateCollectionItemTemplate(elementType);
+            listBox.ItemTemplate = CreateCollectionItemTemplate(elementType, prop.CollectionAllowEditItems);
         }
 
         panel.Children.Add(listBox);
@@ -1035,12 +1067,16 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
             ToolTip.SetTip(addBtn, "Add item");
             addBtn.Click += (s, e) =>
             {
-                if (collection != null && elementType != null)
+                if (collection != null)
                 {
                     try
                     {
                         object? newItem;
-                        if (elementType.IsValueType)
+                        if (elementType == null)
+                        {
+                            newItem = null;
+                        }
+                        else if (elementType.IsValueType)
                         {
                             newItem = Activator.CreateInstance(elementType);
                         }
@@ -1070,7 +1106,7 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
                             else newItem = null;
                         }
 
-                        if (newItem != null || elementType.IsValueType)
+                        if (newItem != null || (elementType != null && elementType.IsValueType))
                         {
                             collection.Add(newItem);
                             // Refresh
@@ -1180,7 +1216,7 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
         return panel;
     }
 
-    private IDataTemplate CreateCollectionItemTemplate(Type elementType)
+    private IDataTemplate CreateCollectionItemTemplate(Type elementType, bool allowEditItems)
     {
         return new FuncDataTemplate<object>((item, scope) =>
         {
@@ -1190,13 +1226,22 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
             if (elementType == typeof(string) || elementType == typeof(int) || elementType == typeof(double) ||
                 elementType == typeof(float) || elementType == typeof(decimal) || elementType == typeof(bool))
             {
+                if (!allowEditItems)
+                {
+                    var text = new TextBlock { HorizontalAlignment = HorizontalAlignment.Stretch };
+                    text.DataContext = item;
+                    text.Bind(TextBlock.TextProperty, new Binding(".") { Mode = BindingMode.OneWay });
+                    return text;
+                }
+
                 var tb = new TextBox { HorizontalAlignment = HorizontalAlignment.Stretch };
+                tb.DataContext = item;
                 tb.Bind(TextBox.TextProperty, new Binding(".") { Mode = BindingMode.TwoWay });
                 return tb;
             }
 
             // Complex types
-            var panel = new StackPanel { Spacing = 5, Margin = new Thickness(5) };
+            var panel = new StackPanel { Spacing = 5, Margin = new Thickness(5), DataContext = item };
             var props = elementType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
                 .Where(p => p.CanRead && p.CanWrite);
 
@@ -1222,6 +1267,9 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
                     tb.Bind(TextBox.TextProperty, new Binding(p.Name) { Mode = BindingMode.TwoWay });
                     editor = tb;
                 }
+
+                if (!allowEditItems && editor is Control ctrl)
+                    ctrl.IsEnabled = false;
 
                 global::Avalonia.Controls.Grid.SetColumn(editor, 1);
                 row.Children.Add(label);
@@ -1323,30 +1371,18 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
             var method = controlType.GetMethod(controlBindingAttr.FactoryMethod!, 
                 BindingFlags.Static | BindingFlags.Public);
             if (method != null)
-            {
-                var parameters = method.GetParameters();
-                if (parameters.Length == 0)
-                    control = method.Invoke(null, null) as global::Avalonia.Controls.Control;
-                else if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Type))
-                    control = method.Invoke(null, new object[] { prop.PropertyType }) as global::Avalonia.Controls.Control;
-            }
+                control = TryInvokeFactoryMethod(method, null, prop.PropertyType);
             
             if (control == null)
             {
                 var attrMethod = controlBindingAttr.GetType().GetMethod(controlBindingAttr.FactoryMethod!, 
                     BindingFlags.Instance | BindingFlags.Public);
                 if (attrMethod != null)
-                {
-                    var parameters = attrMethod.GetParameters();
-                    if (parameters.Length == 0)
-                        control = attrMethod.Invoke(controlBindingAttr, null) as global::Avalonia.Controls.Control;
-                    else if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Type))
-                        control = attrMethod.Invoke(controlBindingAttr, [prop.PropertyType]) as global::Avalonia.Controls.Control;
-                }
+                    control = TryInvokeFactoryMethod(attrMethod, controlBindingAttr, prop.PropertyType);
             }
         }
 
-        control ??= Activator.CreateInstance(controlType) as global::Avalonia.Controls.Control;
+        control ??= TryCreateControlInstance(controlType);
 
         if (control == null) return null;
 
@@ -1383,17 +1419,7 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
             // Try to find factory method with property type parameter
             var method = attrType.GetMethod(prop.CustomControlFactoryMethod, BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance);
             if (method != null)
-            {
-                var parameters = method.GetParameters();
-                if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Type))
-                {
-                    return method.Invoke(attr, new object[] { propertyInfo.PropertyType }) as global::Avalonia.Controls.Control;
-                }
-                else if (parameters.Length == 0)
-                {
-                    return method.Invoke(attr, null) as global::Avalonia.Controls.Control;
-                }
-            }
+                return TryInvokeFactoryMethod(method, attr, propertyInfo.PropertyType);
         }
         return null;
     }
@@ -1425,6 +1451,96 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
             type = assembly.GetType(typeNamePart);
             if (type != null)
                 return type;
+        }
+
+        return null;
+    }
+
+    private static global::Avalonia.Controls.Control? TryCreateControlInstance(Type controlType)
+    {
+        try
+        {
+            var emptyCtor = controlType.GetConstructor(Type.EmptyTypes);
+            if (emptyCtor != null)
+                return Activator.CreateInstance(controlType) as global::Avalonia.Controls.Control;
+
+            var fallbackCtor = controlType.GetConstructors()
+                .OrderBy(c => c.GetParameters().Length)
+                .FirstOrDefault();
+            if (fallbackCtor == null)
+                return null;
+
+            var parameters = fallbackCtor.GetParameters();
+            var args = new object?[parameters.Length];
+            for (int i = 0; i < parameters.Length; i++)
+            {
+                var p = parameters[i];
+                if (p.HasDefaultValue)
+                {
+                    args[i] = p.DefaultValue;
+                }
+                else
+                {
+                    args[i] = p.ParameterType.IsValueType
+                        ? Activator.CreateInstance(p.ParameterType)
+                        : null;
+                }
+            }
+            return fallbackCtor.Invoke(args) as global::Avalonia.Controls.Control;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static global::Avalonia.Controls.Control? TryInvokeFactoryMethod(MethodInfo method, object? instance, Type propertyType)
+    {
+        try
+        {
+            var parameters = method.GetParameters();
+            if (parameters.Length == 0)
+                return method.Invoke(instance, null) as global::Avalonia.Controls.Control;
+            if (parameters.Length == 1 && parameters[0].ParameterType == typeof(Type))
+                return method.Invoke(instance, new object[] { propertyType }) as global::Avalonia.Controls.Control;
+        }
+        catch
+        {
+            return null;
+        }
+        return null;
+    }
+
+    private static void ApplyNumericUpDownSettings(global::Avalonia.Controls.Control control, Core.Models.PropertyDescriptor prop)
+    {
+        if (control is global::Avalonia.Controls.NumericUpDown nud)
+        {
+            nud.Minimum = (decimal)prop.NumericMinimum;
+            nud.Maximum = (decimal)prop.NumericMaximum;
+            nud.Increment = (decimal)prop.NumericIncrement;
+        }
+    }
+
+    private static Type? GetCollectionElementType(Type collectionType)
+    {
+        if (collectionType.IsArray)
+            return collectionType.GetElementType();
+
+        if (collectionType.IsGenericType)
+        {
+            var genericArgs = collectionType.GetGenericArguments();
+            if (genericArgs.Length > 0)
+                return genericArgs[0];
+        }
+
+        foreach (var iface in collectionType.GetInterfaces())
+        {
+            if (iface.IsGenericType && iface.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            {
+                var genericArgs = iface.GetGenericArguments();
+                if (genericArgs.Length > 0)
+                    return genericArgs[0];
+            }
         }
 
         return null;

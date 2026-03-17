@@ -37,6 +37,12 @@ public sealed class CollectionEditorAttribute : Attribute
     public bool AllowReorder { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets whether users can edit items in the collection.
+    /// Default is true.
+    /// </summary>
+    public bool AllowEditItems { get; set; } = true;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="CollectionEditorAttribute"/> class
     /// using the default collection editor.
     /// </summary>

@@ -6,13 +6,14 @@ namespace AutoSettingUI.Ursa.Attributes;
 /// Specifies that a numeric property should be edited using a NumericUpDown control.
 /// </summary>
 [AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
+[ControlBindingDefaults(typeof(global::Ursa.Controls.NumericIntUpDown), "Value", nameof(CreateNumericUpDown))]
 public sealed class NumericUpDownAttribute : ControlBindingAttribute
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="NumericUpDownAttribute"/> class.
     /// This is used by the source generator to identify properties that should use NumericUpDown.
     /// </summary>
-    public NumericUpDownAttribute():base(typeof(global::Ursa.Controls.NumericIntUpDown), "Value")
+    public NumericUpDownAttribute():base(typeof(global::Ursa.Controls.NumericIntUpDown), "Value",nameof(CreateNumericUpDown))
     {
 
     }
