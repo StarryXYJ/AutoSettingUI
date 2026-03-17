@@ -31,7 +31,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\AutoSettingUI.Core\AutoSettingUI.Core.csproj" />
-        <ProjectReference Include="..\..\..\AutoSettingUI.Extension.Shared\AutoSettingUI.Extension.Shared.csproj" />
+        <ProjectReference Include="..\AutoSettingUI.Extension.Shared\AutoSettingUI.Extension.Shared.csproj" />
     </ItemGroup>
 
     <ItemGroup>
