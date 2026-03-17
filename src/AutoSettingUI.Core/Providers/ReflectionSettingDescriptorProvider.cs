@@ -104,9 +104,13 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
             var rangeAttr = prop.GetCustomAttribute<RangeAttribute>();
             var itemsSourceAttr = prop.GetCustomAttribute<ItemsSourceAttribute>();
             var controlBindingAttr = prop.GetCustomAttribute<ControlBindingAttribute>();
+            var controlBindingDefaults = GetControlBindingDefaults(prop);
             var commandCanExecuteAttr = prop.GetCustomAttribute<CommandCanExecuteAttribute>();
             var readOnlyAttr = prop.GetCustomAttribute<ReadOnlyAttribute>();
             var collectionEditorAttr = prop.GetCustomAttribute<CollectionEditorAttribute>();
+            var placeholderAttr = prop.GetCustomAttribute<PlaceholderAttribute>();
+            var descriptionAttr = prop.GetCustomAttribute<DescriptionAttribute>();
+            var passwordAttr = prop.GetCustomAttribute<PasswordAttribute>();
 
             // Pre-compute enum values to avoid runtime Enum.GetValues in non-AOT path
             string[]? enumValues = null;
@@ -140,9 +144,9 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
                 rangeAttr?.Maximum ?? 0,
                 itemsSourceAttr?.SourceType.AssemblyQualifiedName,
                 itemsSourceAttr?.SourcePropertyName,
-                controlBindingAttr?.ControlType.AssemblyQualifiedName,
-                controlBindingAttr?.BindingProperty,
-                controlBindingAttr?.FactoryMethod,
+                controlBindingAttr?.ControlType?.AssemblyQualifiedName ?? controlBindingDefaults?.ControlTypeName,
+                controlBindingAttr?.BindingProperty ?? controlBindingDefaults?.BindingProperty,
+                controlBindingAttr?.FactoryMethod ?? controlBindingDefaults?.FactoryMethod,
                 enumValues,
                 isDelegate,
                 commandCanExecuteAttr?.MethodName,
@@ -153,7 +157,16 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
                 collectionEditorAttr?.AllowAdd ?? true,
                 collectionEditorAttr?.AllowRemove ?? true,
                 collectionEditorAttr?.AllowReorder ?? true,
-                collectionElementTypeName
+                collectionEditorAttr?.AllowEditItems ?? true,
+                collectionElementTypeName,
+                placeholderAttr?.Text,
+                descriptionAttr?.Text,
+                passwordAttr?.Mask ?? false,
+                passwordAttr?.MaskChar ?? '•',
+                false,
+                0,
+                0,
+                0
             );
 
             if (currentSubProps is not null)
@@ -211,5 +224,58 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
         }
 
         return null;
+    }
+
+    private sealed class ControlBindingDefaultsInfo
+    {
+        public string? ControlTypeName { get; init; }
+        public string? BindingProperty { get; init; }
+        public string? FactoryMethod { get; init; }
+    }
+
+    private static ControlBindingDefaultsInfo? GetControlBindingDefaults(PropertyInfo prop)
+    {
+        foreach (var attrData in prop.CustomAttributes)
+        {
+            var attrType = attrData.AttributeType;
+            if (!IsControlBindingAttributeType(attrType)) continue;
+
+            var defaults = attrType.CustomAttributes.FirstOrDefault(a =>
+                a.AttributeType == typeof(ControlBindingDefaultsAttribute));
+            if (defaults == null) return null;
+
+            string? controlTypeName = null;
+            string? bindingProperty = null;
+            string? factoryMethod = null;
+
+            var args = defaults.ConstructorArguments;
+            if (args.Count > 0 && args[0].Value is Type ct)
+                controlTypeName = ct.AssemblyQualifiedName;
+            if (args.Count > 1 && args[1].Value is string bp)
+                bindingProperty = bp;
+            if (args.Count > 2 && args[2].Value is string fm)
+                factoryMethod = fm;
+
+            return new ControlBindingDefaultsInfo
+            {
+                ControlTypeName = controlTypeName,
+                BindingProperty = bindingProperty,
+                FactoryMethod = factoryMethod
+            };
+        }
+
+        return null;
+    }
+
+    private static bool IsControlBindingAttributeType(Type type)
+    {
+        while (type != null && type != typeof(Attribute))
+        {
+            if (type == typeof(ControlBindingAttribute) ||
+                type.FullName == "AutoSettingUI.Core.Attributes.ControlBindingAttribute")
+                return true;
+            type = type.BaseType!;
+        }
+        return false;
     }
 }

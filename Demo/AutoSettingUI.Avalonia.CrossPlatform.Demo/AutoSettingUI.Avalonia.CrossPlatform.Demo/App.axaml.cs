@@ -6,6 +6,8 @@ using System.Linq;
 using Avalonia.Markup.Xaml;
 using AutoSettingUI.Avalonia.CrossPlatform.Demo.ViewModels;
 using AutoSettingUI.Avalonia.CrossPlatform.Demo.Views;
+using AutoSettingUI.Core.Registry;
+using AutoSettingUI.Generated;
 
 namespace AutoSettingUI.Avalonia.CrossPlatform.Demo;
 
@@ -23,6 +25,7 @@ public partial class App : Application
             // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
             // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
             DisableAvaloniaDataAnnotationValidation();
+
             desktop.MainWindow = new MainWindow
             {
                 DataContext = new MainViewModel()
@@ -30,6 +33,9 @@ public partial class App : Application
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
         {
+            var provider = new GeneratedSettingProvider();
+            AotSettingRegistry.Provider = provider;
+            AotSettingRegistry.Accessor = provider;
             singleViewPlatform.MainView = new MainView
             {
                 DataContext = new MainViewModel()

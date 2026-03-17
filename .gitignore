@@ -68,3 +68,5 @@ coverage/
 AgentHelper/
 Task.md
 manual/dev
+build.ps1
+build.sh

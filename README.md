@@ -30,76 +30,121 @@ Install the package for your preferred UI framework:
 
 ## Quick Start
 
-### 1. Define Your Settings Class
+This section shows a minimal end-to-end setup using the current demos as reference. It covers Avalonia, Ursa, and WPF, plus AOT support.
+
+### 1. Add Packages / References
+
+```xml
+<!-- Avalonia -->
+<PackageReference Include="AutoSettingUI.Avalonia" Version="1.0.0" />
+
+<!-- Ursa (Avalonia with Ursa theme) -->
+<PackageReference Include="AutoSettingUI.Ursa" Version="1.0.0" />
+
+<!-- WPF -->
+<PackageReference Include="AutoSettingUI.WPF" Version="1.0.0" />
+```
+
+If you want AOT support, also reference the generator in your **app** project:
+
+```xml
+<ProjectReference Include="..\..\src\AutoSettingUI.Generator\AutoSettingUI.Generator.csproj"
+                  OutputItemType="Analyzer"
+                  ReferenceOutputAssembly="false" />
+```
+
+### 2. Define a Settings Model
 
 ```csharp
 using AutoSettingUI.Core.Attributes;
+using AutoSettingUI.Avalonia.Attributes; // or AutoSettingUI.Ursa.Attributes
 
-[SettingUI(Category = "General", Order = 0)]
-[MainHeader("Application Settings")]
-public class AppSettings
+[SettingUI]
+public sealed class AppSettings
 {
-    [Title("App Name")]
-    public string Name { get; set; } = "My App";
+    [Title("Volume")]
+    [ControlBinding(typeof(Avalonia.Controls.Slider), "Value", nameof(CreateVolume))]
+    public double Volume { get; set; } = 50;
 
-    [Title("Enable Dark Mode")]
-    public bool DarkMode { get; set; }
+    public Avalonia.Controls.Slider CreateVolume()
+        => new Avalonia.Controls.Slider { Minimum = 0, Maximum = 100, Value = 50 };
 
-    [Title("Volume"), Range(0, 100)]
-    public int Volume { get; set; } = 50;
+    [Title("Enable Feature")]
+    [CheckBox]
+    public bool EnableFeature { get; set; } = true;
 
-    [Title("Language")]
-    [ItemsSource(typeof(AppSettings), nameof(AvailableLanguages))]
-    public string Language { get; set; } = "en-US";
+    [Title("Font Size")]
+    [NumericUpDown(Minimum = 8, Maximum = 32, Increment = 1)]
+    public int FontSize { get; set; } = 14;
 
-    public static string[] AvailableLanguages => ["en-US", "zh-CN", "ja-JP"];
+    [Title("Tags")]
+    public System.Collections.ObjectModel.ObservableCollection<string> Tags { get; set; }
+        = new() { "Important", "Work" };
 }
 ```
 
-### 2. Add the Panel to Your UI
+### 3. Bind the Panel
 
-#### Avalonia
+Avalonia:
 
 ```xml
 <Window xmlns:auto="clr-namespace:AutoSettingUI.Avalonia.Controls;assembly=AutoSettingUI.Avalonia">
-    <auto:AvaloniaAutoSettingPanel
-        Title="Settings"
-        Targets="{Binding SettingsList}"
-        ShowNavigation="True" />
+    <auto:AvaloniaAutoSettingPanel Targets="{Binding Targets}" />
 </Window>
 ```
 
-#### Ursa
+Ursa:
 
 ```xml
 <Window xmlns:ursa="clr-namespace:AutoSettingUI.Ursa.Controls;assembly=AutoSettingUI.Ursa">
-    <ursa:UrsaAutoSettingPanel
-        Title="Settings"
-        Targets="{Binding SettingsList}"
-        UseCardBorderTheme="True" />
+    <ursa:UrsaAutoSettingPanel Targets="{Binding Targets}" />
 </Window>
 ```
 
-#### WPF
+WPF:
 
 ```xml
 <Window xmlns:auto="clr-namespace:AutoSettingUI.WPF.Controls;assembly=AutoSettingUI.WPF">
-    <auto:WpfAutoSettingPanel
-        Title="Settings"
-        Targets="{Binding SettingsList}"
-        ShowNavigation="True" />
+    <auto:WpfAutoSettingPanel Targets="{Binding Targets}" />
 </Window>
 ```
 
-### 3. AOT Support (Optional)
-
-For Native AOT or trimming support, use the generated provider:
+ViewModel:
 
 ```csharp
-// The source generator creates this class automatically
-panel.DescriptorProvider = new AutoSettingUI.Generated.GeneratedSettingProvider();
-panel.PropertyAccessor = new AutoSettingUI.Generated.GeneratedSettingProvider();
+public class MainViewModel
+{
+    public IEnumerable<object> Targets { get; } = new object[]
+    {
+        new AppSettings()
+    };
+}
 ```
+
+### 4. AOT Support (Optional)
+
+For Native AOT or trimming, make sure the generator is referenced by the **app** project. In most cases the generated provider is picked up automatically. If you want to force it (or you see fallback-to-TextBox in AOT), do:
+
+```csharp
+using AutoSettingUI.Core.Registry;
+using AutoSettingUI.Generated;
+
+var provider = new GeneratedSettingProvider();
+AotSettingRegistry.Provider = provider;
+AotSettingRegistry.Accessor = provider;
+```
+
+### 5. Publish AOT (Example)
+
+```bash
+# Ursa demo
+pwsh ./publish-demo.ps1 -Framework Avalonia -Mode AOT
+```
+
+### Notes
+
+- Use `EmitCompilerGeneratedFiles=true` if you want to inspect generated code.
+- `CollectionEditor(AllowEditItems = false)` can make collection rows read-only.
 
 ## Extended Controls
 

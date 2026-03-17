@@ -344,7 +344,6 @@ public class ExtendedControlsSettings
     [TimePicker]
     public TimeSpan PreferredTime { get; set; } = DateTime.Now.TimeOfDay;
 
-    [Title("Toggle Feature")]
     [CheckBox]
     public bool EnableAdvancedFeature { get; set; } = true;
 

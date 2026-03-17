@@ -6,6 +6,7 @@ namespace AutoSettingUI.Avalonia.Attributes;
 /// Specifies that a numeric property should be edited using a NumericUpDown control.
 /// </summary>
 [AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
+[ControlBindingDefaults(typeof(global::Avalonia.Controls.NumericUpDown), "Value", nameof(CreateNumericUpDown))]
 public sealed class NumericUpDownAttribute() : ControlBindingAttribute(typeof(global::Avalonia.Controls.NumericUpDown))
 {
     public double Minimum { get; set; } = double.MinValue;

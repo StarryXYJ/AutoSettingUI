@@ -30,76 +30,121 @@
 
 ## 快速上手
 
-### 1. 定义设置类
+这部分基于 demo 的最小端到端使用示例，覆盖 Avalonia、Ursa、WPF，并包含 AOT 支持。
+
+### 1. 添加包 / 引用
+
+```xml
+<!-- Avalonia -->
+<PackageReference Include="AutoSettingUI.Avalonia" Version="1.0.0" />
+
+<!-- Ursa (带 Ursa 主题的 Avalonia) -->
+<PackageReference Include="AutoSettingUI.Ursa" Version="1.0.0" />
+
+<!-- WPF -->
+<PackageReference Include="AutoSettingUI.WPF" Version="1.0.0" />
+```
+
+如需 AOT 支持，请在 **应用项目** 中额外引用源代码生成器：
+
+```xml
+<ProjectReference Include="..\..\src\AutoSettingUI.Generator\AutoSettingUI.Generator.csproj"
+                  OutputItemType="Analyzer"
+                  ReferenceOutputAssembly="false" />
+```
+
+### 2. 定义设置模型
 
 ```csharp
 using AutoSettingUI.Core.Attributes;
+using AutoSettingUI.Avalonia.Attributes; // 或 AutoSettingUI.Ursa.Attributes
 
-[SettingUI(Category = "通用", Order = 0)]
-[MainHeader("应用设置")]
-public class AppSettings
+[SettingUI]
+public sealed class AppSettings
 {
-    [Title("应用名称")]
-    public string Name { get; set; } = "我的应用";
+    [Title("Volume")]
+    [ControlBinding(typeof(Avalonia.Controls.Slider), "Value", nameof(CreateVolume))]
+    public double Volume { get; set; } = 50;
 
-    [Title("启用深色模式")]
-    public bool DarkMode { get; set; }
+    public Avalonia.Controls.Slider CreateVolume()
+        => new Avalonia.Controls.Slider { Minimum = 0, Maximum = 100, Value = 50 };
 
-    [Title("音量"), Range(0, 100)]
-    public int Volume { get; set; } = 50;
+    [Title("Enable Feature")]
+    [CheckBox]
+    public bool EnableFeature { get; set; } = true;
 
-    [Title("语言")]
-    [ItemsSource(typeof(AppSettings), nameof(AvailableLanguages))]
-    public string Language { get; set; } = "zh-CN";
+    [Title("Font Size")]
+    [NumericUpDown(Minimum = 8, Maximum = 32, Increment = 1)]
+    public int FontSize { get; set; } = 14;
 
-    public static string[] AvailableLanguages => ["zh-CN", "en-US", "ja-JP"];
+    [Title("Tags")]
+    public System.Collections.ObjectModel.ObservableCollection<string> Tags { get; set; }
+        = new() { "Important", "Work" };
 }
 ```
 
-### 2. 在界面中添加面板
+### 3. 绑定面板
 
-#### Avalonia
+Avalonia:
 
 ```xml
 <Window xmlns:auto="clr-namespace:AutoSettingUI.Avalonia.Controls;assembly=AutoSettingUI.Avalonia">
-    <auto:AvaloniaAutoSettingPanel
-        Title="设置"
-        Targets="{Binding SettingsList}"
-        ShowNavigation="True" />
+    <auto:AvaloniaAutoSettingPanel Targets="{Binding Targets}" />
 </Window>
 ```
 
-#### Ursa
+Ursa:
 
 ```xml
 <Window xmlns:ursa="clr-namespace:AutoSettingUI.Ursa.Controls;assembly=AutoSettingUI.Ursa">
-    <ursa:UrsaAutoSettingPanel
-        Title="设置"
-        Targets="{Binding SettingsList}"
-        UseCardBorderTheme="True" />
+    <ursa:UrsaAutoSettingPanel Targets="{Binding Targets}" />
 </Window>
 ```
 
-#### WPF
+WPF:
 
 ```xml
 <Window xmlns:auto="clr-namespace:AutoSettingUI.WPF.Controls;assembly=AutoSettingUI.WPF">
-    <auto:WpfAutoSettingPanel
-        Title="设置"
-        Targets="{Binding SettingsList}"
-        ShowNavigation="True" />
+    <auto:WpfAutoSettingPanel Targets="{Binding Targets}" />
 </Window>
 ```
 
-### 3. AOT 支持（可选）
-
-如需支持 Native AOT 或裁剪发布，使用源生成器生成的提供者：
+ViewModel:
 
 ```csharp
-// 源生成器会自动创建此类
-panel.DescriptorProvider = new AutoSettingUI.Generated.GeneratedSettingProvider();
-panel.PropertyAccessor = new AutoSettingUI.Generated.GeneratedSettingProvider();
+public class MainViewModel
+{
+    public IEnumerable<object> Targets { get; } = new object[]
+    {
+        new AppSettings()
+    };
+}
 ```
+
+### 4. AOT 支持（可选）
+
+如需 Native AOT 或裁剪发布，请确保生成器在 **应用项目** 中被引用。多数情况下会自动使用生成的 Provider。如果 AOT 下出现回退为 TextBox，可以手动指定：
+
+```csharp
+using AutoSettingUI.Core.Registry;
+using AutoSettingUI.Generated;
+
+var provider = new GeneratedSettingProvider();
+AotSettingRegistry.Provider = provider;
+AotSettingRegistry.Accessor = provider;
+```
+
+### 5. 发布 AOT（示例）
+
+```bash
+# Ursa demo
+pwsh ./publish-demo.ps1 -Framework Avalonia -Mode AOT
+```
+
+### 说明
+
+- 需要查看生成代码时，可启用 `EmitCompilerGeneratedFiles=true`。
+- `CollectionEditor(AllowEditItems = false)` 可将集合行设为只读。
 
 ## 扩展控件
 
