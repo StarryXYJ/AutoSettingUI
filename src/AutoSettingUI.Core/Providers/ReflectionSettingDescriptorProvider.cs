@@ -76,7 +76,7 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
 
         var mainHeaderAttr = type.GetCustomAttribute<MainHeaderAttribute>();
 
-        // Use ordered list to preserve declaration order of sub-sections
+        // Use ordered list to preserve declaration order of subsections
         var subSectionList = new List<(string Title, List<PropertyDescriptor> Props)>();
         var directProperties = new List<PropertyDescriptor>();
         List<PropertyDescriptor>? currentSubProps = null;
@@ -88,7 +88,7 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
             if (prop.GetCustomAttribute<HideAttribute>() is not null)
                 continue;
 
-            // SubHeader: flush previous sub-section and start a new one.
+            // SubHeader: flush previous subsection and start a new one.
             // Do NOT skip the property itself — it should be the first item in the new group.
             var subHeader = prop.GetCustomAttribute<SubHeaderAttribute>();
             if (subHeader is not null)
@@ -175,7 +175,7 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
                 directProperties.Add(propDescriptor);
         }
 
-        // Flush final sub-section
+        // Flush final subsection
         if (currentSubHeader is not null && currentSubProps is not null)
             subSectionList.Add((currentSubHeader, currentSubProps));
 
@@ -196,7 +196,7 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
     }
 
     /// <summary>
-    /// Gets the element type of a collection type.
+    /// Gets the element type of collection type.
     /// </summary>
     private static Type? GetCollectionElementType(Type collectionType)
     {

@@ -26,7 +26,11 @@ Install the package for your preferred UI framework:
 <PackageReference Include="AutoSettingUI.WPF" Version="1.0.0" />
 ```
 
-> **Note:** `AutoSettingUI.Core` and `AutoSettingUI.Generator` are automatically included as dependencies.
+> **Note:** `AutoSettingUI.Core` is automatically included as a dependency. `AutoSettingUI.Generator` is only needed for AOT and should be referenced by the app project.
+
+**Target frameworks:** `AutoSettingUI.Core`, `AutoSettingUI.Avalonia`, and `AutoSettingUI.Ursa` target `net8.0;net9.0;net10.0`. `AutoSettingUI.WPF` targets `net8.0-windows;net9.0-windows;net10.0-windows`.
+
+**Avalonia version range:** `AutoSettingUI.Avalonia` references `[11.0.0,12.0.0)`. `AutoSettingUI.Ursa` references `[11.1.1,12.0.0)` (Ursa 1.13.0 requires Avalonia >= 11.1.1).
 
 ## Quick Start
 

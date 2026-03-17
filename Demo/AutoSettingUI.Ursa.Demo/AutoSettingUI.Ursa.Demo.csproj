@@ -7,6 +7,7 @@
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <IsAotCompatible>true</IsAotCompatible>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <NoWarn>$(NoWarn);IL2026;IL2057;IL2067;IL2070;IL2072;IL2075;IL2104;IL3050</NoWarn>
 
         <PublishAot>true</PublishAot>
         <SelfContained>true</SelfContained>
@@ -35,8 +36,18 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\src\Extensions\AutoSettingUI.Ursa\AutoSettingUI.Ursa.csproj" />
-      <!-- 直接引用Generator以确保为Demo项目中的Models生成AOT代码 -->
-      <ProjectReference Include="..\..\src\AutoSettingUI.Generator\AutoSettingUI.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+      <ProjectReference Include="..\..\src\Extensions\AutoSettingUI.Ursa\AutoSettingUI.Ursa.csproj"
+                        RemoveProperties="PublishAot" />
+    </ItemGroup>
+
+    <!-- Generator: project reference for normal builds, prebuilt analyzer for AOT publish -->
+    <ItemGroup Condition="'$(PublishAot)' != 'true'">
+      <ProjectReference Include="..\..\src\AutoSettingUI.Generator\AutoSettingUI.Generator.csproj"
+                        OutputItemType="Analyzer"
+                        ReferenceOutputAssembly="false" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(PublishAot)' == 'true'">
+      <Analyzer Include="..\..\src\AutoSettingUI.Generator\bin\Release\netstandard2.0\AutoSettingUI.Generator.dll" />
     </ItemGroup>
 </Project>

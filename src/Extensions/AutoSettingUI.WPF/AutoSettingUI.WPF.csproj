@@ -1,12 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0-windows</TargetFramework>
+        <TargetFrameworks>net8.0-windows;net9.0-windows;net10.0-windows</TargetFrameworks>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <UseWPF>true</UseWPF>
         <IsAotCompatible>true</IsAotCompatible>
         <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+        <NoWarn>$(NoWarn);CS8604;IL2026;IL2057;IL2067;IL2070;IL2072;IL2075;IL3050</NoWarn>
         
         <!-- NuGet Packaging -->
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -25,7 +26,6 @@
     <ItemGroup>
       <ProjectReference Include="..\..\AutoSettingUI.Core\AutoSettingUI.Core.csproj" />
       <ProjectReference Include="..\..\..\AutoSettingUI.Extension.Shared\AutoSettingUI.Extension.Shared.csproj" />
-      <ProjectReference Include="..\..\AutoSettingUI.Generator\AutoSettingUI.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     </ItemGroup>
 
     <ItemGroup>

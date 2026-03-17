@@ -26,7 +26,11 @@
 <PackageReference Include="AutoSettingUI.WPF" Version="1.0.0" />
 ```
 
-> **注意：** `AutoSettingUI.Core` 和 `AutoSettingUI.Generator` 会作为依赖自动引入。
+> **注意：** `AutoSettingUI.Core` 会作为依赖自动引入。`AutoSettingUI.Generator` 仅在 AOT 场景需要，需要在应用项目中单独引用。
+
+**目标框架：** `AutoSettingUI.Core`、`AutoSettingUI.Avalonia`、`AutoSettingUI.Ursa` 支持 `net8.0;net9.0;net10.0`，`AutoSettingUI.WPF` 支持 `net8.0-windows;net9.0-windows;net10.0-windows`。
+
+**Avalonia 版本范围：** `AutoSettingUI.Avalonia` 为 `[11.0.0,12.0.0)`；`AutoSettingUI.Ursa` 为 `[11.1.1,12.0.0)`（Ursa 1.13.0 依赖 Avalonia >= 11.1.1）。
 
 ## 快速上手
 

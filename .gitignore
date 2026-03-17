@@ -70,3 +70,6 @@ Task.md
 manual/dev
 build.ps1
 build.sh
+publish-nuget.ps1
+global.json
+push-nuget.ps1

@@ -9,6 +9,9 @@
         <IsRoslynComponent>true</IsRoslynComponent>
         <IncludeBuildOutput>false</IncludeBuildOutput>
         <DevelopmentDependency>true</DevelopmentDependency>
+        <NoWarn>$(NoWarn);RS2008;NU5128</NoWarn>
+        <MSBuildTreatAsLocalProperty>PublishAot</MSBuildTreatAsLocalProperty>
+        <PublishAot>false</PublishAot>
         
         <!-- NuGet Packaging -->
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>

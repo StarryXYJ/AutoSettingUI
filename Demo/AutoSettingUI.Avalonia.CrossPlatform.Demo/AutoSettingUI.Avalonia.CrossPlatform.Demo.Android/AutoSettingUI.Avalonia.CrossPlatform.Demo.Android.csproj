@@ -4,6 +4,7 @@
         <TargetFramework>net9.0-android</TargetFramework>
         <SupportedOSPlatformVersion>21</SupportedOSPlatformVersion>
         <Nullable>enable</Nullable>
+        <NoWarn>$(NoWarn);MSB3277;XA0141</NoWarn>
         <ApplicationId>com.CompanyName.AutoSettingUI.Avalonia.CrossPlatform.Demo</ApplicationId>
         <ApplicationVersion>1</ApplicationVersion>
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
