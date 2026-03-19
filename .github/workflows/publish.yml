@@ -30,15 +30,28 @@ jobs:
             9.0.x
             10.0.x
 
-
       - name: Restore dependencies
-        run: dotnet restore AutoSettingUI.sln
+        run: |
+          dotnet restore src/AutoSettingUI.Core/AutoSettingUI.Core.csproj
+          dotnet restore src/AutoSettingUI.Generator/AutoSettingUI.Generator.csproj
+          dotnet restore src/Extensions/AutoSettingUI.Extension.Shared/AutoSettingUI.Extension.Shared.csproj
+          dotnet restore src/Extensions/AutoSettingUI.Avalonia/AutoSettingUI.Avalonia.csproj
+          dotnet restore src/Extensions/AutoSettingUI.Ursa/AutoSettingUI.Ursa.csproj
+          dotnet restore src/Extensions/AutoSettingUI.WPF/AutoSettingUI.WPF.csproj
+          dotnet restore src/AutoSettingUI.Generator.Tests/AutoSettingUI.Generator.Tests.csproj
 
       - name: Build
-        run: dotnet build AutoSettingUI.sln --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
+        run: |
+          dotnet build src/AutoSettingUI.Core/AutoSettingUI.Core.csproj --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
+          dotnet build src/AutoSettingUI.Generator/AutoSettingUI.Generator.csproj --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
+          dotnet build src/Extensions/AutoSettingUI.Extension.Shared/AutoSettingUI.Extension.Shared.csproj --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
+          dotnet build src/Extensions/AutoSettingUI.Avalonia/AutoSettingUI.Avalonia.csproj --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
+          dotnet build src/Extensions/AutoSettingUI.Ursa/AutoSettingUI.Ursa.csproj --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
+          dotnet build src/Extensions/AutoSettingUI.WPF/AutoSettingUI.WPF.csproj --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
+          dotnet build src/AutoSettingUI.Generator.Tests/AutoSettingUI.Generator.Tests.csproj --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
 
       - name: Run tests
-        run: dotnet test AutoSettingUI.sln --configuration Release --no-build --verbosity normal
+        run: dotnet test src/AutoSettingUI.Generator.Tests/AutoSettingUI.Generator.Tests.csproj --configuration Release --no-build --verbosity normal
 
       - name: Pack AutoSettingUI.Core
         run: dotnet pack src/AutoSettingUI.Core/AutoSettingUI.Core.csproj --configuration Release --no-build --output artifacts
