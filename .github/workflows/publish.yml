@@ -1,0 +1,70 @@
+name: Publish to NuGet
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_NOLOGO: true
+
+jobs:
+  build-and-publish:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+
+
+      - name: Restore dependencies
+        run: dotnet restore AutoSettingUI.sln
+
+      - name: Build
+        run: dotnet build AutoSettingUI.sln --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
+
+      - name: Run tests
+        run: dotnet test AutoSettingUI.sln --configuration Release --no-build --verbosity normal
+
+      - name: Pack AutoSettingUI.Core
+        run: dotnet pack src/AutoSettingUI.Core/AutoSettingUI.Core.csproj --configuration Release --no-build --output artifacts
+
+      - name: Pack AutoSettingUI.Generator
+        run: dotnet pack src/AutoSettingUI.Generator/AutoSettingUI.Generator.csproj --configuration Release --no-build --output artifacts
+
+      - name: Pack AutoSettingUI.Extension.Shared
+        run: dotnet pack src/Extensions/AutoSettingUI.Extension.Shared/AutoSettingUI.Extension.Shared.csproj --configuration Release --no-build --output artifacts
+
+      - name: Pack AutoSettingUI.Avalonia
+        run: dotnet pack src/Extensions/AutoSettingUI.Avalonia/AutoSettingUI.Avalonia.csproj --configuration Release --no-build --output artifacts
+
+      - name: Pack AutoSettingUI.Ursa
+        run: dotnet pack src/Extensions/AutoSettingUI.Ursa/AutoSettingUI.Ursa.csproj --configuration Release --no-build --output artifacts
+
+      - name: Pack AutoSettingUI.WPF
+        run: dotnet pack src/Extensions/AutoSettingUI.WPF/AutoSettingUI.WPF.csproj --configuration Release --no-build --output artifacts
+
+      - name: Publish to NuGet
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: dotnet nuget push artifacts/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages
+          path: artifacts/*.nupkg
+          retention-days: 30
