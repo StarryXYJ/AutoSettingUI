@@ -32,7 +32,7 @@ param (
 $ErrorActionPreference = "Stop"
 
 $ProjectMap = @{
-    "Avalonia" = "Demo\AutoSettingUI.Avalonia.Demo\AutoSettingUI.Avalonia.Demo.csproj"
+    "Avalonia" = "Demo\AutoSettingUI.Avalonia.CrossPlatform.Demo\AutoSettingUI.Avalonia.CrossPlatform.Demo\AutoSettingUI.Avalonia.CrossPlatform.Demo.csproj"
     "Ursa"     = "Demo\AutoSettingUI.Ursa.Demo\AutoSettingUI.Ursa.Demo.csproj"
     "WPF"      = "Demo\AutoSettingUI.Wpf.Demo\AutoSettingUI.Wpf.Demo.csproj"
 }

@@ -13,22 +13,51 @@
 
 ## Installation
 
-Install the package for your preferred UI framework:
+Install the package for your preferred UI framework. Each package automatically includes the necessary dependencies (`Core`, `Extension.Shared`).
+
+### Avalonia
+
+```bash
+dotnet add package AutoSettingUI.Avalonia
+```
 
 ```xml
-<!-- Avalonia -->
 <PackageReference Include="AutoSettingUI.Avalonia" Version="1.0.0" />
+```
 
-<!-- Ursa (Avalonia with Ursa theme) -->
+### Ursa (Avalonia with Ursa theme)
+
+```bash
+dotnet add package AutoSettingUI.Ursa
+```
+
+```xml
 <PackageReference Include="AutoSettingUI.Ursa" Version="1.0.0" />
+```
 
-<!-- WPF -->
+### WPF
+
+```bash
+dotnet add package AutoSettingUI.WPF
+```
+
+```xml
 <PackageReference Include="AutoSettingUI.WPF" Version="1.0.0" />
 ```
 
-> **Note:** `AutoSettingUI.Core` is automatically included as a dependency. `AutoSettingUI.Generator` is only needed for AOT and should be referenced by the app project.
+### AOT Support (Optional)
 
-**Target frameworks:** `AutoSettingUI.Core`, `AutoSettingUI.Avalonia`, and `AutoSettingUI.Ursa` target `net8.0;net9.0;net10.0`. `AutoSettingUI.WPF` targets `net8.0-windows;net9.0-windows;net10.0-windows`.
+For Native AOT or trimming support, also install the source generator:
+
+```bash
+dotnet add package AutoSettingUI.Generator
+```
+
+```xml
+<PackageReference Include="AutoSettingUI.Generator" Version="1.0.0" />
+```
+
+**Target frameworks:** `AutoSettingUI.Core`, `AutoSettingUI.Avalonia`, `AutoSettingUI.Ursa`, and `AutoSettingUI.Generator` target `net8.0;net9.0;net10.0`. `AutoSettingUI.WPF` targets `net8.0-windows;net9.0-windows;net10.0-windows`.
 
 **Avalonia version range:** `AutoSettingUI.Avalonia` references `[11.0.0,12.0.0)`. `AutoSettingUI.Ursa` references `[11.1.1,12.0.0)` (Ursa 1.13.0 requires Avalonia >= 11.1.1).
 
@@ -36,25 +65,25 @@ Install the package for your preferred UI framework:
 
 This section shows a minimal end-to-end setup using the current demos as reference. It covers Avalonia, Ursa, and WPF, plus AOT support.
 
-### 1. Add Packages / References
+### 1. Add Packages
 
-```xml
-<!-- Avalonia -->
-<PackageReference Include="AutoSettingUI.Avalonia" Version="1.0.0" />
+Install the package for your UI framework:
 
-<!-- Ursa (Avalonia with Ursa theme) -->
-<PackageReference Include="AutoSettingUI.Ursa" Version="1.0.0" />
+```bash
+# Avalonia
+dotnet add package AutoSettingUI.Avalonia
 
-<!-- WPF -->
-<PackageReference Include="AutoSettingUI.WPF" Version="1.0.0" />
+# Ursa
+dotnet add package AutoSettingUI.Ursa
+
+# WPF
+dotnet add package AutoSettingUI.WPF
 ```
 
-If you want AOT support, also reference the generator in your **app** project:
+For AOT support, also add the generator:
 
-```xml
-<ProjectReference Include="..\..\src\AutoSettingUI.Generator\AutoSettingUI.Generator.csproj"
-                  OutputItemType="Analyzer"
-                  ReferenceOutputAssembly="false" />
+```bash
+dotnet add package AutoSettingUI.Generator
 ```
 
 ### 2. Define a Settings Model
@@ -251,14 +280,23 @@ public sealed class NumericUpDownAttribute : ControlBindingAttribute
 
 ## Packages
 
-| Package                      | Description                                     |
-| ---------------------------- | ----------------------------------------------- |
-| `AutoSettingUI.Core`         | Attributes, interfaces, and models.             |
-| `AutoSettingUI.Generator`    | Roslyn Incremental Source Generator (Analyzer). |
-| `AutoSettingUI.Extension.Shared` | Shared validation and control helpers.      |
-| `AutoSettingUI.Avalonia`     | Avalonia UI panel extension.                    |
-| `AutoSettingUI.Ursa`         | Ursa-themed Avalonia panel extension.           |
-| `AutoSettingUI.WPF`          | WPF panel extension.                            |
+### User-Facing Packages (Install These)
+
+| Package                   | Description                                         | When to Use                          |
+| ------------------------- | --------------------------------------------------- | ------------------------------------ |
+| `AutoSettingUI.Avalonia`  | Avalonia UI panel extension. Includes Core + Shared | Avalonia applications                |
+| `AutoSettingUI.Ursa`      | Ursa-themed Avalonia panel extension. Includes all  | Ursa (Avalonia theme) applications   |
+| `AutoSettingUI.WPF`       | WPF panel extension. Includes Core + Shared         | WPF applications                     |
+| `AutoSettingUI.Generator` | Roslyn Source Generator for AOT support (Optional)  | When using Native AOT or trimming    |
+
+### Internal Dependencies (Auto-Included)
+
+| Package                        | Description                                  |
+| ------------------------------ | -------------------------------------------- |
+| `AutoSettingUI.Core`           | Attributes, interfaces, and models.          |
+| `AutoSettingUI.Extension.Shared` | Shared validation and control helpers.     |
+
+> **Note:** You don't need to install `Core` or `Extension.Shared` manually — they are automatically included when you install any UI framework package.
 
 ## Documentation
 
@@ -267,6 +305,65 @@ public sealed class NumericUpDownAttribute : ControlBindingAttribute
 - [Framework Extensions](manual/extensions.md) — Framework-specific usage
 - [AOT Source Generator](manual/aot-source-generator.md) — AOT support details
 
+
+## Building and Publishing
+
+For maintainers and contributors:
+
+### Build the Solution
+
+```powershell
+# Debug build
+.\build-all.ps1
+
+# Release build with NuGet packages
+.\build-all.ps1 -Configuration Release -Pack
+```
+
+### Publish NuGet Packages
+
+Use the interactive script to select and publish packages:
+
+```powershell
+.\publish-nuget.ps1
+```
+
+This will show an interactive menu:
+
+```
+========================================
+  AutoSettingUI NuGet Pack & Publish
+========================================
+
+Select packages to pack/publish:
+
+  1. AutoSettingUI.Core - Core library with attributes and descriptors
+  2. AutoSettingUI.Generator - Roslyn source generator for AOT support
+  3. AutoSettingUI.Avalonia - Avalonia UI controls
+  4. AutoSettingUI.Ursa - Ursa UI controls (Avalonia theme)
+  5. AutoSettingUI.WPF - WPF UI controls
+
+  A. Pack ALL packages
+  Q. Quit
+```
+
+Enter numbers (e.g., `1 3 4`) to select specific packages, or `A` for all.
+
+### Publish Demo Applications
+
+```powershell
+# Avalonia demo (Normal mode)
+.\publish-demo.ps1 -Framework Avalonia -Mode Normal
+
+# Avalonia demo (AOT mode)
+.\publish-demo.ps1 -Framework Avalonia -Mode AOT
+
+# Ursa demo
+.\publish-demo.ps1 -Framework Ursa -Mode Normal
+
+# WPF demo
+.\publish-demo.ps1 -Framework WPF -Mode Normal
+```
 
 ## License
 
