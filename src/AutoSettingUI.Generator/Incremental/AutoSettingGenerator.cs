@@ -310,7 +310,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
         var settingAttr = GetAttr(cls, SettingUIAttributeName);
         var mainHeaderAttr = GetAttr(cls, MainHeaderAttributeName);
 
-        var mainHeader = GetConstructorArgString(mainHeaderAttr, 0);
+        var mainHeader = GetConstructorArgString(mainHeaderAttr, 0) ?? "null";
 
         // Get factory info from SettingUI attribute (ControlFactory is a Type, FactoryMethod is string)
         var factoryTypeArg = settingAttr?.NamedArguments.FirstOrDefault(a => a.Key == "ControlFactory").Value;
