@@ -185,6 +185,13 @@ public sealed class PropertyDescriptor
     public double NumericIncrement { get; }
 
     /// <summary>
+    /// Gets the display order of the property.
+    /// Lower values are displayed first.
+    /// Properties with the same order are displayed in their declaration order.
+    /// </summary>
+    public int DisplayOrder { get; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="PropertyDescriptor"/> class.
     /// </summary>
     public PropertyDescriptor(
@@ -221,7 +228,8 @@ public sealed class PropertyDescriptor
         bool isNumericUpDown = false,
         double numericMinimum = 0,
         double numericMaximum = 0,
-        double numericIncrement = 0)
+        double numericIncrement = 0,
+        int displayOrder = 0)
     {
         PropertyName = propertyName;
         DisplayName = displayName;
@@ -257,6 +265,7 @@ public sealed class PropertyDescriptor
         NumericMinimum = numericMinimum;
         NumericMaximum = numericMaximum;
         NumericIncrement = numericIncrement;
+        DisplayOrder = displayOrder;
     }
 }
 

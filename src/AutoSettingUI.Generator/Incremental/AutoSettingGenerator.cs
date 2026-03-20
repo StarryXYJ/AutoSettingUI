@@ -33,6 +33,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
     private const string PasswordAttributeName = "PasswordAttribute";
     private const string NumericUpDownAttributeName = "NumericUpDownAttribute"; // Special handling needed - type depends on property type
     private const string ControlBindingDefaultsAttributeName = "ControlBindingDefaultsAttribute";
+    private const string DisplayOrderAttributeName = "DisplayOrderAttribute";
 
     // Diagnostic descriptors
     private static readonly DiagnosticDescriptor NonPublicClassWarning = new(
@@ -333,8 +334,17 @@ public class AutoSettingGenerator : IIncrementalGenerator
         sb.AppendLine("            string? currentSubTitle = null;");
         sb.AppendLine();
 
-        foreach (var prop in GetPublicInstanceProperties(cls, context))
+        var allProps = GetPublicInstanceProperties(cls, context).ToList();
+        var propsWithOrder = allProps.Select((prop, index) => new
         {
+            Property = prop,
+            DisplayOrder = GetDisplayOrder(prop),
+            DeclarationOrder = prop.DeclarationOrder
+        }).ToList();
+
+        foreach (var item in propsWithOrder.OrderBy(p => p.DisplayOrder).ThenBy(p => p.DeclarationOrder))
+        {
+            var prop = item.Property;
             if (GetAttr(prop, HideAttributeName) != null) continue;
 
             var subHeaderAttr = GetAttr(prop, SubHeaderAttributeName);
@@ -514,6 +524,15 @@ public class AutoSettingGenerator : IIncrementalGenerator
                 numericInc = TryGetNamedArgDouble(cbAttr, "Increment") ?? 1.0;
             }
 
+            // DisplayOrder
+            var displayOrderAttr = GetAttr(prop, DisplayOrderAttributeName);
+            int displayOrder = 0;
+            if (displayOrderAttr != null && displayOrderAttr.ConstructorArguments.Length > 0)
+            {
+                if (displayOrderAttr.ConstructorArguments[0].Value is int orderVal)
+                    displayOrder = orderVal;
+            }
+
             // CollectionEditor
             var collEditorAttr = GetAttr(prop, CollectionEditorAttributeName);
             string? collEditorTypeName = null;
@@ -615,7 +634,8 @@ public class AutoSettingGenerator : IIncrementalGenerator
             sb.AppendLine($"                {(isNumericUpDown ? "true" : "false")},");
             sb.AppendLine($"                {numericMin},");
             sb.AppendLine($"                {numericMax},");
-            sb.AppendLine($"                {numericInc});");
+            sb.AppendLine($"                {numericInc},");
+            sb.AppendLine($"                {displayOrder});");
 
             var varName = $"pd_{safeName}_{EscapeName(prop.Name)}";
             sb.AppendLine($"            if (currentSub != null) currentSub.Add({varName}); else directProps.Add({varName});");
@@ -676,6 +696,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
         public Location? Location { get; }
         public bool IsFromObservableProperty { get; }
         public IFieldSymbol? SourceField { get; }
+        public int DeclarationOrder { get; }
 
         public PropertyInfo(
             string name,
@@ -685,7 +706,8 @@ public class AutoSettingGenerator : IIncrementalGenerator
             ImmutableArray<AttributeData> attributes,
             Location? location,
             bool isFromObservableProperty,
-            IFieldSymbol? sourceField)
+            IFieldSymbol? sourceField,
+            int declarationOrder = 0)
         {
             Name = name;
             Type = type;
@@ -695,11 +717,13 @@ public class AutoSettingGenerator : IIncrementalGenerator
             Location = location;
             IsFromObservableProperty = isFromObservableProperty;
             SourceField = sourceField;
+            DeclarationOrder = declarationOrder;
         }
     }
 
     private static IEnumerable<PropertyInfo> GetPublicInstanceProperties(INamedTypeSymbol cls, SourceProductionContext context)
     {
+        int order = 0;
         var properties = cls.GetMembers()
               .OfType<IPropertySymbol>()
               .Where(p => p.DeclaredAccessibility == Accessibility.Public && !p.IsStatic)
@@ -711,7 +735,8 @@ public class AutoSettingGenerator : IIncrementalGenerator
                   p.GetAttributes(),
                   p.Locations.FirstOrDefault(),
                   false,
-                  null));
+                  null,
+                  order++));
 
         var allFields = cls.GetMembers().OfType<IFieldSymbol>().ToList();
         var observableFields = new List<PropertyInfo>();
@@ -728,7 +753,8 @@ public class AutoSettingGenerator : IIncrementalGenerator
                     f.GetAttributes(),
                     f.Locations.FirstOrDefault(),
                     true,
-                    f));
+                    f,
+                    order++));
             }
         }
 
@@ -843,6 +869,17 @@ public class AutoSettingGenerator : IIncrementalGenerator
                    attrName == name.Replace("Attribute", "") ||
                    attrFullName == $"AutoSettingUI.Core.Attributes.{name}";
         });
+    }
+
+    private static int GetDisplayOrder(PropertyInfo prop)
+    {
+        var attr = GetAttr(prop, DisplayOrderAttributeName);
+        if (attr != null && attr.ConstructorArguments.Length > 0)
+        {
+            if (attr.ConstructorArguments[0].Value is int orderVal)
+                return orderVal;
+        }
+        return 0;
     }
 
     private static AttributeData? GetAttrInherited(ISymbol symbol, string baseName)

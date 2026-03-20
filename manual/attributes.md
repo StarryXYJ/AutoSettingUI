@@ -147,3 +147,35 @@ Specifies a custom control type to use for rendering this specific property.
 [ControlBinding(typeof(ColorPicker), BindingProperty = "Color")]
 public Color AccentColor { get; set; }
 ```
+
+---
+
+## `[DisplayOrder]`
+
+Controls the display order of properties within a settings class. Properties with lower order values are displayed first. Properties with the same order value are displayed in their declaration order.
+
+**Target:** `Property`
+
+| Parameter      | Type  | Default | Description                                    |
+| -------------- | ----- | ------- | ---------------------------------------------- |
+| `order` (ctor) | `int` | `0`     | Display order value. Lower values appear first. |
+
+```csharp
+[SettingUI]
+public class AppSettings
+{
+    // Displayed third (order = 2)
+    [DisplayOrder(2)]
+    [Title("Advanced Options")]
+    public bool EnableAdvanced { get; set; }
+
+    // Displayed first (order = 0, default)
+    [Title("Application Name")]
+    public string AppName { get; set; }
+
+    // Displayed second (order = 1)
+    [DisplayOrder(1)]
+    [Title("Version")]
+    public string Version { get; set; }
+}
+```

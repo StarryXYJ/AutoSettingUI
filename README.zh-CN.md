@@ -237,6 +237,7 @@ public class ThemeSettings
 | `[Placeholder]`    | 属性      | 输入框占位文本             |
 | `[Layout]`         | 属性      | 自定义布局（宽度、高度）   |
 | `[Validation]`     | 属性      | 自定义验证方法             |
+| `[DisplayOrder]`   | 属性      | 控制显示顺序（数值小在前）|
 
 ## 自定义控件绑定
 

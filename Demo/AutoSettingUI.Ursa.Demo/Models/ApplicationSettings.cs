@@ -262,14 +262,17 @@ public class NetworkSettings
     public int Port { get; set; } = 8080;
 
     [Title("Use HTTPS")]
+    [DisplayOrder(-1)]
     public bool UseHttps { get; set; } = false;
 
     [SubHeader("Authentication")]
     [Title("Username")]
+    [DisplayOrder(1)]
     public string Username { get; set; } = "";
 
     [Title("Timeout (seconds)")]
     [Range(1, 300)]
+    [DisplayOrder(1)]
     public int Timeout { get; set; } = 30;
 
     [SubHeader("Actions")]

@@ -311,6 +311,7 @@ public class ThemeSettings
 | `[Placeholder]`    | Property  | Placeholder text for input                 |
 | `[Layout]`         | Property  | Custom layout (width, height)              |
 | `[Validation]`     | Property  | Custom validation method                   |
+| `[DisplayOrder]`   | Property  | Controls display order (lower = first)     |
 
 ## Custom Control Binding
 
