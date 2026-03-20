@@ -25,13 +25,16 @@ public partial class ApplicationSettings:ObservableObject
     
     [Title("Application Name")]
     [ObservableProperty]
+    [DisplayOrder(-1)]
     private string _appName= "My Application";
 
     [ObservableProperty]
+    [DisplayOrder(-1)]
     private string _version="1.0.0";
 
     [Title("Enable Logging")]
     [ObservableProperty]
+    [DisplayOrder(1)]
     private bool _enableLogging;
 
     [Title("Log Level")]
