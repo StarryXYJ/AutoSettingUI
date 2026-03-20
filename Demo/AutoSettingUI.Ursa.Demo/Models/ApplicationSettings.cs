@@ -20,17 +20,19 @@ namespace AutoSettingUI.Ursa.Demo.Models;
 /// Sample application settings class demonstrating various AutoSettingUI features.
 /// </summary>
 [SettingUI]
-[MainHeader("Application Settings")]
-public class ApplicationSettings
+public partial class ApplicationSettings:ObservableObject
 {
-    [Title("Application Name")]
-    public string AppName { get; set; } = "My Application";
-
     
-    public string Version { get; set; } = "1.0.0";
+    [Title("Application Name")]
+    [ObservableProperty]
+    private string _appName= "My Application";
+
+    [ObservableProperty]
+    private string _version="1.0.0";
 
     [Title("Enable Logging")]
-    public bool EnableLogging { get; set; } = true;
+    [ObservableProperty]
+    private bool _enableLogging;
 
     [Title("Log Level")]
     public LogLevel LogLevel { get; set; } = LogLevel.Info;
@@ -62,7 +64,7 @@ public class ApplicationSettings
 /// Sample user preferences class demonstrating delegate properties and collection editors.
 /// </summary>
 [SettingUI]
-[MainHeader("User Preferences")]
+
 public class UserPreferences : INotifyPropertyChanged
 {
     private bool _isAdmin = true;
@@ -74,7 +76,8 @@ public class UserPreferences : INotifyPropertyChanged
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
-
+    
+    
     [SubHeader("Display")]
     [Title("Theme")]
     public Theme Theme { get; set; } = Theme.Light;

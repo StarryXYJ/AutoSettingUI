@@ -13,7 +13,26 @@ Ursa-themed Avalonia UI implementation for **AutoSettingUI** - Declarative setti
 
 ## Quick Start
 
-### 1. Define Your Settings Class
+### 1. Add Style References (Required)
+
+> **⚠️ Important:** You **must** add the theme style reference to your `App.axaml` file. Without this, the controls will not render correctly.
+
+```xml
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:u-semi="https://irihi.tech/ursa/themes/semi"
+             x:Class="YourApp.App">
+    <Application.Styles>
+        <u-semi:SemiTheme Locale="zh-CN" />
+        <!-- Required for ColorPicker support (optional) -->
+        <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml"/>
+        <!-- Required for AutoSettingUI.Ursa -->
+        <StyleInclude Source="avares://AutoSettingUI.Ursa/Themes/Generic.axaml"/>
+    </Application.Styles>
+</Application>
+```
+
+### 2. Define Your Settings Class
 
 ```csharp
 using AutoSettingUI.Core.Attributes;
@@ -33,7 +52,7 @@ public class AppSettings
 }
 ```
 
-### 2. Add to Your Avalonia Window
+### 3. Add to Your Avalonia Window
 
 ```xml
 <Window xmlns:ursa="clr-namespace:AutoSettingUI.Ursa.Controls;assembly=AutoSettingUI.Ursa">
@@ -44,7 +63,7 @@ public class AppSettings
 </Window>
 ```
 
-### 3. AOT Support (Optional)
+### 4. AOT Support (Optional)
 
 ```csharp
 panel.DescriptorProvider = new AutoSettingUI.Generated.GeneratedSettingProvider();

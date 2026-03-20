@@ -10,6 +10,7 @@
 - 🔌 **Extensible** — Inject your own `ISettingDescriptorProvider` or `IPropertyValueAccessor` to override the defaults.
 - 🧭 **Built-in navigation** — Sections are listed in a sidebar tree; clicking navigates directly to the section.
 - 🎯 **Extended Controls** — Built-in support for ColorPicker, DatePicker, TimePicker, NumericUpDown, and more.
+- 🔄 **MVVM Support** — Works seamlessly with CommunityToolkit.Mvvm `[ObservableProperty]` attribute on partial classes.
 
 ## Installation
 
@@ -86,7 +87,52 @@ For AOT support, also add the generator:
 dotnet add package AutoSettingUI.Generator
 ```
 
-### 2. Define a Settings Model
+### 2. Add Style References (Required for Avalonia/Ursa)
+
+> **⚠️ Important:** For Avalonia and Ursa projects, you **must** add the theme style reference to your `App.axaml` file. Without this, the controls will not render correctly.
+
+#### Avalonia
+
+Add to your `App.axaml`:
+
+```xml
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="YourApp.App">
+    <Application.Styles>
+        <FluentTheme />
+        <!-- Required for ColorPicker support (optional) -->
+        <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml"/>
+        <!-- Required for AutoSettingUI.Avalonia -->
+        <StyleInclude Source="avares://AutoSettingUI.Avalonia/Themes/Generic.axaml"/>
+    </Application.Styles>
+</Application>
+```
+
+#### Ursa
+
+Add to your `App.axaml`:
+
+```xml
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:u-semi="https://irihi.tech/ursa/themes/semi"
+             x:Class="YourApp.App">
+    <Application.Styles>
+        <u-semi:SemiTheme Locale="zh-CN" />
+        <!-- Required for ColorPicker support (optional) -->
+        <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml"/>
+        <!-- Required for AutoSettingUI.Ursa -->
+        <StyleInclude Source="avares://AutoSettingUI.Ursa/Themes/Generic.axaml"/>
+    </Application.Styles>
+</Application>
+```
+
+#### WPF
+
+WPF does not require additional style references. The default styles are included automatically.
+
+### 3. Define a Settings Model
 
 ```csharp
 using AutoSettingUI.Core.Attributes;
@@ -116,7 +162,34 @@ public sealed class AppSettings
 }
 ```
 
-### 3. Bind the Panel
+#### Using with CommunityToolkit.Mvvm
+
+AutoSettingUI supports `[ObservableProperty]` from CommunityToolkit.Mvvm. Use partial classes with private fields:
+
+```csharp
+using CommunityToolkit.Mvvm.ComponentModel;
+using AutoSettingUI.Core.Attributes;
+
+[SettingUI]
+[MainHeader("Application Settings")]
+public partial class ApplicationSettings : ObservableObject
+{
+    [Title("Application Name")]
+    [ObservableProperty]
+    private string _appName = "My Application";
+
+    [ObservableProperty]
+    private string _version = "1.0.0";
+
+    [Title("Enable Logging")]
+    [ObservableProperty]
+    private bool _enableLogging;
+}
+```
+
+> **Note:** The source generator automatically detects fields marked with `[ObservableProperty]` and generates UI for the corresponding properties. Field naming conventions (`_fieldName` or `m_fieldName`) are automatically converted to property names (`FieldName`).
+
+### 4. Bind the Panel
 
 Avalonia:
 
@@ -154,7 +227,7 @@ public class MainViewModel
 }
 ```
 
-### 4. AOT Support (Optional)
+### 5. AOT Support (Optional)
 
 For Native AOT or trimming, make sure the generator is referenced by the **app** project. In most cases the generated provider is picked up automatically. If you want to force it (or you see fallback-to-TextBox in AOT), do:
 
@@ -167,7 +240,7 @@ AotSettingRegistry.Provider = provider;
 AotSettingRegistry.Accessor = provider;
 ```
 
-### 5. Publish AOT (Example)
+### 6. Publish AOT (Example)
 
 ```bash
 # Ursa demo

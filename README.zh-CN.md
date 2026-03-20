@@ -10,6 +10,7 @@
 - 🔌 **高度可扩展** — 可注入自定义 `ISettingDescriptorProvider` 或 `IPropertyValueAccessor`，覆盖默认实现。
 - 🧭 **内置导航栏** — 各设置分组以树形列表展示在侧边栏，点击即可滚动定位到对应区域。
 - 🎯 **扩展控件支持** — 内置 ColorPicker、DatePicker、TimePicker、NumericUpDown 等扩展控件。
+- 🔄 **MVVM 支持** — 完美支持 CommunityToolkit.Mvvm 的 `[ObservableProperty]` 特性，可在 partial 类上使用。
 
 ## 安装
 
@@ -17,13 +18,13 @@
 
 ```xml
 <!-- Avalonia -->
-<PackageReference Include="AutoSettingUI.Avalonia" Version="1.0.0" />
+<PackageReference Include="AutoSettingUI.Avalonia" />
 
 <!-- Ursa (带 Ursa 主题的 Avalonia) -->
-<PackageReference Include="AutoSettingUI.Ursa" Version="1.0.0" />
+<PackageReference Include="AutoSettingUI.Ursa" />
 
 <!-- WPF -->
-<PackageReference Include="AutoSettingUI.WPF" Version="1.0.0" />
+<PackageReference Include="AutoSettingUI.WPF" />
 ```
 
 > **注意：** `AutoSettingUI.Core` 会作为依赖自动引入。`AutoSettingUI.Generator` 仅在 AOT 场景需要，需要在应用项目中单独引用。
@@ -40,13 +41,13 @@
 
 ```xml
 <!-- Avalonia -->
-<PackageReference Include="AutoSettingUI.Avalonia" Version="1.0.0" />
+<PackageReference Include="AutoSettingUI.Avalonia" />
 
 <!-- Ursa (带 Ursa 主题的 Avalonia) -->
-<PackageReference Include="AutoSettingUI.Ursa" Version="1.0.0" />
+<PackageReference Include="AutoSettingUI.Ursa"  />
 
 <!-- WPF -->
-<PackageReference Include="AutoSettingUI.WPF" Version="1.0.0" />
+<PackageReference Include="AutoSettingUI.WPF"  />
 ```
 
 如需 AOT 支持，请在 **应用项目** 中额外引用源代码生成器：
@@ -86,6 +87,33 @@ public sealed class AppSettings
         = new() { "Important", "Work" };
 }
 ```
+
+#### 配合 CommunityToolkit.Mvvm 使用
+
+AutoSettingUI 支持 CommunityToolkit.Mvvm 的 `[ObservableProperty]` 特性。使用 partial 类和私有字段：
+
+```csharp
+using CommunityToolkit.Mvvm.ComponentModel;
+using AutoSettingUI.Core.Attributes;
+
+[SettingUI]
+[MainHeader("应用程序设置")]
+public partial class ApplicationSettings : ObservableObject
+{
+    [Title("应用程序名称")]
+    [ObservableProperty]
+    private string _appName = "我的应用程序";
+
+    [ObservableProperty]
+    private string _version = "1.0.0";
+
+    [Title("启用日志")]
+    [ObservableProperty]
+    private bool _enableLogging;
+}
+```
+
+> **注意：** 源码生成器会自动检测标记了 `[ObservableProperty]` 的字段，并为对应的属性生成 UI。字段命名约定（`_fieldName` 或 `m_fieldName`）会自动转换为属性名（`FieldName`）。
 
 ### 3. 绑定面板
 
