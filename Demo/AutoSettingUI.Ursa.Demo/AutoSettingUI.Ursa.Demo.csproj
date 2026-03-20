@@ -13,6 +13,7 @@
         <SelfContained>true</SelfContained>
         <PublishTrimmed>true</PublishTrimmed>
         <TrimMode>link</TrimMode>
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
