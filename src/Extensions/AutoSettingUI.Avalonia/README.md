@@ -8,12 +8,30 @@ Avalonia UI implementation for **AutoSettingUI** - Declarative settings UI contr
 ## Installation
 
 ```xml
-<PackageReference Include="AutoSettingUI.Avalonia" Version="1.0.0" />
+<PackageReference Include="AutoSettingUI.Avalonia" />
 ```
 
 ## Quick Start
 
-### 1. Define Your Settings Class
+### 1. Add Style References (Required)
+
+> **⚠️ Important:** You **must** add the theme style reference to your `App.axaml` file. Without this, the controls will not render correctly.
+
+```xml
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="YourApp.App">
+    <Application.Styles>
+        <FluentTheme />
+        <!-- Required for ColorPicker support (optional) -->
+        <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml"/>
+        <!-- Required for AutoSettingUI.Avalonia -->
+        <StyleInclude Source="avares://AutoSettingUI.Avalonia/Themes/Generic.axaml"/>
+    </Application.Styles>
+</Application>
+```
+
+### 2. Define Your Settings Class
 
 ```csharp
 using AutoSettingUI.Core.Attributes;
@@ -33,7 +51,7 @@ public class AppSettings
 }
 ```
 
-### 2. Add to Your Avalonia Window
+### 3. Add to Your Avalonia Window
 
 ```xml
 <Window xmlns:auto="clr-namespace:AutoSettingUI.Avalonia.Controls;assembly=AutoSettingUI.Avalonia">
@@ -45,7 +63,7 @@ public class AppSettings
 </Window>
 ```
 
-### 3. AOT Support (Optional)
+### 4. AOT Support (Optional)
 
 ```csharp
 panel.DescriptorProvider = new AutoSettingUI.Generated.GeneratedSettingProvider();

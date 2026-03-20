@@ -8,7 +8,7 @@ Roslyn Incremental Source Generator for **AutoSettingUI** - Generates AOT-compat
 ## Installation
 
 ```xml
-<PackageReference Include="AutoSettingUI.Generator" Version="1.0.0" />
+<PackageReference Include="AutoSettingUI.Generator" />
 ```
 
 ## What It Does

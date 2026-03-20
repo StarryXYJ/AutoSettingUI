@@ -82,8 +82,26 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
         List<PropertyDescriptor>? currentSubProps = null;
         string? currentSubHeader = null;
 
-        foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        // Get all properties with their declaration order
+        var props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select((prop, index) => new { Property = prop, DeclarationOrder = index })
+            .ToList();
+
+        // Sort by DisplayOrder, then by declaration order
+        var sortedProps = props
+            .Select(p => new
+            {
+                p.Property,
+                p.DeclarationOrder,
+                DisplayOrder = p.Property.GetCustomAttribute<DisplayOrderAttribute>()?.Order ?? 0
+            })
+            .OrderBy(p => p.DisplayOrder)
+            .ThenBy(p => p.DeclarationOrder)
+            .ToList();
+
+        foreach (var item in sortedProps)
         {
+            var prop = item.Property;
             // Skip hidden properties
             if (prop.GetCustomAttribute<HideAttribute>() is not null)
                 continue;
@@ -111,6 +129,7 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
             var placeholderAttr = prop.GetCustomAttribute<PlaceholderAttribute>();
             var descriptionAttr = prop.GetCustomAttribute<DescriptionAttribute>();
             var passwordAttr = prop.GetCustomAttribute<PasswordAttribute>();
+            var displayOrderAttr = prop.GetCustomAttribute<DisplayOrderAttribute>();
 
             // Pre-compute enum values to avoid runtime Enum.GetValues in non-AOT path
             string[]? enumValues = null;
@@ -166,7 +185,8 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
                 false,
                 0,
                 0,
-                0
+                0,
+                displayOrderAttr?.Order ?? 0
             );
 
             if (currentSubProps is not null)

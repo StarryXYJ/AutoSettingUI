@@ -33,6 +33,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
     private const string PasswordAttributeName = "PasswordAttribute";
     private const string NumericUpDownAttributeName = "NumericUpDownAttribute"; // Special handling needed - type depends on property type
     private const string ControlBindingDefaultsAttributeName = "ControlBindingDefaultsAttribute";
+    private const string DisplayOrderAttributeName = "DisplayOrderAttribute";
 
     // Diagnostic descriptors
     private static readonly DiagnosticDescriptor NonPublicClassWarning = new(
@@ -240,7 +241,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
             sb.AppendLine("            {");
             sb.AppendLine("                switch (propertyName)");
             sb.AppendLine("                {");
-            foreach (var prop in GetPublicInstanceProperties(cls))
+            foreach (var prop in GetPublicInstanceProperties(cls, context))
                 sb.AppendLine($"                    case \"{prop.Name}\": return t_{EscapeName(cls.Name)}.{prop.Name};");
             sb.AppendLine("                }");
             sb.AppendLine("            }");
@@ -249,7 +250,6 @@ public class AutoSettingGenerator : IIncrementalGenerator
         sb.AppendLine("        }");
         sb.AppendLine();
 
-        // IPropertyValueAccessor – SetValue
         sb.AppendLine("        public void SetValue(object target, string propertyName, object? value)");
         sb.AppendLine("        {");
         foreach (var cls in classes)
@@ -260,9 +260,9 @@ public class AutoSettingGenerator : IIncrementalGenerator
             sb.AppendLine("            {");
             sb.AppendLine("                switch (propertyName)");
             sb.AppendLine("                {");
-            foreach (var prop in GetPublicInstanceProperties(cls))
+            foreach (var prop in GetPublicInstanceProperties(cls, context))
             {
-                if (prop.SetMethod != null && prop.SetMethod.DeclaredAccessibility == Accessibility.Public)
+                if (prop.HasPublicSetter)
                 {
                     var typeFqn = prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
                     sb.AppendLine($"                    case \"{prop.Name}\": s_{escapedName}.{prop.Name} = ({typeFqn})value!; return;");
@@ -334,8 +334,17 @@ public class AutoSettingGenerator : IIncrementalGenerator
         sb.AppendLine("            string? currentSubTitle = null;");
         sb.AppendLine();
 
-        foreach (var prop in GetPublicInstanceProperties(cls))
+        var allProps = GetPublicInstanceProperties(cls, context).ToList();
+        var propsWithOrder = allProps.Select((prop, index) => new
         {
+            Property = prop,
+            DisplayOrder = GetDisplayOrder(prop),
+            DeclarationOrder = prop.DeclarationOrder
+        }).ToList();
+
+        foreach (var item in propsWithOrder.OrderBy(p => p.DisplayOrder).ThenBy(p => p.DeclarationOrder))
+        {
+            var prop = item.Property;
             if (GetAttr(prop, HideAttributeName) != null) continue;
 
             var subHeaderAttr = GetAttr(prop, SubHeaderAttributeName);
@@ -355,14 +364,12 @@ public class AutoSettingGenerator : IIncrementalGenerator
 
             var isEnum = prop.Type.TypeKind == TypeKind.Enum;
 
-            // Range
             var rangeAttr = GetAttr(prop, RangeAttributeName);
             var hasRange = rangeAttr != null;
             
-            // Check for [Range] on non-numeric types
             if (hasRange && !IsNumericType(prop.Type))
             {
-                var diagnostic = Diagnostic.Create(RangeOnNonNumericWarning, prop.Locations.FirstOrDefault(), prop.Name, prop.Type.ToDisplayString());
+                var diagnostic = Diagnostic.Create(RangeOnNonNumericWarning, prop.Location, prop.Name, prop.Type.ToDisplayString());
                 context.ReportDiagnostic(diagnostic);
             }
             
@@ -517,6 +524,15 @@ public class AutoSettingGenerator : IIncrementalGenerator
                 numericInc = TryGetNamedArgDouble(cbAttr, "Increment") ?? 1.0;
             }
 
+            // DisplayOrder
+            var displayOrderAttr = GetAttr(prop, DisplayOrderAttributeName);
+            int displayOrder = 0;
+            if (displayOrderAttr != null && displayOrderAttr.ConstructorArguments.Length > 0)
+            {
+                if (displayOrderAttr.ConstructorArguments[0].Value is int orderVal)
+                    displayOrder = orderVal;
+            }
+
             // CollectionEditor
             var collEditorAttr = GetAttr(prop, CollectionEditorAttributeName);
             string? collEditorTypeName = null;
@@ -618,7 +634,8 @@ public class AutoSettingGenerator : IIncrementalGenerator
             sb.AppendLine($"                {(isNumericUpDown ? "true" : "false")},");
             sb.AppendLine($"                {numericMin},");
             sb.AppendLine($"                {numericMax},");
-            sb.AppendLine($"                {numericInc});");
+            sb.AppendLine($"                {numericInc},");
+            sb.AppendLine($"                {displayOrder});");
 
             var varName = $"pd_{safeName}_{EscapeName(prop.Name)}";
             sb.AppendLine($"            if (currentSub != null) currentSub.Add({varName}); else directProps.Add({varName});");
@@ -667,10 +684,168 @@ public class AutoSettingGenerator : IIncrementalGenerator
         };
     }
 
-    private static IEnumerable<IPropertySymbol> GetPublicInstanceProperties(INamedTypeSymbol cls)
-        => cls.GetMembers()
+    private const string ObservablePropertyAttributeName = "ObservablePropertyAttribute";
+
+    private sealed class PropertyInfo
+    {
+        public string Name { get; }
+        public ITypeSymbol Type { get; }
+        public bool HasPublicSetter { get; }
+        public Accessibility DeclaredAccessibility { get; }
+        public ImmutableArray<AttributeData> Attributes { get; }
+        public Location? Location { get; }
+        public bool IsFromObservableProperty { get; }
+        public IFieldSymbol? SourceField { get; }
+        public int DeclarationOrder { get; }
+
+        public PropertyInfo(
+            string name,
+            ITypeSymbol type,
+            bool hasPublicSetter,
+            Accessibility declaredAccessibility,
+            ImmutableArray<AttributeData> attributes,
+            Location? location,
+            bool isFromObservableProperty,
+            IFieldSymbol? sourceField,
+            int declarationOrder = 0)
+        {
+            Name = name;
+            Type = type;
+            HasPublicSetter = hasPublicSetter;
+            DeclaredAccessibility = declaredAccessibility;
+            Attributes = attributes;
+            Location = location;
+            IsFromObservableProperty = isFromObservableProperty;
+            SourceField = sourceField;
+            DeclarationOrder = declarationOrder;
+        }
+    }
+
+    private static IEnumerable<PropertyInfo> GetPublicInstanceProperties(INamedTypeSymbol cls, SourceProductionContext context)
+    {
+        int order = 0;
+        var properties = cls.GetMembers()
               .OfType<IPropertySymbol>()
-              .Where(p => p.DeclaredAccessibility == Accessibility.Public && !p.IsStatic);
+              .Where(p => p.DeclaredAccessibility == Accessibility.Public && !p.IsStatic)
+              .Select(p => new PropertyInfo(
+                  p.Name,
+                  p.Type,
+                  p.SetMethod != null && p.SetMethod.DeclaredAccessibility == Accessibility.Public,
+                  p.DeclaredAccessibility,
+                  p.GetAttributes(),
+                  p.Locations.FirstOrDefault(),
+                  false,
+                  null,
+                  order++));
+
+        var allFields = cls.GetMembers().OfType<IFieldSymbol>().ToList();
+        var observableFields = new List<PropertyInfo>();
+        
+        foreach (var f in allFields)
+        {
+            if (HasObservablePropertyAttribute(f, context, out _))
+            {
+                observableFields.Add(new PropertyInfo(
+                    GetPropertyNameFromField(f.Name),
+                    f.Type,
+                    true,
+                    Accessibility.Public,
+                    f.GetAttributes(),
+                    f.Locations.FirstOrDefault(),
+                    true,
+                    f,
+                    order++));
+            }
+        }
+
+        return properties.Concat(observableFields);
+    }
+
+    private static IEnumerable<PropertyInfo> GetPublicInstanceProperties(INamedTypeSymbol cls)
+    {
+        var properties = cls.GetMembers()
+              .OfType<IPropertySymbol>()
+              .Where(p => p.DeclaredAccessibility == Accessibility.Public && !p.IsStatic)
+              .Select(p => new PropertyInfo(
+                  p.Name,
+                  p.Type,
+                  p.SetMethod != null && p.SetMethod.DeclaredAccessibility == Accessibility.Public,
+                  p.DeclaredAccessibility,
+                  p.GetAttributes(),
+                  p.Locations.FirstOrDefault(),
+                  false,
+                  null));
+
+        var allFields = cls.GetMembers().OfType<IFieldSymbol>().ToList();
+        var observableFields = allFields
+              .Where(f => HasObservablePropertyAttribute(f))
+              .Select(f => new PropertyInfo(
+                  GetPropertyNameFromField(f.Name),
+                  f.Type,
+                  true,
+                  Accessibility.Public,
+                  f.GetAttributes(),
+                  f.Locations.FirstOrDefault(),
+                  true,
+                  f));
+
+        return properties.Concat(observableFields);
+    }
+
+    private static bool HasObservablePropertyAttribute(ISymbol symbol, SourceProductionContext context, out string? matchedAttrName)
+    {
+        matchedAttrName = null;
+        var attrs = symbol.GetAttributes();
+        if (attrs.Length == 0) return false;
+        
+        foreach (var a in attrs)
+        {
+            var attrName = a.AttributeClass?.Name;
+            var attrFullName = a.AttributeClass?.ToDisplayString() ?? "";
+            
+            if (attrName == ObservablePropertyAttributeName ||
+                attrName == "ObservableProperty" ||
+                attrFullName == "CommunityToolkit.Mvvm.ComponentModel.ObservablePropertyAttribute" ||
+                (attrFullName.StartsWith("CommunityToolkit.Mvvm.SourceGenerators.") && attrName == ObservablePropertyAttributeName))
+            {
+                matchedAttrName = attrFullName;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static bool HasObservablePropertyAttribute(ISymbol symbol)
+    {
+        var attrs = symbol.GetAttributes().ToList();
+        if (attrs.Count == 0) return false;
+        
+        foreach (var a in attrs)
+        {
+            var attrName = a.AttributeClass?.Name;
+            var attrFullName = a.AttributeClass?.ToDisplayString() ?? "";
+            
+            if (attrName == ObservablePropertyAttributeName ||
+                attrName == "ObservableProperty" ||
+                attrFullName == "CommunityToolkit.Mvvm.ComponentModel.ObservablePropertyAttribute" ||
+                (attrFullName.StartsWith("CommunityToolkit.Mvvm.SourceGenerators.") && attrName == ObservablePropertyAttributeName))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static string GetPropertyNameFromField(string fieldName)
+    {
+        if (fieldName.StartsWith("_"))
+            return char.ToUpperInvariant(fieldName[1]) + fieldName.Substring(2);
+        if (fieldName.StartsWith("m_"))
+            return char.ToUpperInvariant(fieldName[2]) + fieldName.Substring(3);
+        if (char.IsLower(fieldName[0]))
+            return char.ToUpperInvariant(fieldName[0]) + fieldName.Substring(1);
+        return fieldName;
+    }
 
     private static AttributeData? GetAttr(ISymbol symbol, string name)
     {
@@ -684,6 +859,29 @@ public class AutoSettingGenerator : IIncrementalGenerator
         });
     }
 
+    private static AttributeData? GetAttr(PropertyInfo prop, string name)
+    {
+        return prop.Attributes.FirstOrDefault(a =>
+        {
+            var attrName = a.AttributeClass?.Name;
+            var attrFullName = a.AttributeClass?.ToDisplayString();
+            return attrName == name ||
+                   attrName == name.Replace("Attribute", "") ||
+                   attrFullName == $"AutoSettingUI.Core.Attributes.{name}";
+        });
+    }
+
+    private static int GetDisplayOrder(PropertyInfo prop)
+    {
+        var attr = GetAttr(prop, DisplayOrderAttributeName);
+        if (attr != null && attr.ConstructorArguments.Length > 0)
+        {
+            if (attr.ConstructorArguments[0].Value is int orderVal)
+                return orderVal;
+        }
+        return 0;
+    }
+
     private static AttributeData? GetAttrInherited(ISymbol symbol, string baseName)
     {
         return symbol.GetAttributes().FirstOrDefault(a => 
@@ -692,6 +890,22 @@ public class AutoSettingGenerator : IIncrementalGenerator
             while (baseType != null)
             {
                 if (baseType.Name == baseName || 
+                    baseType.ToDisplayString() == $"AutoSettingUI.Core.Attributes.{baseName}")
+                    return true;
+                baseType = baseType.BaseType;
+            }
+            return false;
+        });
+    }
+
+    private static AttributeData? GetAttrInherited(PropertyInfo prop, string baseName)
+    {
+        return prop.Attributes.FirstOrDefault(a =>
+        {
+            var baseType = a.AttributeClass?.BaseType;
+            while (baseType != null)
+            {
+                if (baseType.Name == baseName ||
                     baseType.ToDisplayString() == $"AutoSettingUI.Core.Attributes.{baseName}")
                     return true;
                 baseType = baseType.BaseType;

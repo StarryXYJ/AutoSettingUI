@@ -5,7 +5,7 @@ namespace AutoSettingUI.Core.Attributes;
 /// Main headers create a container that groups subsequent properties until the next MainHeader or end.
 /// They also appear in the navigation table of contents.
 /// </summary>
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Property | AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Class /*| AttributeTargets.Property | AttributeTargets.Field*/, Inherited = false, AllowMultiple = false)]
 public sealed class MainHeaderAttribute : Attribute
 {
     /// <summary>
