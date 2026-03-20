@@ -2,8 +2,8 @@ name: Publish to NuGet
 
 on:
   push:
-    branches:
-      - main
+    # branches:
+    #   - main
     tags:
       - 'v*'
   workflow_dispatch:
@@ -29,6 +29,7 @@ jobs:
             8.0.x
             9.0.x
             10.0.x
+          cache: true
 
       - name: Build Core
         run: dotnet build src/AutoSettingUI.Core/AutoSettingUI.Core.csproj --configuration Release -p:ContinuousIntegrationBuild=true
