@@ -41,10 +41,10 @@ jobs:
             ${{ runner.os }}-nuget-
 
       - name: Restore
-        run: dotnet restore src/AutoSettingUI.Core/AutoSettingUI.Core.csproj src/AutoSettingUI.Generator/AutoSettingUI.Generator.csproj src/Extensions/AutoSettingUI.Extension.Shared/AutoSettingUI.Extension.Shared.csproj src/Extensions/AutoSettingUI.Avalonia/AutoSettingUI.Avalonia.csproj src/Extensions/AutoSettingUI.Ursa/AutoSettingUI.Ursa.csproj src/Extensions/AutoSettingUI.WPF/AutoSettingUI.WPF.csproj src/AutoSettingUI.Generator.Tests/AutoSettingUI.Generator.Tests.csproj
+        run: dotnet restore src/AutoSettingUI.Generator.Tests/AutoSettingUI.Generator.Tests.csproj
 
       - name: Build
-        run: dotnet build src/AutoSettingUI.Core/AutoSettingUI.Core.csproj src/AutoSettingUI.Generator/AutoSettingUI.Generator.csproj src/Extensions/AutoSettingUI.Extension.Shared/AutoSettingUI.Extension.Shared.csproj src/Extensions/AutoSettingUI.Avalonia/AutoSettingUI.Avalonia.csproj src/Extensions/AutoSettingUI.Ursa/AutoSettingUI.Ursa.csproj src/Extensions/AutoSettingUI.WPF/AutoSettingUI.WPF.csproj src/AutoSettingUI.Generator.Tests/AutoSettingUI.Generator.Tests.csproj --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
+        run: dotnet build src/AutoSettingUI.Generator.Tests/AutoSettingUI.Generator.Tests.csproj --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
 
       - name: Test
         run: dotnet test src/AutoSettingUI.Generator.Tests/AutoSettingUI.Generator.Tests.csproj --configuration Release --no-build --verbosity minimal
