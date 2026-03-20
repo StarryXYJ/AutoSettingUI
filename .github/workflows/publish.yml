@@ -40,23 +40,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Restore
-        run: dotnet restore src/AutoSettingUI.Generator.Tests/AutoSettingUI.Generator.Tests.csproj
-
-      - name: Build
-        run: dotnet build src/AutoSettingUI.Generator.Tests/AutoSettingUI.Generator.Tests.csproj --configuration Release --no-restore -p:ContinuousIntegrationBuild=true
 
       - name: Test
-        run: dotnet test src/AutoSettingUI.Generator.Tests/AutoSettingUI.Generator.Tests.csproj --configuration Release --no-build --verbosity minimal
+        run: dotnet test src/AutoSettingUI.Generator.Tests/AutoSettingUI.Generator.Tests.csproj --configuration Release  --verbosity minimal
 
       - name: Pack
         run: |
-          dotnet pack src/AutoSettingUI.Core/AutoSettingUI.Core.csproj --configuration Release --no-build --output artifacts
-          dotnet pack src/AutoSettingUI.Generator/AutoSettingUI.Generator.csproj --configuration Release --no-build --output artifacts
-          dotnet pack src/Extensions/AutoSettingUI.Extension.Shared/AutoSettingUI.Extension.Shared.csproj --configuration Release --no-build --output artifacts
-          dotnet pack src/Extensions/AutoSettingUI.Avalonia/AutoSettingUI.Avalonia.csproj --configuration Release --no-build --output artifacts
-          dotnet pack src/Extensions/AutoSettingUI.Ursa/AutoSettingUI.Ursa.csproj --configuration Release --no-build --output artifacts
-          dotnet pack src/Extensions/AutoSettingUI.WPF/AutoSettingUI.WPF.csproj --configuration Release --no-build --output artifacts
+          dotnet pack src/AutoSettingUI.Core/AutoSettingUI.Core.csproj --configuration Release  --output artifacts
+          dotnet pack src/AutoSettingUI.Generator/AutoSettingUI.Generator.csproj --configuration Release d --output artifacts
+          dotnet pack src/Extensions/AutoSettingUI.Extension.Shared/AutoSettingUI.Extension.Shared.csproj --configuration Release  --output artifacts
+          dotnet pack src/Extensions/AutoSettingUI.Avalonia/AutoSettingUI.Avalonia.csproj --configuration Release  --output artifacts
+          dotnet pack src/Extensions/AutoSettingUI.Ursa/AutoSettingUI.Ursa.csproj --configuration Release  --output artifacts
+          dotnet pack src/Extensions/AutoSettingUI.WPF/AutoSettingUI.WPF.csproj --configuration Release  --output artifacts
 
       - name: Publish to NuGet
         if: startsWith(github.ref, 'refs/tags/v')
