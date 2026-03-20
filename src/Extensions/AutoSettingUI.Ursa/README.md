@@ -8,7 +8,7 @@ Ursa-themed Avalonia UI implementation for **AutoSettingUI** - Declarative setti
 ## Installation
 
 ```xml
-<PackageReference Include="AutoSettingUI.Ursa" Version="1.0.0" />
+<PackageReference Include="AutoSettingUI.Ursa" />
 ```
 
 ## Quick Start

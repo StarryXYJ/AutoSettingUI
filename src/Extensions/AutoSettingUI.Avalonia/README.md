@@ -8,7 +8,7 @@ Avalonia UI implementation for **AutoSettingUI** - Declarative settings UI contr
 ## Installation
 
 ```xml
-<PackageReference Include="AutoSettingUI.Avalonia" Version="1.0.0" />
+<PackageReference Include="AutoSettingUI.Avalonia" />
 ```
 
 ## Quick Start

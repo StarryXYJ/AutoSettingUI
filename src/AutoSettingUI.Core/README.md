@@ -8,7 +8,7 @@ Core library for **AutoSettingUI** - A declarative settings UI framework for .NE
 ## Installation
 
 ```xml
-<PackageReference Include="AutoSettingUI.Core" Version="1.0.0" />
+<PackageReference Include="AutoSettingUI.Core" />
 ```
 
 ## Features
@@ -60,6 +60,7 @@ public class AppSettings
 | `[Placeholder]` | Property | Placeholder text |
 | `[Layout]` | Property | Custom layout settings |
 | `[Validation]` | Property | Custom validation method |
+| `[DisplayOrder]` | Property | Controls display order |
 
 ## Related Packages
 

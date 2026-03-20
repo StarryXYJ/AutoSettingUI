@@ -8,7 +8,7 @@ WPF implementation for **AutoSettingUI** - Declarative settings UI controls for 
 ## Installation
 
 ```xml
-<PackageReference Include="AutoSettingUI.WPF" Version="1.0.0" />
+<PackageReference Include="AutoSettingUI.WPF" />
 ```
 
 ## Quick Start
