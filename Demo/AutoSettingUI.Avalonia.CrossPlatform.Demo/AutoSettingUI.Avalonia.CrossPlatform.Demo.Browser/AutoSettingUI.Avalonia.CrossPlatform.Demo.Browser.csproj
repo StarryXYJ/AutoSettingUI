@@ -5,6 +5,7 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <Nullable>enable</Nullable>
         <NoWarn>$(NoWarn);MSB3277</NoWarn>
+        <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>

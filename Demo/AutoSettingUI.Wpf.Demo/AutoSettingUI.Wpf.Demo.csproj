@@ -8,6 +8,7 @@
         <UseWPF>true</UseWPF>
         <AssemblyName>AutoSettingUI.WPF.Demo</AssemblyName>
         <RootNamespace>AutoSettingUI.WPF.Demo</RootNamespace>
+        <IsPackable>false</IsPackable>
 
 
     </PropertyGroup>

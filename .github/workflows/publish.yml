@@ -2,8 +2,6 @@ name: Publish to NuGet
 
 on:
   push:
-    # branches:
-    #   - main
     tags:
       - 'v*'
   workflow_dispatch:
@@ -11,6 +9,7 @@ on:
 env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_NOLOGO: true
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
 
 jobs:
   build-and-publish:
@@ -22,11 +21,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Fetch all tags
+      - name: Fetch tags
         run: git fetch --tags
-
-      - name: Show current tag
-        run: git describe --tags
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -35,56 +31,52 @@ jobs:
             8.0.x
             9.0.x
             10.0.x
-          cache: true
 
-      - name: Build Core
-        run: dotnet build src/AutoSettingUI.Core/AutoSettingUI.Core.csproj --configuration Release -p:ContinuousIntegrationBuild=true
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/Directory.Packages.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
-      - name: Build Generator
-        run: dotnet build src/AutoSettingUI.Generator/AutoSettingUI.Generator.csproj --configuration Release -p:ContinuousIntegrationBuild=true
+      - name: Restore all projects
+        run: |
+          dotnet restore src/AutoSettingUI.Core/AutoSettingUI.Core.csproj
+          dotnet restore src/AutoSettingUI.Generator/AutoSettingUI.Generator.csproj
+          dotnet restore src/Extensions/AutoSettingUI.Extension.Shared/AutoSettingUI.Extension.Shared.csproj
+          dotnet restore src/Extensions/AutoSettingUI.Avalonia/AutoSettingUI.Avalonia.csproj
+          dotnet restore src/Extensions/AutoSettingUI.Ursa/AutoSettingUI.Ursa.csproj
+          dotnet restore src/Extensions/AutoSettingUI.WPF/AutoSettingUI.WPF.csproj
+          dotnet restore src/AutoSettingUI.Generator.Tests/AutoSettingUI.Generator.Tests.csproj
 
-      - name: Build Extension.Shared
-        run: dotnet build src/Extensions/AutoSettingUI.Extension.Shared/AutoSettingUI.Extension.Shared.csproj --configuration Release -p:ContinuousIntegrationBuild=true
+      - name: Build all projects
+        run: |
+          dotnet build src/AutoSettingUI.Core/AutoSettingUI.Core.csproj --configuration Release
+          dotnet build src/AutoSettingUI.Generator/AutoSettingUI.Generator.csproj --configuration Release
+          dotnet build src/Extensions/AutoSettingUI.Extension.Shared/AutoSettingUI.Extension.Shared.csproj --configuration Release
+          dotnet build src/Extensions/AutoSettingUI.Avalonia/AutoSettingUI.Avalonia.csproj --configuration Release
+          dotnet build src/Extensions/AutoSettingUI.Ursa/AutoSettingUI.Ursa.csproj --configuration Release
+          dotnet build src/Extensions/AutoSettingUI.WPF/AutoSettingUI.WPF.csproj --configuration Release
+          dotnet build src/AutoSettingUI.Generator.Tests/AutoSettingUI.Generator.Tests.csproj --configuration Release
 
-      - name: Build Avalonia
-        run: dotnet build src/Extensions/AutoSettingUI.Avalonia/AutoSettingUI.Avalonia.csproj --configuration Release -p:ContinuousIntegrationBuild=true
+      - name: Test
+        run: dotnet test src/AutoSettingUI.Generator.Tests/AutoSettingUI.Generator.Tests.csproj --configuration Release --verbosity minimal
 
-      - name: Build Ursa
-        run: dotnet build src/Extensions/AutoSettingUI.Ursa/AutoSettingUI.Ursa.csproj --configuration Release -p:ContinuousIntegrationBuild=true
-
-      - name: Build WPF
-        run: dotnet build src/Extensions/AutoSettingUI.WPF/AutoSettingUI.WPF.csproj --configuration Release -p:ContinuousIntegrationBuild=true
-
-      - name: Build Tests
-        run: dotnet build src/AutoSettingUI.Generator.Tests/AutoSettingUI.Generator.Tests.csproj --configuration Release
-
-      - name: Run tests
-        run: dotnet test src/AutoSettingUI.Generator.Tests/AutoSettingUI.Generator.Tests.csproj --configuration Release --no-build --verbosity minimal
-
-      - name: Pack Core
-        run: dotnet pack src/AutoSettingUI.Core/AutoSettingUI.Core.csproj --configuration Release --no-build --output artifacts
-
-      - name: Pack Generator
-        run: dotnet pack src/AutoSettingUI.Generator/AutoSettingUI.Generator.csproj --configuration Release --no-build --output artifacts
-
-      - name: Pack Extension.Shared
-        run: dotnet pack src/Extensions/AutoSettingUI.Extension.Shared/AutoSettingUI.Extension.Shared.csproj --configuration Release --no-build --output artifacts
-
-      - name: Pack Avalonia
-        run: dotnet pack src/Extensions/AutoSettingUI.Avalonia/AutoSettingUI.Avalonia.csproj --configuration Release --no-build --output artifacts
-
-      - name: Pack Ursa
-        run: dotnet pack src/Extensions/AutoSettingUI.Ursa/AutoSettingUI.Ursa.csproj --configuration Release --no-build --output artifacts
-
-      - name: Pack WPF
-        run: dotnet pack src/Extensions/AutoSettingUI.WPF/AutoSettingUI.WPF.csproj --configuration Release --no-build --output artifacts
-
-      - name: List packages
-        run: Get-ChildItem artifacts -Filter *.nupkg
+      - name: Pack
+        run: |
+          mkdir -p artifacts
+          dotnet pack src/AutoSettingUI.Core/AutoSettingUI.Core.csproj --configuration Release --output artifacts
+          dotnet pack src/AutoSettingUI.Generator/AutoSettingUI.Generator.csproj --configuration Release --output artifacts
+          dotnet pack src/Extensions/AutoSettingUI.Extension.Shared/AutoSettingUI.Extension.Shared.csproj --configuration Release --output artifacts
+          dotnet pack src/Extensions/AutoSettingUI.Avalonia/AutoSettingUI.Avalonia.csproj --configuration Release --output artifacts
+          dotnet pack src/Extensions/AutoSettingUI.Ursa/AutoSettingUI.Ursa.csproj --configuration Release --output artifacts
+          dotnet pack src/Extensions/AutoSettingUI.WPF/AutoSettingUI.WPF.csproj --configuration Release --output artifacts
+          ls -R artifacts
 
       - name: Publish to NuGet
         if: startsWith(github.ref, 'refs/tags/v')
-        run: Get-ChildItem artifacts -Filter *.nupkg | ForEach-Object { dotnet nuget push $_.FullName --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate }
+        run: dotnet nuget push artifacts/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

@@ -7,12 +7,14 @@
         <IsAotCompatible>true</IsAotCompatible>
         <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
         <NoWarn>$(NoWarn);IL2026;IL2057;IL2070;IL2072;IL2075;IL3050</NoWarn>
+        <MinVerTagPrefix>v</MinVerTagPrefix>
+        <MinVerAutoIncrement>patch</MinVerAutoIncrement>
         
         <!-- NuGet Packaging -->
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageId>AutoSettingUI.Extension.Shared</PackageId>
         <Version>1.0.0</Version>
-        <Authors>AutoSettingUI Contributors</Authors>
+        <Authors>Sakuya Starry</Authors>
         <Description>Shared utilities and helpers for AutoSettingUI framework extensions</Description>
         <PackageTags>settings;configuration;ui;shared;helpers</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>

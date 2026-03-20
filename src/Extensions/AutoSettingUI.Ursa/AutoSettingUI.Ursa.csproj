@@ -8,12 +8,14 @@
         <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <NoWarn>$(NoWarn);IL2026;IL2057;IL2067;IL2070;IL2072;IL2075;IL3050</NoWarn>
+        <MinVerTagPrefix>v</MinVerTagPrefix>
+        <MinVerAutoIncrement>patch</MinVerAutoIncrement>
         
         <!-- NuGet Packaging -->
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageId>AutoSettingUI.Ursa</PackageId>
         <Version>1.0.0</Version>
-        <Authors>AutoSettingUI Contributors</Authors>
+        <Authors>Sakuya Starry</Authors>
         <Description>Ursa UI implementation for AutoSettingUI - Declarative settings UI controls for Ursa (Avalonia)</Description>
         <PackageTags>settings;configuration;ui;ursa;avalonia;cross-platform</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>

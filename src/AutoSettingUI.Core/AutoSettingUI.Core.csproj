@@ -7,12 +7,13 @@
         <IsAotCompatible>true</IsAotCompatible>
         <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
         <NoWarn>$(NoWarn);IL2026;IL2057;IL2070;IL2072;IL2075;IL3050</NoWarn>
+        <MinVerTagPrefix>v</MinVerTagPrefix>
+        <MinVerAutoIncrement>patch</MinVerAutoIncrement>
         
         <!-- NuGet Packaging -->
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageId>AutoSettingUI.Core</PackageId>
-        <Version>1.0.0</Version>
-        <Authors>AutoSettingUI Contributors</Authors>
+        <Authors>Sakuya Starry</Authors>
         <Description>Core library for AutoSettingUI - A declarative settings UI framework for .NET</Description>
         <PackageTags>settings;configuration;ui;avalonia;wpf;ursa</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
