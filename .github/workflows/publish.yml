@@ -65,12 +65,14 @@ jobs:
 
       - name: Pack
         run: |
+          mkdir -p artifacts
           dotnet pack src/AutoSettingUI.Core/AutoSettingUI.Core.csproj --configuration Release --output artifacts
           dotnet pack src/AutoSettingUI.Generator/AutoSettingUI.Generator.csproj --configuration Release --output artifacts
           dotnet pack src/Extensions/AutoSettingUI.Extension.Shared/AutoSettingUI.Extension.Shared.csproj --configuration Release --output artifacts
           dotnet pack src/Extensions/AutoSettingUI.Avalonia/AutoSettingUI.Avalonia.csproj --configuration Release --output artifacts
           dotnet pack src/Extensions/AutoSettingUI.Ursa/AutoSettingUI.Ursa.csproj --configuration Release --output artifacts
           dotnet pack src/Extensions/AutoSettingUI.WPF/AutoSettingUI.WPF.csproj --configuration Release --output artifacts
+          ls -R artifacts
 
       - name: Publish to NuGet
         if: startsWith(github.ref, 'refs/tags/v')
