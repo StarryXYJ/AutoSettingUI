@@ -22,6 +22,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Fetch all tags
+        run: git fetch --tags
+
+      - name: Show current tag
+        run: git describe --tags
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -55,9 +61,6 @@ jobs:
       - name: Run tests
         run: dotnet test src/AutoSettingUI.Generator.Tests/AutoSettingUI.Generator.Tests.csproj --configuration Release --no-build --verbosity minimal
 
-      - name: Create artifacts directory
-        run: mkdir -p artifacts
-
       - name: Pack Core
         run: dotnet pack src/AutoSettingUI.Core/AutoSettingUI.Core.csproj --configuration Release --no-build --output artifacts
 
@@ -77,11 +80,11 @@ jobs:
         run: dotnet pack src/Extensions/AutoSettingUI.WPF/AutoSettingUI.WPF.csproj --configuration Release --no-build --output artifacts
 
       - name: List packages
-        run: ls artifacts
+        run: Get-ChildItem artifacts -Filter *.nupkg
 
       - name: Publish to NuGet
         if: startsWith(github.ref, 'refs/tags/v')
-        run: dotnet nuget push artifacts/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
+        run: Get-ChildItem artifacts -Filter *.nupkg | ForEach-Object { dotnet nuget push $_.FullName --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate }
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
