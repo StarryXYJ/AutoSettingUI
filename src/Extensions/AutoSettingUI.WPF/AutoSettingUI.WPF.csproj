@@ -8,12 +8,14 @@
         <IsAotCompatible>true</IsAotCompatible>
         <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
         <NoWarn>$(NoWarn);CS8604;IL2026;IL2057;IL2067;IL2070;IL2072;IL2075;IL3050</NoWarn>
+        <MinVerTagPrefix>v</MinVerTagPrefix>
+        <MinVerAutoIncrement>patch</MinVerAutoIncrement>
         
         <!-- NuGet Packaging -->
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageId>AutoSettingUI.WPF</PackageId>
         <Version>1.0.0</Version>
-        <Authors>AutoSettingUI Contributors</Authors>
+        <Authors>Sakuya Starry</Authors>
         <Description>WPF UI implementation for AutoSettingUI - Declarative settings UI controls for WPF</Description>
         <PackageTags>settings;configuration;ui;wpf;windows</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>

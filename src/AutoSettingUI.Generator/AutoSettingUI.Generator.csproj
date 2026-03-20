@@ -12,12 +12,13 @@
         <NoWarn>$(NoWarn);RS2008;NU5128</NoWarn>
         <MSBuildTreatAsLocalProperty>PublishAot</MSBuildTreatAsLocalProperty>
         <PublishAot>false</PublishAot>
+        <MinVerTagPrefix>v</MinVerTagPrefix>
+        <MinVerAutoIncrement>patch</MinVerAutoIncrement>
         
         <!-- NuGet Packaging -->
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageId>AutoSettingUI.Generator</PackageId>
-        <Version>1.0.0</Version>
-        <Authors>AutoSettingUI Contributors</Authors>
+        <Authors>Sakuya Starry</Authors>
         <Description>Roslyn source generator for AutoSettingUI - Generates AOT-compatible setting descriptors at compile time</Description>
         <PackageTags>settings;configuration;ui;source-generator;roslyn;aot</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
