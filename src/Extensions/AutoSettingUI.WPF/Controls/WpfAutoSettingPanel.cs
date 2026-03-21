@@ -48,6 +48,10 @@ public class WpfAutoSettingPanel : Control
         nameof(PropertyAccessor), typeof(IPropertyValueAccessor), typeof(WpfAutoSettingPanel),
         new PropertyMetadata(null, OnPropertyAccessorChanged));
 
+    public static readonly DependencyProperty LocalizationServiceProperty = DependencyProperty.Register(
+        nameof(LocalizationService), typeof(ILocalizationService), typeof(WpfAutoSettingPanel),
+        new PropertyMetadata(null, OnLocalizationServiceChanged));
+
     #endregion
 
     #region Properties
@@ -103,6 +107,16 @@ public class WpfAutoSettingPanel : Control
         set => SetValue(PropertyAccessorProperty, value);
     }
 
+    /// <summary>
+    /// Gets or sets the localization service for dynamic language switching.
+    /// When set, all text in the panel will be automatically updated when the culture changes.
+    /// </summary>
+    public ILocalizationService? LocalizationService
+    {
+        get => (ILocalizationService?)GetValue(LocalizationServiceProperty);
+        set => SetValue(LocalizationServiceProperty, value);
+    }
+
     #endregion
 
     private ScrollViewer? _formScrollViewer;
@@ -113,7 +127,10 @@ public class WpfAutoSettingPanel : Control
     private readonly Dictionary<string, FrameworkElement> _sectionControlMap = new();
     private IEnumerable? _previousTargets;
     private readonly List<(FrameworkElement Control, Func<bool> IsReadOnlyGetter)> _readOnlyControls = new();
+    private readonly List<(TextBlock TextBlock, string? ResourceKey, string FallbackText)> _localizedTextBlocks = new();
+    private readonly List<(FrameworkElement Control, string? PlaceholderKey, string? PlaceholderFallback)> _localizedPlaceholders = new();
     private readonly HashSet<INotifyPropertyChanged> _subscribedTargets = new();
+    private ILocalizationService? _localizationService;
 
     public WpfAutoSettingPanel()
     {
@@ -279,6 +296,27 @@ public class WpfAutoSettingPanel : Control
         }
     }
 
+    private static void OnLocalizationServiceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is WpfAutoSettingPanel panel)
+        {
+            if (e.OldValue is ILocalizationService oldService)
+            {
+                oldService.CultureChanged -= panel.OnCultureChanged;
+                oldService.PropertyChanged -= panel.OnLocalizationServicePropertyChanged;
+            }
+            
+            if (e.NewValue is ILocalizationService newService)
+            {
+                newService.CultureChanged += panel.OnCultureChanged;
+                newService.PropertyChanged += panel.OnLocalizationServicePropertyChanged;
+            }
+            
+            panel._localizationService = e.NewValue as ILocalizationService;
+            panel.UpdateLocalizedTexts();
+        }
+    }
+
     public override void OnApplyTemplate()
     {
         base.OnApplyTemplate();
@@ -348,6 +386,63 @@ public class WpfAutoSettingPanel : Control
         _readOnlyControls.Add((control, isReadOnlyGetter));
     }
 
+    private void OnCultureChanged(object? sender, CultureChangedEventArgs e)
+    {
+        UpdateLocalizedTexts();
+    }
+
+    private void OnLocalizationServicePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == "Item[]")
+        {
+            UpdateLocalizedTexts();
+        }
+    }
+
+    private void UpdateLocalizedTexts()
+    {
+        var service = _localizationService;
+        if (service == null) return;
+
+        foreach (var (textBlock, resourceKey, fallbackText) in _localizedTextBlocks)
+        {
+            if (!string.IsNullOrEmpty(resourceKey))
+            {
+                textBlock.Text = service.GetString(resourceKey);
+            }
+        }
+
+        foreach (var (control, placeholderKey, placeholderFallback) in _localizedPlaceholders)
+        {
+            if (!string.IsNullOrEmpty(placeholderKey))
+            {
+                var localizedPlaceholder = service.GetString(placeholderKey);
+                if (control is TextBox textBox)
+                {
+                    textBox.Tag = localizedPlaceholder;
+                }
+            }
+        }
+
+        foreach (var navNode in _navigationNodes)
+        {
+            UpdateNavigationNodeTitle(navNode, service);
+        }
+    }
+
+    private void UpdateNavigationNodeTitle(NavigationNode node, ILocalizationService service)
+    {
+        if (!string.IsNullOrEmpty(node.TitleKey))
+        {
+            node.Title = service.GetString(node.TitleKey);
+        }
+
+        foreach (var child in node.Children)
+        {
+            UpdateNavigationNodeTitle(child, service);
+        }
+    }
+
     private void SubscribeToPropertyChangedEvents(object target)
     {
         if (target is INotifyPropertyChanged notifyPropertyChanged && !_subscribedTargets.Contains(notifyPropertyChanged))
@@ -401,6 +496,8 @@ public class WpfAutoSettingPanel : Control
         _formSections.Clear();
         _sectionControlMap.Clear();
         _readOnlyControls.Clear();
+        _localizedTextBlocks.Clear();
+        _localizedPlaceholders.Clear();
         
         // Clear navigation nodes - do this before setting ItemsSource if not already set
         _navigationNodes.Clear();
@@ -442,16 +539,28 @@ public class WpfAutoSettingPanel : Control
             
             // Create navigation node for this class
             var headerTitle = descriptor.MainHeader ?? descriptor.DisplayName;
+            var headerTitleKey = descriptor.UseMainHeaderKey ? descriptor.MainHeader : null;
+            
+            if (!string.IsNullOrEmpty(headerTitleKey) && _localizationService != null)
+            {
+                var localized = _localizationService.GetString(headerTitleKey);
+                if (!string.IsNullOrEmpty(localized))
+                {
+                    headerTitle = localized;
+                }
+            }
+            
             var navNode = new NavigationNode(
                 headerTitle,
                 null, // icon
                 classSectionId,
                 descriptor,
-                target);
+                target,
+                headerTitleKey);
             _navigationNodes.Add(navNode);
 
             // Create class-level form section
-            var classHeader = CreateSectionHeader(headerTitle, classSectionId, true);
+            var classHeader = CreateSectionHeader(headerTitle, classSectionId, true, descriptor.UseMainHeaderKey ? descriptor.MainHeader : null);
             formPanel.Children.Add(classHeader);
 
             // Direct properties
@@ -465,18 +574,30 @@ public class WpfAutoSettingPanel : Control
             foreach (var subSection in descriptor.SubSections)
             {
                 var subSectionId = $"{classSectionId}_sub_{subIndex}";
+                var subTitleKey = subSection.UseTitleKey ? subSection.Title : null;
+                var subTitle = subSection.Title;
+                
+                if (!string.IsNullOrEmpty(subTitleKey) && _localizationService != null)
+                {
+                    var localized = _localizationService.GetString(subTitleKey);
+                    if (!string.IsNullOrEmpty(localized))
+                    {
+                        subTitle = localized;
+                    }
+                }
                 
                 // Create navigation child node for subsection
                 var subNavNode = new NavigationNode(
-                    subSection.Title,
+                    subTitle,
                     subIndex,
                     subSectionId,
                     subSection,
-                    navNode);
+                    navNode,
+                    subTitleKey);
                 navNode.Children.Add(subNavNode);
 
                 // Create subsection header
-                var subHeader = CreateSectionHeader(subSection.Title, subSectionId, false);
+                var subHeader = CreateSectionHeader(subSection.Title, subSectionId, false, subSection.UseTitleKey ? subSection.Title : null);
                 formPanel.Children.Add(subHeader);
 
                 foreach (var prop in subSection.Properties)
@@ -493,11 +614,22 @@ public class WpfAutoSettingPanel : Control
         _formScrollViewer.Content = formPanel;
     }
 
-    private FrameworkElement CreateSectionHeader(string title, string sectionId, bool isMainHeader)
+    private FrameworkElement CreateSectionHeader(string title, string sectionId, bool isMainHeader, string? titleKey = null)
     {
+        var displayText = title;
+        
+        if (!string.IsNullOrEmpty(titleKey) && _localizationService != null)
+        {
+            var localized = _localizationService.GetString(titleKey);
+            if (!string.IsNullOrEmpty(localized))
+            {
+                displayText = localized;
+            }
+        }
+        
         var textBlock = new TextBlock 
         { 
-            Text = title, 
+            Text = displayText, 
             FontWeight = isMainHeader ? FontWeights.SemiBold : FontWeights.Normal,
             Margin = isMainHeader ? new Thickness(0, 20, 0, 10) : new Thickness(0, 15, 0, 5)
         };
@@ -512,7 +644,11 @@ public class WpfAutoSettingPanel : Control
             textBlock.Foreground = Brushes.Gray;
         }
         
-        // Store in dictionary for O(1) scroll lookup
+        if (!string.IsNullOrEmpty(titleKey))
+        {
+            _localizedTextBlocks.Add((textBlock, titleKey, title));
+        }
+        
         _sectionControlMap[sectionId] = textBlock;
         
         return textBlock;
@@ -525,12 +661,28 @@ public class WpfAutoSettingPanel : Control
         panel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         // Label
+        var labelText = prop.DisplayName;
+        if (prop.UseDisplayNameKey && !string.IsNullOrEmpty(prop.DisplayNameKey) && _localizationService != null)
+        {
+            var localized = _localizationService.GetString(prop.DisplayNameKey);
+            if (!string.IsNullOrEmpty(localized))
+            {
+                labelText = localized;
+            }
+        }
+        
         var label = new TextBlock 
         { 
-            Text = prop.DisplayName, 
+            Text = labelText, 
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 10, 0)
         };
+        
+        if (prop.UseDisplayNameKey)
+        {
+            _localizedTextBlocks.Add((label, prop.DisplayNameKey, prop.DisplayName));
+        }
+        
         Grid.SetColumn(label, 0);
         panel.Children.Add(label);
 

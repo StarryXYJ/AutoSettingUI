@@ -3,36 +3,49 @@ using AutoSettingUI.Core.Attributes;
 namespace AutoSettingUI.Ursa.Attributes;
 
 /// <summary>
-/// Specifies that a numeric property should be edited using a NumericUpDown control.
+/// Specifies that a numeric property should be rendered using Ursa's NumericUpDown control.
+/// Automatically selects the appropriate control type based on the property type
+/// (int, double, float, byte, etc.).
 /// </summary>
-[AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
+/// <example>
+/// [NumericUpDown(Minimum = 0, Maximum = 100, Increment = 5)]
+/// [Title("Item Count")]
+/// public int ItemCount { get; set; } = 10;
+/// </example>
+[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
 [ControlBindingDefaults(typeof(global::Ursa.Controls.NumericIntUpDown), "Value", nameof(CreateNumericUpDown))]
 public sealed class NumericUpDownAttribute : ControlBindingAttribute
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="NumericUpDownAttribute"/> class.
-    /// This is used by the source generator to identify properties that should use NumericUpDown.
+    /// Gets or sets the minimum allowed value.
     /// </summary>
-    public NumericUpDownAttribute():base(typeof(global::Ursa.Controls.NumericIntUpDown), "Value",nameof(CreateNumericUpDown))
-    {
-
-    }
-
     public double Minimum { get; set; } = double.MinValue;
-    public double Maximum { get; set; } = double.MaxValue;
-    public double Increment { get; set; } = 1.0;
 
     /// <summary>
-    /// Factory method used to create the appropriate NumericUpDown control based on property type.
-    /// This is invoked by the UI panel at runtime.
+    /// Gets or sets the maximum allowed value.
     /// </summary>
+    public double Maximum { get; set; } = double.MaxValue;
+
+    /// <summary>
+    /// Gets or sets the increment/step value for the up/down buttons.
+    /// </summary>
+    public double Increment { get; set; } = 1.0;
+
+    public NumericUpDownAttribute() : base(typeof(global::Ursa.Controls.NumericIntUpDown), "Value", nameof(CreateNumericUpDown))
+    {
+    }
+
+    /// <summary>
+    /// Factory method that creates the appropriate NumericUpDown control based on property type.
+    /// Called by the UI panel at runtime.
+    /// </summary>
+    /// <param name="propertyType">The type of the property being edited.</param>
+    /// <returns>A configured NumericUpDown control.</returns>
     public Avalonia.Controls.Control CreateNumericUpDown(Type propertyType)
     {
         var controlType = GetUrsaNumericUpDownType(propertyType);
-        
         var control = (Avalonia.Controls.Control)Activator.CreateInstance(controlType)!;
 
-        // Apply customization
         if (control is global::Ursa.Controls.NumericIntUpDown intControl)
         {
             intControl.Minimum = (int)Minimum;
@@ -45,11 +58,13 @@ public sealed class NumericUpDownAttribute : ControlBindingAttribute
             doubleControl.Maximum = Maximum;
             doubleControl.Step = Increment;
         }
-        // ... (Add other types if needed, but these are the main ones)
 
         return control;
     }
 
+    /// <summary>
+    /// Maps a .NET numeric type to the corresponding Ursa NumericUpDown control type.
+    /// </summary>
     private static Type GetUrsaNumericUpDownType(Type type)
     {
         if (type == typeof(int) || type == typeof(int?)) return typeof(global::Ursa.Controls.NumericIntUpDown);
@@ -63,6 +78,6 @@ public sealed class NumericUpDownAttribute : ControlBindingAttribute
         if (type == typeof(long) || type == typeof(long?)) return typeof(global::Ursa.Controls.NumericLongUpDown);
         if (type == typeof(ulong) || type == typeof(ulong?)) return typeof(global::Ursa.Controls.NumericULongUpDown);
 
-        return typeof(global::Ursa.Controls.NumericIntUpDown); // Default fallback
+        return typeof(global::Ursa.Controls.NumericIntUpDown);
     }
 }

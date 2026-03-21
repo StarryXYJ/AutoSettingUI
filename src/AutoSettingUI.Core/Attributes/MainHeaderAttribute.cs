@@ -22,6 +22,12 @@ public sealed class MainHeaderAttribute : Attribute
     /// Gets or sets the display order of this header.
     /// </summary>
     public int Order { get; set; }
+    
+    /// <summary>
+    /// Gets or sets whether the title is a resource key for localization.
+    /// When true, the Title value will be used as a key to lookup the localized string.
+    /// </summary>
+    public bool UseResourceKey { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MainHeaderAttribute"/> class.

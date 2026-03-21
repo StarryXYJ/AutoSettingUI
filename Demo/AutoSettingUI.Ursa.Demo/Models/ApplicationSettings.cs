@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -16,14 +16,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AutoSettingUI.Ursa.Demo.Models;
 
-/// <summary>
-/// Sample application settings class demonstrating various AutoSettingUI features.
-/// </summary>
 [SettingUI]
+[MainHeader("Settings.Application", UseResourceKey = true)]
 public partial class ApplicationSettings:ObservableObject
 {
     
-    [Title("Application Name")]
+    [Title("Settings.Application", UseResourceKey = true)]
     [ObservableProperty]
     [DisplayOrder(-1)]
     private string _appName= "My Application";
@@ -32,19 +30,19 @@ public partial class ApplicationSettings:ObservableObject
     [DisplayOrder(-1)]
     private string _version="1.0.0";
 
-    [Title("Enable Logging")]
+    [Title("Settings.EnableLogging", UseResourceKey = true)]
     [ObservableProperty]
     [DisplayOrder(1)]
     private bool _enableLogging;
 
-    [Title("Log Level")]
+    [Title("Settings.LogLevel", UseResourceKey = true)]
     public LogLevel LogLevel { get; set; } = LogLevel.Info;
 
-    [Title("Max Log Size (MB)")]
+    [Title("Settings.MaxLogSize", UseResourceKey = true)]
     [Range(1, 100)]
     public int MaxLogSize { get; set; } = 10;
 
-    [Title("Volume")]
+    [Title("Settings.Volume", UseResourceKey = true)]
     [ControlBinding(typeof(global::Avalonia.Controls.Slider),"Value",nameof(VolumeFactory))]
     public double Volume { get; set; } = 50.0;
 
@@ -253,37 +251,37 @@ public class UserPreferences : INotifyPropertyChanged
 /// Sample network settings class.
 /// </summary>
 [SettingUI]
-[MainHeader("Network Configuration")]
+[MainHeader("Settings.Network", UseResourceKey = true)]
 public class NetworkSettings
 {
     [SubHeader("Connection")]
-    [Title("Server Address")]
+    [Title("Settings.ServerAddress", UseResourceKey = true)]
     public string ServerAddress { get; set; } = "localhost";
 
-    [Title("Port")]
+    [Title("Settings.Port", UseResourceKey = true)]
     [Range(1, 65535)]
     public int Port { get; set; } = 8080;
 
-    [Title("Use HTTPS")]
+    [Title("Settings.UseHttps", UseResourceKey = true)]
     [DisplayOrder(-1)]
     public bool UseHttps { get; set; } = false;
 
     [SubHeader("Authentication")]
-    [Title("Username")]
+    [Title("Settings.Username", UseResourceKey = true)]
     [DisplayOrder(1)]
     public string Username { get; set; } = "";
 
-    [Title("Timeout (seconds)")]
+    [Title("Settings.Timeout", UseResourceKey = true)]
     [Range(1, 300)]
     [DisplayOrder(1)]
     public int Timeout { get; set; } = 30;
 
     [SubHeader("Actions")]
-    [Title("Test Connection")]
+    [Title("Settings.TestConnection", UseResourceKey = true)]
     [CommandCanExecute(nameof(CanTestConnection))]
     public Action? TestConnectionCommand { get; set; }
 
-    [Title("Ping Server")]
+    [Title("Settings.PingServer", UseResourceKey = true)]
     public Action? PingServerCommand { get; set; }
 
     public NetworkSettings()
@@ -330,35 +328,37 @@ public enum Theme
 /// Sample class demonstrating extended controls like ColorPicker, IPv4Box, etc.
 /// </summary>
 [SettingUI]
-[MainHeader("Extended UI Controls")]
-public class ExtendedControlsSettings
+[MainHeader("Settings.ExtendedControls", UseResourceKey = true)]
+public partial class ExtendedControlsSettings  : ObservableObject
 {
-    [Title("Background Color")]
+    [Title("Settings.BackgroundColor", UseResourceKey = true)]
     [ColorPicker]
     public Color ThemeColor { get; set; } = Colors.DodgerBlue;
 
-    [Title("Server IP Address")]
+    [Title("Settings.ServerIP", UseResourceKey = true)]
     [IPv4Box]
     public IPAddress ServerIP { get; set; } = IPAddress.Parse("192.168.1.1");
 
-    [Title("Selection Tags")]
+    [Title("Settings.SelectionTags", UseResourceKey = true)]
     [TagInput]
     public ObservableCollection<string> ProjectTags { get; set; } = ["Ursa", "Avalonia", "AutoSettingUI"];
 
-    [Title("Release Date")]
+    [Title("Settings.ReleaseDate", UseResourceKey = true)]
     [DatePicker]
     public DateTime ReleaseDate { get; set; } = DateTime.Today;
 
-    [Title("Preferred Time")]
+    [Title("Settings.PreferredTime", UseResourceKey = true)]
     [TimePicker]
     public TimeSpan PreferredTime { get; set; } = DateTime.Now.TimeOfDay;
 
     [CheckBox]
     public bool EnableAdvancedFeature { get; set; } = true;
 
-    [Title("Count (Step 5)")]
+    [Title("Settings.ItemCount", UseResourceKey = true)]
     [NumericUpDown(Minimum = 0, Maximum = 100, Increment = 5)]
-    public int ItemCount { get; set; } = 40;
+    [ObservableProperty]
+    [DisplayOrder(1)]
+    private int _itemCount = 40;
 }
 
 /// <summary>
@@ -379,15 +379,15 @@ public enum AppTheme
 /// Settings class for theme management within the form.
 /// </summary>
 [SettingUI]
-[MainHeader("Theme Personalization")]
+[MainHeader("Settings.Theme", UseResourceKey = true)]
 public partial class ThemeSettings : ObservableObject
 {
     private AppTheme _selectedTheme = AppTheme.Default;
 
     public event EventHandler<AppTheme>? ThemeChanged;
 
-    [Title("Application Theme")]
-    [Description("Change the look and feel of the application")]
+    [Title("Settings.SelectedTheme", UseResourceKey = true)]
+    [Description("Settings.SelectedThemeDesc", UseResourceKey = true)]
     [ItemsSource(typeof(ThemeSettings), nameof(AvailableThemes))]
     public AppTheme SelectedTheme
     {

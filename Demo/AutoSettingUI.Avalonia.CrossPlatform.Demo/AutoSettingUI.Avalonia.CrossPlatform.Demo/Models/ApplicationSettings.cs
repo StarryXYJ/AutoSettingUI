@@ -13,35 +13,38 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AutoSettingUI.Avalonia.CrossPlatform.Demo.Models;
 
-/// <summary>
-/// Sample application settings class demonstrating various AutoSettingUI features.
-/// </summary>
 [SettingUI]
-[MainHeader("Application Settings")]
-public class ApplicationSettings
+[MainHeader("Settings.Application", UseResourceKey = true)]
+public partial class ApplicationSettings : ObservableObject
 {
-    [Title("Application Name")]
-    public string AppName { get; set; } = "My Application";
+    [Title("Settings.Application", UseResourceKey = true)]
+    [ObservableProperty]
+    [DisplayOrder(-1)]
+    private string _appName = "My Application";
 
-    
-    public string Version { get; set; } = "1.0.0";
+    [ObservableProperty]
+    [DisplayOrder(-1)]
+    private string _version = "1.0.0";
 
-    [Title("Enable Logging")]
-    public bool EnableLogging { get; set; } = true;
+    [Title("Settings.EnableLogging", UseResourceKey = true)]
+    [ObservableProperty]
+    [DisplayOrder(1)]
+    private bool _enableLogging;
 
-    [Title("Log Level")]
+    [Title("Settings.LogLevel", UseResourceKey = true)]
     public LogLevel LogLevel { get; set; } = LogLevel.Info;
 
-    [Title("Max Log Size (MB)")]
+    [Title("Settings.MaxLogSize", UseResourceKey = true)]
     [Range(1, 100)]
     public int MaxLogSize { get; set; } = 10;
 
-    [Title("Volume")]
-    [ControlBinding(typeof(global::Avalonia.Controls.Slider), BindingProperty = "Value",FactoryMethod = nameof(VolumeFactory))]
+    [Title("Settings.Volume", UseResourceKey = true)]
+    [ControlBinding(typeof(global::Avalonia.Controls.Slider), "Value", nameof(VolumeFactory))]
     public double Volume { get; set; } = 50.0;
 
     [Hide]
     public string InternalId { get; set; } = Guid.NewGuid().ToString();
+
     public Slider VolumeFactory()
     {
         var slider = new Slider
@@ -55,9 +58,6 @@ public class ApplicationSettings
     }
 }
 
-/// <summary>
-/// Sample user preferences class demonstrating delegate properties and collection editors.
-/// </summary>
 [SettingUI]
 [MainHeader("User Preferences")]
 public class UserPreferences : INotifyPropertyChanged
@@ -80,7 +80,7 @@ public class UserPreferences : INotifyPropertyChanged
     public string Language { get; set; } = "English";
 
     [Title("Font Size")]
-    [Range(8, 32)]
+    [NumericUpDown(Minimum = 8, Maximum = 32, Increment = 1)]
     public int FontSize { get; set; } = 14;
 
     [SubHeader("Actions (Delegate Properties)")]
@@ -108,6 +108,7 @@ public class UserPreferences : INotifyPropertyChanged
     [ReadOnly(nameof(CanEdit))]
     public string DynamicReadOnlyField { get; set; } = "Only editable by admins";
 
+    [ControlBinding(typeof(CheckBox), "IsChecked")]
     public bool IsAdmin
     {
         get => _isAdmin;
@@ -148,8 +149,6 @@ public class UserPreferences : INotifyPropertyChanged
     }
 
     [SubHeader("Layout & Validation Examples")]
-
-    // Username: Required, length validation, custom layout
     [Title("Username")]
     [Description("Your display name (3-20 characters)")]
     [Placeholder("Enter username")]
@@ -157,28 +156,24 @@ public class UserPreferences : INotifyPropertyChanged
     [Layout(Width = 200, Height = 28, Margin = "0,2,0,2")]
     public string Username { get; set; } = "";
 
-    // Password: Custom mask character
     [Title("Password")]
-    [Password]  // Default mask character '•'
+    [Password]
     [Validation(Required = true, MinLength = 6, ErrorMessage = "Password must be at least 6 characters")]
     [Layout(Width = 200)]
     public string Password { get; set; } = "";
 
-    // API Key: Different mask character
     [Title("API Key")]
-    [Password('*')]  // Custom mask character '*'
+    [Password('*')]
     [Placeholder("Enter API key")]
     [Layout(Width = 300)]
     public string ApiKey { get; set; } = "";
 
-    // Age: Numeric range validation
     [Title("Age")]
     [Description("Your age in years")]
     [Validation(MinValue = 0, MaxValue = 150, ErrorMessage = "Age must be between 0 and 150")]
     [Layout(Width = 80)]
     public int Age { get; set; } = 25;
 
-    // Website: Regex pattern validation
     [Title("Website")]
     [Description("Your personal website URL")]
     [Placeholder("https://example.com")]
@@ -239,38 +234,38 @@ public class UserPreferences : INotifyPropertyChanged
     public bool CanEdit() => !IsAdmin;
 }
 
-/// <summary>
-/// Sample network settings class.
-/// </summary>
 [SettingUI]
-[MainHeader("Network Configuration")]
+[MainHeader("Settings.Network", UseResourceKey = true)]
 public class NetworkSettings
 {
     [SubHeader("Connection")]
-    [Title("Server Address")]
+    [Title("Settings.ServerAddress", UseResourceKey = true)]
     public string ServerAddress { get; set; } = "localhost";
 
-    [Title("Port")]
+    [Title("Settings.Port", UseResourceKey = true)]
     [Range(1, 65535)]
     public int Port { get; set; } = 8080;
 
-    [Title("Use HTTPS")]
+    [Title("Settings.UseHttps", UseResourceKey = true)]
+    [DisplayOrder(-1)]
     public bool UseHttps { get; set; } = false;
 
     [SubHeader("Authentication")]
-    [Title("Username")]
+    [Title("Settings.Username", UseResourceKey = true)]
+    [DisplayOrder(1)]
     public string Username { get; set; } = "";
 
-    [Title("Timeout (seconds)")]
+    [Title("Settings.Timeout", UseResourceKey = true)]
     [Range(1, 300)]
+    [DisplayOrder(1)]
     public int Timeout { get; set; } = 30;
 
     [SubHeader("Actions")]
-    [Title("Test Connection")]
+    [Title("Settings.TestConnection", UseResourceKey = true)]
     [CommandCanExecute(nameof(CanTestConnection))]
     public Action? TestConnectionCommand { get; set; }
 
-    [Title("Ping Server")]
+    [Title("Settings.PingServer", UseResourceKey = true)]
     public Action? PingServerCommand { get; set; }
 
     public NetworkSettings()
@@ -292,9 +287,6 @@ public class NetworkSettings
     public bool CanTestConnection() => !string.IsNullOrEmpty(ServerAddress) && Port > 0;
 }
 
-/// <summary>
-/// Log level enumeration.
-/// </summary>
 public enum LogLevel
 {
     Debug,
@@ -304,9 +296,6 @@ public enum LogLevel
     Fatal
 }
 
-/// <summary>
-/// Theme enumeration.
-/// </summary>
 public enum Theme
 {
     Light,
@@ -314,37 +303,32 @@ public enum Theme
     System
 }
 
-/// <summary>
-/// Sample class demonstrating extended controls like ColorPicker, DatePicker, etc.
-/// </summary>
 [SettingUI]
-[MainHeader("Extended UI Controls")]
-public class ExtendedControlsSettings
+[MainHeader("Settings.ExtendedControls", UseResourceKey = true)]
+public partial class ExtendedControlsSettings : ObservableObject
 {
-    [Title("Background Color")]
+    [Title("Settings.BackgroundColor", UseResourceKey = true)]
     [ColorPicker]
     public Color ThemeColor { get; set; } = Colors.DodgerBlue;
 
-    [Title("Release Date")]
+    [Title("Settings.ReleaseDate", UseResourceKey = true)]
     [DatePicker]
     public DateTime ReleaseDate { get; set; } = DateTime.Today;
 
-    [Title("Preferred Time")]
+    [Title("Settings.PreferredTime", UseResourceKey = true)]
     [TimePicker]
     public TimeSpan PreferredTime { get; set; } = DateTime.Now.TimeOfDay;
 
-    [Title("Toggle Feature")]
     [CheckBox]
     public bool EnableAdvancedFeature { get; set; } = true;
 
-    [Title("Count (Step 10)")]
+    [Title("Settings.ItemCount", UseResourceKey = true)]
     [NumericUpDown(Minimum = 0, Maximum = 100, Increment = 10)]
-    public int ItemCount { get; set; } = 40;
+    [ObservableProperty]
+    [DisplayOrder(1)]
+    private int _itemCount = 40;
 }
 
-/// <summary>
-/// Theme enumeration for application theming.
-/// </summary>
 public enum AppTheme
 {
     Default,
@@ -352,19 +336,16 @@ public enum AppTheme
     Dark
 }
 
-/// <summary>
-/// Settings class for theme management within the form.
-/// </summary>
 [SettingUI]
-[MainHeader("Theme Personalization")]
+[MainHeader("Settings.Theme", UseResourceKey = true)]
 public partial class ThemeSettings : ObservableObject
 {
     private AppTheme _selectedTheme = AppTheme.Default;
 
     public event EventHandler<AppTheme>? ThemeChanged;
 
-    [Title("Application Theme")]
-    [Description("Change the look and feel of the application")]
+    [Title("Settings.SelectedTheme", UseResourceKey = true)]
+    [Description("Settings.SelectedThemeDesc", UseResourceKey = true)]
     [ItemsSource(typeof(ThemeSettings), nameof(AvailableThemes))]
     public AppTheme SelectedTheme
     {

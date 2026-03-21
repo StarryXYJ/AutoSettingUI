@@ -1,95 +1,83 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace AutoSettingUI.Core.Models;
 
-/// <summary>
-/// Represents a node in the hierarchical navigation tree.
-/// Rendering order follows the order of items in the Targets collection.
-/// </summary>
-public sealed class NavigationNode
+public sealed class NavigationNode : INotifyPropertyChanged
 {
-    /// <summary>
-    /// Gets the display title of this node.
-    /// </summary>
-    public string Title { get; }
+    private string _title;
+    
+    public event PropertyChangedEventHandler? PropertyChanged;
 
-    /// <summary>
-    /// Gets the icon identifier (optional).
-    /// </summary>
+    public string Title 
+    { 
+        get => _title;
+        set
+        {
+            if (_title != value)
+            {
+                _title = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
     public string? Icon { get; }
 
-    /// <summary>
-    /// Gets whether this is a main header (class level).
-    /// </summary>
     public bool IsMainHeader { get; }
 
-    /// <summary>
-    /// Gets the unique identifier for scrolling to this section.
-    /// </summary>
     public string SectionId { get; }
 
-    /// <summary>
-    /// Gets the child nodes (subsections).
-    /// </summary>
     public ObservableCollection<NavigationNode> Children { get; } = new();
 
-    /// <summary>
-    /// Gets or sets whether this node is expanded in the tree view.
-    /// </summary>
     public bool IsExpanded { get; set; } = true;
 
-    /// <summary>
-    /// Gets or sets whether this node is currently selected.
-    /// </summary>
     public bool IsSelected { get; set; }
 
-    /// <summary>
-    /// Gets the associated class descriptor (for class-level nodes).
-    /// </summary>
     public SettingClassDescriptor? ClassDescriptor { get; }
 
-    /// <summary>
-    /// Gets the associated subsection info (for subsection nodes).
-    /// </summary>
     public SubSectionInfo? SubSection { get; }
 
-    /// <summary>
-    /// Gets the target object instance this node represents.
-    /// </summary>
     public object? TargetInstance { get; }
 
-    /// <summary>
-    /// Initializes a new class-level navigation node.
-    /// </summary>
+    public string? TitleKey { get; }
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
     public NavigationNode(
         string title,
         string? icon,
         string sectionId,
         SettingClassDescriptor classDescriptor,
-        object targetInstance)
+        object targetInstance,
+        string? titleKey = null)
     {
-        Title = title;
+        _title = title;
         Icon = icon;
         IsMainHeader = true;
         SectionId = sectionId;
         ClassDescriptor = classDescriptor;
         TargetInstance = targetInstance;
+        TitleKey = titleKey;
     }
 
-    /// <summary>
-    /// Initializes a new subsection navigation node.
-    /// </summary>
     public NavigationNode(
         string title,
         int order,
         string sectionId,
         SubSectionInfo subSection,
-        NavigationNode parent)
+        NavigationNode parent,
+        string? titleKey = null)
     {
-        Title = title;
+        _title = title;
         IsMainHeader = false;
         SectionId = sectionId;
         SubSection = subSection;
+        TitleKey = titleKey;
     }
 }
 

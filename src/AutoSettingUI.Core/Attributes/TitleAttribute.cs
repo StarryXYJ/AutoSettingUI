@@ -16,6 +16,18 @@ public sealed class TitleAttribute : Attribute
     /// Gets or sets the description/tooltip for the property.
     /// </summary>
     public string? Description { get; set; }
+    
+    /// <summary>
+    /// Gets or sets whether the name is a resource key for localization.
+    /// When true, the Name value will be used as a key to lookup the localized string.
+    /// </summary>
+    public bool UseResourceKey { get; set; }
+    
+    /// <summary>
+    /// Gets or sets whether the description is a resource key for localization.
+    /// When true, the Description value will be used as a key to lookup the localized string.
+    /// </summary>
+    public bool UseDescriptionKey { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TitleAttribute"/> class.

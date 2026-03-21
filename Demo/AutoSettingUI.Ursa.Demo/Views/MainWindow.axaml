@@ -12,6 +12,10 @@
         Height="600"
         Width="900">
 
+    <Window.Resources>
+        <vm:LanguageToFontWeightConverter x:Key="LanguageToFontWeightConverter"/>
+    </Window.Resources>
+
     <Design.DataContext>
         <vm:MainWindowViewModel/>
     </Design.DataContext>
@@ -19,20 +23,33 @@
     <Grid RowDefinitions="Auto,*,Auto">
         <!-- Header -->
         <Border Grid.Row="0" Background="#FF2D2D30" Padding="15">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto">
                 <TextBlock Grid.Column="0" Text="AutoSettingUI Ursa Demo"
                            Foreground="White"
                            FontSize="20"
                            FontWeight="Bold"
                            VerticalAlignment="Center"/>
-                <!-- Navigation Toggle -->
+                <!-- Language Switch -->
+                <Button Grid.Column="1"
+                        Command="{Binding SwitchToEnglishCommand}"
+                        Margin="5,0,5,0"
+                        Padding="10,5">
+                    <TextBlock Text="English" FontWeight="{Binding CurrentLanguage, Converter={StaticResource LanguageToFontWeightConverter}, ConverterParameter=en}"/>
+                </Button>
                 <Button Grid.Column="2"
+                        Command="{Binding SwitchToChineseCommand}"
+                        Margin="5,0,5,0"
+                        Padding="10,5">
+                    <TextBlock Text="中文" FontWeight="{Binding CurrentLanguage, Converter={StaticResource LanguageToFontWeightConverter}, ConverterParameter=zh-CN}"/>
+                </Button>
+                <!-- Navigation Toggle -->
+                <Button Grid.Column="3"
                         Command="{Binding ToggleNavigationCommand}"
                         Margin="5,0,5,0"
                         Padding="10,5">
                     <TextBlock Text="{Binding ShowNavigation, StringFormat='Nav: {0}'}"/>
                 </Button>
-                <Button Grid.Column="3"
+                <Button Grid.Column="4"
                         Command="{Binding ToggleViewCommand}"
                         Margin="5,0,0,0"
                         Padding="10,5">
@@ -48,7 +65,8 @@
                                        Title="{Binding Title}"
                                        ShowNavigation="{Binding ShowNavigation}"
                                        NavigationWidth="{Binding NavigationWidth}"
-                                       Targets="{Binding Targets}"/>
+                                       Targets="{Binding Targets}"
+                                       LocalizationService="{Binding LocalizationService}"/>
 
         <!-- Settings Panel - Custom Styled -->
         <Border Grid.Row="1"
@@ -58,7 +76,8 @@
                                            Title="Custom Styled Settings"
                                            ShowNavigation="{Binding ShowNavigation}"
                                            NavigationWidth="250"
-                                           Targets="{Binding Targets}">
+                                           Targets="{Binding Targets}"
+                                           LocalizationService="{Binding LocalizationService}">
                 <controls:UrsaAutoSettingPanel.Styles>
                     <!-- Card container style -->
                     <Style Selector="Border">

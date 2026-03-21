@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Settings.Title" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Settings.Theme" xml:space="preserve">
+    <value>Theme Personalization</value>
+  </data>
+  <data name="Settings.ExtendedControls" xml:space="preserve">
+    <value>Extended UI Controls</value>
+  </data>
+  <data name="Settings.Application" xml:space="preserve">
+    <value>Application Settings</value>
+  </data>
+  <data name="Settings.EnableLogging" xml:space="preserve">
+    <value>Enable Logging</value>
+  </data>
+  <data name="Settings.LogLevel" xml:space="preserve">
+    <value>Log Level</value>
+  </data>
+  <data name="Settings.MaxLogSize" xml:space="preserve">
+    <value>Max Log Size (MB)</value>
+  </data>
+  <data name="Settings.Volume" xml:space="preserve">
+    <value>Volume</value>
+  </data>
+  <data name="Settings.Network" xml:space="preserve">
+    <value>Network Configuration</value>
+  </data>
+  <data name="Settings.ServerAddress" xml:space="preserve">
+    <value>Server Address</value>
+  </data>
+  <data name="Settings.Port" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="Settings.UseHttps" xml:space="preserve">
+    <value>Use HTTPS</value>
+  </data>
+  <data name="Settings.Username" xml:space="preserve">
+    <value>Username</value>
+  </data>
+  <data name="Settings.Timeout" xml:space="preserve">
+    <value>Timeout (seconds)</value>
+  </data>
+  <data name="Settings.TestConnection" xml:space="preserve">
+    <value>Test Connection</value>
+  </data>
+  <data name="Settings.PingServer" xml:space="preserve">
+    <value>Ping Server</value>
+  </data>
+  <data name="Settings.SelectedTheme" xml:space="preserve">
+    <value>Application Theme</value>
+  </data>
+  <data name="Settings.SelectedThemeDesc" xml:space="preserve">
+    <value>Change the look and feel of the application</value>
+  </data>
+  <data name="Settings.BackgroundColor" xml:space="preserve">
+    <value>Background Color</value>
+  </data>
+  <data name="Settings.ReleaseDate" xml:space="preserve">
+    <value>Release Date</value>
+  </data>
+  <data name="Settings.ItemCount" xml:space="preserve">
+    <value>Count</value>
+  </data>
+</root>

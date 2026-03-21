@@ -6,7 +6,7 @@
 [![NuGet](https://img.shields.io/nuget/v/AutoSettingUI.WPF?label=WPF)](https://www.nuget.org/packages/AutoSettingUI.WPF/)
 [![NuGet](https://img.shields.io/nuget/v/AutoSettingUI.Generator?label=Generator)](https://www.nuget.org/packages/AutoSettingUI.Generator/)
 [![NuGet Downloads](https://img.shields.io/nuget/dt/AutoSettingUI.Core?label=Downloads)](https://www.nuget.org/packages/AutoSettingUI.Core/)
-[![License](https://img.shields.io/github/license/your-org/AutoSettingUI)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 **AutoSettingUI** 是一个 .NET 库，通过为普通 C# 对象标注特性（Attribute），自动生成设置界面面板。只需装饰好类，将实例传入控件，即可得到一个完整可交互的设置表单，无需手动布局任何 UI。
 
@@ -16,6 +16,7 @@
 - ✨ **特性驱动渲染** — 使用特性灵活自定义每个属性的渲染方式
 - ⚡ **AOT 兼容** — 增量 Roslyn 源生成器，完整支持 Native AOT 与裁剪发布
 - 🔄 **MVVM 支持** — 完美支持 CommunityToolkit.Mvvm `[ObservableProperty]`
+- 🌐 **国际化支持** — 内置本地化服务，支持动态语言切换
 - 🔌 **高度可扩展** — 可注入自定义 Provider 和 Accessor
 - 🧭 **内置导航栏** — 侧边栏树形导航
 - 🎯 **扩展控件支持** — ColorPicker、DatePicker、TimePicker、NumericUpDown 等
@@ -153,6 +154,83 @@ AotSettingRegistry.Provider = new GeneratedSettingProvider();
 AotSettingRegistry.Accessor = AotSettingRegistry.Provider;
 ```
 
+## 国际化（i18n）
+
+AutoSettingUI 通过 `ILocalizationService` 接口支持动态语言切换。
+
+### 使用资源键
+
+在标题特性上设置 `UseResourceKey = true`：
+
+```csharp
+[SettingUI]
+[MainHeader("Settings.Application", UseResourceKey = true)]
+public class ApplicationSettings
+{
+    [Title("Settings.AppName", UseResourceKey = true)]
+    public string AppName { get; set; } = "我的应用程序";
+
+    [Title("Settings.EnableLogging", UseResourceKey = true)]
+    public bool EnableLogging { get; set; }
+}
+```
+
+### 配置本地化服务
+
+**1. 创建资源文件（.resx）：**
+
+- `Strings.resx`（默认/英文）
+- `Strings.zh-CN.resx`（简体中文）
+
+**2. 创建资源访问类：**
+
+```csharp
+namespace YourApp.Resources;
+
+public static class Strings
+{
+    public static System.Resources.ResourceManager ResourceManager { get; } 
+        = new System.Resources.ResourceManager(
+            "YourApp.Resources.Strings", 
+            typeof(Strings).Assembly);
+}
+```
+
+**3. 配置本地化服务：**
+
+```csharp
+using AutoSettingUI.Core.Interfaces;
+using AutoSettingUI.Core.Services;
+
+public class MainViewModel
+{
+    public ILocalizationService LocalizationService { get; }
+
+    public MainViewModel()
+    {
+        LocalizationService = new ResxLocalizationService(Strings.ResourceManager);
+    }
+
+    public void SwitchToEnglish() => LocalizationService.SetCulture("en");
+    public void SwitchToChinese() => LocalizationService.SetCulture("zh-CN");
+}
+```
+
+**4. 绑定到面板：**
+
+```xml
+<auto:AvaloniaAutoSettingPanel 
+    Targets="{Binding Targets}"
+    LocalizationService="{Binding LocalizationService}" />
+```
+
+### 本地化服务
+
+| 服务 | 说明 |
+|------|------|
+| `ResxLocalizationService` | 使用 .NET .resx 资源文件 |
+| `DictionaryLocalizationService` | 基于内存字典的翻译 |
+
 ## 可用特性一览
 
 | 特性               | 目标   | 说明                       |
@@ -178,9 +256,9 @@ AotSettingRegistry.Accessor = AotSettingRegistry.Provider;
 | ----------------- | -------- | ------------------ |
 | `[CheckBox]`      | 所有     | 布尔属性复选框     |
 | `[DatePicker]`    | 所有     | DateTime 日期选择  |
-| `[TimePicker]`    | 所有     | TimeSpan 时间选择  |
-| `[NumericUpDown]` | Avalonia | 数值增减输入       |
-| `[ColorPicker]`   | Avalonia | 颜色选择           |
+| `[TimePicker]`    | Avalonia/Ursa | TimeSpan 时间选择 |
+| `[NumericUpDown]` | Avalonia/Ursa | 数值增减输入     |
+| `[ColorPicker]`   | Avalonia/Ursa | 颜色选择         |
 | `[TagInput]`      | Ursa     | 字符串集合标签输入 |
 | `[IPv4Box]`       | Ursa     | IP 地址输入        |
 
@@ -217,6 +295,25 @@ public sealed class NumericUpDownAttribute : ControlBindingAttribute
     };
 }
 ```
+
+## 演示应用
+
+仓库包含展示所有功能的演示应用：
+
+| 演示 | 框架 | 说明 |
+|------|------|------|
+| `AutoSettingUI.Avalonia.CrossPlatform.Demo` | Avalonia | 跨平台（桌面、Android、iOS、浏览器） |
+| `AutoSettingUI.Ursa.Demo` | Ursa | Ursa 主题 Avalonia，含扩展控件 |
+| `AutoSettingUI.Wpf.Demo` | WPF | Windows Presentation Foundation |
+
+### 演示功能
+
+- ✅ 动态语言切换（英文/中文）
+- ✅ 主题切换（浅色/深色/系统）
+- ✅ 导航栏切换
+- ✅ 自定义样式面板
+- ✅ 扩展控件演示
+- ✅ 集合编辑
 
 ## 包说明
 

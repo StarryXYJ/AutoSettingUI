@@ -1,4 +1,4 @@
-﻿<Window x:Class="AutoSettingUI.Wpf.Demo.MainWindow"
+<Window x:Class="AutoSettingUI.Wpf.Demo.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -198,6 +198,8 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
                     <Ellipse Width="15" Height="15" Fill="#E74C3C" Margin="0,0,10,0"/>
@@ -208,10 +210,18 @@
                                VerticalAlignment="Center"/>
                 </StackPanel>
                 
-                <Button Grid.Column="1" x:Name="ToggleNavButton" Content="Navigation" 
+                <!-- Language Switch -->
+                <Button Grid.Column="1" x:Name="BtnEnglish" Content="English" 
+                        Background="#16A085"
+                        Click="SwitchToEnglish"/>
+                <Button Grid.Column="2" x:Name="BtnChinese" Content="中文" 
+                        Background="#16A085"
+                        Click="SwitchToChinese"/>
+                
+                <Button Grid.Column="3" x:Name="ToggleNavButton" Content="Navigation" 
                         Background="#16A085"
                         Click="ToggleNav_Click"/>
-                <Button Grid.Column="2" x:Name="ToggleViewButton" Content="Switch View" 
+                <Button Grid.Column="4" x:Name="ToggleViewButton" Content="Switch View" 
                         Background="#9B59B6"
                         Click="ToggleView_Click"/>
             </Grid>

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Settings.Title" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="Settings.Theme" xml:space="preserve">
+    <value>主题个性化</value>
+  </data>
+  <data name="Settings.ExtendedControls" xml:space="preserve">
+    <value>扩展UI控件</value>
+  </data>
+  <data name="Settings.Application" xml:space="preserve">
+    <value>应用程序设置</value>
+  </data>
+  <data name="Settings.EnableLogging" xml:space="preserve">
+    <value>启用日志</value>
+  </data>
+  <data name="Settings.LogLevel" xml:space="preserve">
+    <value>日志级别</value>
+  </data>
+  <data name="Settings.MaxLogSize" xml:space="preserve">
+    <value>最大日志大小(MB)</value>
+  </data>
+  <data name="Settings.Volume" xml:space="preserve">
+    <value>音量</value>
+  </data>
+  <data name="Settings.Network" xml:space="preserve">
+    <value>网络配置</value>
+  </data>
+  <data name="Settings.ServerAddress" xml:space="preserve">
+    <value>服务器地址</value>
+  </data>
+  <data name="Settings.Port" xml:space="preserve">
+    <value>端口</value>
+  </data>
+  <data name="Settings.UseHttps" xml:space="preserve">
+    <value>使用HTTPS</value>
+  </data>
+  <data name="Settings.Username" xml:space="preserve">
+    <value>用户名</value>
+  </data>
+  <data name="Settings.Timeout" xml:space="preserve">
+    <value>超时时间(秒)</value>
+  </data>
+  <data name="Settings.TestConnection" xml:space="preserve">
+    <value>测试连接</value>
+  </data>
+  <data name="Settings.PingServer" xml:space="preserve">
+    <value>Ping服务器</value>
+  </data>
+  <data name="Settings.SelectedTheme" xml:space="preserve">
+    <value>应用程序主题</value>
+  </data>
+  <data name="Settings.SelectedThemeDesc" xml:space="preserve">
+    <value>更改应用程序的外观和感觉</value>
+  </data>
+  <data name="Settings.BackgroundColor" xml:space="preserve">
+    <value>背景颜色</value>
+  </data>
+  <data name="Settings.ReleaseDate" xml:space="preserve">
+    <value>发布日期</value>
+  </data>
+  <data name="Settings.ItemCount" xml:space="preserve">
+    <value>计数</value>
+  </data>
+</root>

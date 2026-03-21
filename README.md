@@ -6,7 +6,7 @@
 [![NuGet](https://img.shields.io/nuget/v/AutoSettingUI.WPF?label=WPF)](https://www.nuget.org/packages/AutoSettingUI.WPF/)
 [![NuGet](https://img.shields.io/nuget/v/AutoSettingUI.Generator?label=Generator)](https://www.nuget.org/packages/AutoSettingUI.Generator/)
 [![NuGet Downloads](https://img.shields.io/nuget/dt/AutoSettingUI.Core?label=Downloads)](https://www.nuget.org/packages/AutoSettingUI.Core/)
-[![License](https://img.shields.io/github/license/your-org/AutoSettingUI)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 **AutoSettingUI** is a .NET library that automatically generates settings UI panels from plain C# objects decorated with attributes. Annotate a class, hand it to the control, and a fully functional settings form is rendered — no manual UI wiring required.
 
@@ -16,6 +16,7 @@
 - ✨ **Attribute-driven** — Decorate properties with attributes to customize rendering
 - ⚡ **AOT-compatible** — Incremental Roslyn Source Generator enables full Native AOT and trimming support
 - 🔄 **MVVM Support** — Works with CommunityToolkit.Mvvm `[ObservableProperty]`
+- 🌐 **i18n Support** — Built-in localization service with dynamic language switching
 - 🔌 **Extensible** — Inject custom providers and accessors
 - 🧭 **Built-in navigation** — Sidebar tree navigation to sections
 - 🎯 **Extended Controls** — ColorPicker, DatePicker, TimePicker, NumericUpDown, and more
@@ -153,6 +154,83 @@ AotSettingRegistry.Provider = new GeneratedSettingProvider();
 AotSettingRegistry.Accessor = AotSettingRegistry.Provider;
 ```
 
+## Internationalization (i18n)
+
+AutoSettingUI supports dynamic language switching through the `ILocalizationService` interface.
+
+### Using Resource Keys
+
+Set `UseResourceKey = true` on title attributes:
+
+```csharp
+[SettingUI]
+[MainHeader("Settings.Application", UseResourceKey = true)]
+public class ApplicationSettings
+{
+    [Title("Settings.AppName", UseResourceKey = true)]
+    public string AppName { get; set; } = "My Application";
+
+    [Title("Settings.EnableLogging", UseResourceKey = true)]
+    public bool EnableLogging { get; set; }
+}
+```
+
+### Setting Up Localization
+
+**1. Create resource files (.resx):**
+
+- `Strings.resx` (default/English)
+- `Strings.zh-CN.resx` (Chinese Simplified)
+
+**2. Create a resource accessor class:**
+
+```csharp
+namespace YourApp.Resources;
+
+public static class Strings
+{
+    public static System.Resources.ResourceManager ResourceManager { get; } 
+        = new System.Resources.ResourceManager(
+            "YourApp.Resources.Strings", 
+            typeof(Strings).Assembly);
+}
+```
+
+**3. Configure the localization service:**
+
+```csharp
+using AutoSettingUI.Core.Interfaces;
+using AutoSettingUI.Core.Services;
+
+public class MainViewModel
+{
+    public ILocalizationService LocalizationService { get; }
+
+    public MainViewModel()
+    {
+        LocalizationService = new ResxLocalizationService(Strings.ResourceManager);
+    }
+
+    public void SwitchToEnglish() => LocalizationService.SetCulture("en");
+    public void SwitchToChinese() => LocalizationService.SetCulture("zh-CN");
+}
+```
+
+**4. Bind to the panel:**
+
+```xml
+<auto:AvaloniaAutoSettingPanel 
+    Targets="{Binding Targets}"
+    LocalizationService="{Binding LocalizationService}" />
+```
+
+### Localization Services
+
+| Service | Description |
+|---------|-------------|
+| `ResxLocalizationService` | Uses .NET .resx resource files |
+| `DictionaryLocalizationService` | In-memory dictionary-based translations |
+
 ## Available Attributes
 
 | Attribute          | Target   | Description                              |
@@ -178,9 +256,9 @@ AotSettingRegistry.Accessor = AotSettingRegistry.Provider;
 | ----------------- | --------- | ---------------------------------- |
 | `[CheckBox]`      | All       | Boolean property as CheckBox       |
 | `[DatePicker]`    | All       | DateTime with date picker          |
-| `[TimePicker]`    | All       | TimeSpan with time picker          |
-| `[NumericUpDown]` | Avalonia  | Numeric input with up/down buttons |
-| `[ColorPicker]`   | Avalonia  | Color selection                    |
+| `[TimePicker]`    | Avalonia/Ursa | TimeSpan with time picker      |
+| `[NumericUpDown]` | Avalonia/Ursa | Numeric input with up/down buttons |
+| `[ColorPicker]`   | Avalonia/Ursa | Color selection                 |
 | `[TagInput]`      | Ursa      | String collection as tags          |
 | `[IPv4Box]`       | Ursa      | IP address input                   |
 
@@ -217,6 +295,25 @@ public sealed class NumericUpDownAttribute : ControlBindingAttribute
     };
 }
 ```
+
+## Demo Applications
+
+The repository includes demo applications showcasing all features:
+
+| Demo | Framework | Description |
+|------|-----------|-------------|
+| `AutoSettingUI.Avalonia.CrossPlatform.Demo` | Avalonia | Cross-platform (Desktop, Android, iOS, Browser) |
+| `AutoSettingUI.Ursa.Demo` | Ursa | Ursa-themed Avalonia with extended controls |
+| `AutoSettingUI.Wpf.Demo` | WPF | Windows Presentation Foundation |
+
+### Demo Features
+
+- ✅ Dynamic language switching (English/Chinese)
+- ✅ Theme switching (Light/Dark/System)
+- ✅ Navigation toggle
+- ✅ Custom styled panels
+- ✅ Extended controls demonstration
+- ✅ Collection editing
 
 ## Packages
 

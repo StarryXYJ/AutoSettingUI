@@ -110,3 +110,78 @@ ViewModel for the sidebar navigation tree. Contains child nodes for sub-sections
 | `Title`     | `string`                               | Displayed node text.                  |
 | `SectionId` | `string`                               | ID tag used to scroll to the section. |
 | `Children`  | `ObservableCollection<NavigationNode>` | Child nodes (sub-sections).           |
+
+---
+
+## `ILocalizationService`
+
+Provides localization support for dynamic language switching.
+
+```csharp
+namespace AutoSettingUI.Core.Interfaces;
+
+public interface ILocalizationService : INotifyPropertyChanged
+{
+    string GetString(string key);
+    string this[string key] => GetString(key);
+    string CurrentCulture { get; }
+    void SetCulture(string cultureName);
+    event EventHandler<CultureChangedEventArgs>? CultureChanged;
+}
+```
+
+| Member           | Type     | Description                                    |
+| ---------------- | -------- | ---------------------------------------------- |
+| `GetString`      | Method   | Gets localized string for a resource key.      |
+| `CurrentCulture` | Property | Current culture name (e.g., "en", "zh-CN").    |
+| `SetCulture`     | Method   | Changes the current culture at runtime.        |
+| `CultureChanged` | Event    | Raised when culture changes.                   |
+
+### Built-in Implementations
+
+| Implementation               | Description                                          |
+| ---------------------------- | ---------------------------------------------------- |
+| `DictionaryLocalizationService` | Simple dictionary-based localization.             |
+| `ResxLocalizationService`    | Uses .NET `.resx` resource files.                   |
+
+### Usage Example
+
+```csharp
+// Using .resx files
+var localizationService = new ResxLocalizationService(Strings.ResourceManager);
+localizationService.SetCulture("zh-CN");
+
+// Bind to panel
+panel.LocalizationService = localizationService;
+```
+
+---
+
+## Resource Key Properties
+
+Several descriptor types support resource keys for i18n:
+
+### `SettingClassDescriptor`
+
+| Property            | Type      | Description                                    |
+| ------------------- | --------- | ---------------------------------------------- |
+| `UseMainHeaderKey`  | `bool`    | Whether `MainHeader` is a resource key.        |
+| `MainHeaderKey`     | `string?` | Resource key for main header.                  |
+
+### `PropertyDescriptor`
+
+| Property              | Type      | Description                                    |
+| --------------------- | --------- | ---------------------------------------------- |
+| `UseDisplayNameKey`   | `bool`    | Whether `DisplayName` is a resource key.       |
+| `DisplayNameKey`      | `string?` | Resource key for display name.                 |
+| `UseDescriptionKey`   | `bool`    | Whether `Description` is a resource key.       |
+| `DescriptionKey`      | `string?` | Resource key for description.                  |
+| `UsePlaceholderKey`   | `bool`    | Whether `Placeholder` is a resource key.       |
+| `PlaceholderKey`      | `string?` | Resource key for placeholder text.             |
+
+### `SubSectionInfo`
+
+| Property        | Type      | Description                                    |
+| --------------- | --------- | ---------------------------------------------- |
+| `UseTitleKey`   | `bool`    | Whether `Title` is a resource key.             |
+| `TitleKey`      | `string?` | Resource key for sub-section title.            |

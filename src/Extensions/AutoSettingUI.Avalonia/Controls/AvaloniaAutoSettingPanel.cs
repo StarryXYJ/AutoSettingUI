@@ -37,6 +37,8 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
     private readonly List<DelegateCommand> _commands = new();
     private readonly List<INotifyPropertyChanged> _subscribedTargets = new();
     private readonly List<(global::Avalonia.Controls.Control Control, Func<bool> IsReadOnlyGetter)> _readOnlyControls = new();
+    private readonly List<(TextBlock TextBlock, string? ResourceKey, string FallbackText)> _localizedTextBlocks = new();
+    private readonly List<(global::Avalonia.Controls.Control Control, string? PlaceholderKey, string? PlaceholderFallback)> _localizedPlaceholders = new();
 
     #region Styled Properties
 
@@ -75,6 +77,12 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
     /// </summary>
     public static readonly StyledProperty<IPropertyValueAccessor?> PropertyAccessorProperty =
         AvaloniaProperty.Register<AvaloniaAutoSettingPanel, IPropertyValueAccessor?>(nameof(PropertyAccessor));
+
+    /// <summary>
+    /// Defines the <see cref="LocalizationService"/> property.
+    /// </summary>
+    public static readonly StyledProperty<ILocalizationService?> LocalizationServiceProperty =
+        AvaloniaProperty.Register<AvaloniaAutoSettingPanel, ILocalizationService?>(nameof(LocalizationService));
 
     #endregion
 
@@ -146,6 +154,16 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
         set => SetValue(PropertyAccessorProperty, value);
     }
 
+    /// <summary>
+    /// Gets or sets the localization service for dynamic language switching.
+    /// When set, all text in the panel will be automatically updated when the culture changes.
+    /// </summary>
+    public ILocalizationService? LocalizationService
+    {
+        get => GetValue(LocalizationServiceProperty);
+        set => SetValue(LocalizationServiceProperty, value);
+    }
+
     #endregion
 
     /// <summary>
@@ -208,6 +226,63 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
         Refresh();
     }
 
+    private void OnCultureChanged(object? sender, CultureChangedEventArgs e)
+    {
+        UpdateLocalizedTexts();
+    }
+
+    private void OnLocalizationServicePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == "Item[]")
+        {
+            UpdateLocalizedTexts();
+        }
+    }
+
+    private void UpdateLocalizedTexts()
+    {
+        var service = LocalizationService;
+        if (service == null) return;
+
+        foreach (var (textBlock, resourceKey, fallbackText) in _localizedTextBlocks)
+        {
+            if (!string.IsNullOrEmpty(resourceKey))
+            {
+                textBlock.Text = service.GetString(resourceKey);
+            }
+        }
+
+        foreach (var (control, placeholderKey, placeholderFallback) in _localizedPlaceholders)
+        {
+            if (!string.IsNullOrEmpty(placeholderKey))
+            {
+                var localizedPlaceholder = service.GetString(placeholderKey);
+                if (control is TextBox textBox)
+                {
+                    textBox.Watermark = localizedPlaceholder;
+                }
+            }
+        }
+
+        foreach (var navNode in _navigationNodes)
+        {
+            UpdateNavigationNodeTitle(navNode, service);
+        }
+    }
+
+    private void UpdateNavigationNodeTitle(NavigationNode node, ILocalizationService service)
+    {
+        if (!string.IsNullOrEmpty(node.TitleKey))
+        {
+            node.Title = service.GetString(node.TitleKey);
+        }
+
+        foreach (var child in node.Children)
+        {
+            UpdateNavigationNodeTitle(child, service);
+        }
+    }
+
     protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
     {
         base.OnApplyTemplate(e);
@@ -244,6 +319,22 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
         {
             _accessor = injectedAcc;
             BuildUI();
+        }
+        else if (change.Property == LocalizationServiceProperty)
+        {
+            if (change.OldValue is ILocalizationService oldService)
+            {
+                oldService.CultureChanged -= OnCultureChanged;
+                oldService.PropertyChanged -= OnLocalizationServicePropertyChanged;
+            }
+            
+            if (change.NewValue is ILocalizationService newService)
+            {
+                newService.CultureChanged += OnCultureChanged;
+                newService.PropertyChanged += OnLocalizationServicePropertyChanged;
+            }
+            
+            UpdateLocalizedTexts();
         }
         else if (change.Property == TargetsProperty)
         {
@@ -401,6 +492,8 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
         _sectionControlMap.Clear();
         _commands.Clear();
         _readOnlyControls.Clear();
+        _localizedTextBlocks.Clear();
+        _localizedPlaceholders.Clear();
 
         var formPanel = new StackPanel
         {
@@ -441,16 +534,28 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
             
             // Create navigation node for this class
             var headerTitle = descriptor.MainHeader ?? descriptor.DisplayName;
+            var headerTitleKey = descriptor.UseMainHeaderKey ? descriptor.MainHeader : null;
+            
+            if (!string.IsNullOrEmpty(headerTitleKey) && LocalizationService != null)
+            {
+                var localized = LocalizationService.GetString(headerTitleKey);
+                if (!string.IsNullOrEmpty(localized))
+                {
+                    headerTitle = localized;
+                }
+            }
+            
             var navNode = new NavigationNode(
                 headerTitle,
                 null, // icon
                 classSectionId,
                 descriptor,
-                target);
+                target,
+                headerTitleKey);
             _navigationNodes.Add(navNode);
 
             // Create class-level form section
-            var classHeader = CreateSectionHeader(headerTitle, classSectionId, true);
+            var classHeader = CreateSectionHeader(headerTitle, classSectionId, true, descriptor.UseMainHeaderKey ? descriptor.MainHeader : null);
             formPanel.Children.Add(classHeader);
 
             // Create border container for section content
@@ -475,18 +580,30 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
             foreach (var subSection in descriptor.SubSections)
             {
                 var subSectionId = $"{classSectionId}_sub_{subIndex}";
+                var subTitleKey = subSection.UseTitleKey ? subSection.Title : null;
+                var subTitle = subSection.Title;
+                
+                if (!string.IsNullOrEmpty(subTitleKey) && LocalizationService != null)
+                {
+                    var localized = LocalizationService.GetString(subTitleKey);
+                    if (!string.IsNullOrEmpty(localized))
+                    {
+                        subTitle = localized;
+                    }
+                }
                 
                 // Create navigation child node for subsection
                 var subNavNode = new NavigationNode(
-                    subSection.Title,
+                    subTitle,
                     subIndex,
                     subSectionId,
                     subSection,
-                    navNode);
+                    navNode,
+                    subTitleKey);
                 navNode.Children.Add(subNavNode);
 
                 // Create subsection header
-                var subHeader = CreateSectionHeader(subSection.Title, subSectionId, false);
+                var subHeader = CreateSectionHeader(subSection.Title, subSectionId, false, subSection.UseTitleKey ? subSection.Title : null);
                 contentPanel.Children.Add(subHeader);
 
                 foreach (var prop in subSection.Properties)
@@ -506,15 +623,30 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
         _formScrollViewer.Content = formPanel;
     }
 
-    private global::Avalonia.Controls.Control CreateSectionHeader(string title, string sectionId, bool isMainHeader)
+    private global::Avalonia.Controls.Control CreateSectionHeader(string title, string sectionId, bool isMainHeader, string? titleKey = null)
     {
+        var displayText = title;
+        
+        if (!string.IsNullOrEmpty(titleKey) && LocalizationService != null)
+        {
+            var localized = LocalizationService.GetString(titleKey);
+            if (!string.IsNullOrEmpty(localized))
+            {
+                displayText = localized;
+            }
+        }
+        
         var textBlock = new TextBlock 
         { 
-            Text = title
+            Text = displayText
         };
         textBlock.Classes.Add(isMainHeader ? "main-header" : "sub-header");
         
-        // Store in dictionary for O(1) scroll lookup
+        if (!string.IsNullOrEmpty(titleKey))
+        {
+            _localizedTextBlocks.Add((textBlock, titleKey, title));
+        }
+        
         _sectionControlMap[sectionId] = textBlock;
         
         return textBlock;
@@ -537,11 +669,27 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
         });
 
         // Label
+        var labelText = prop.DisplayName;
+        if (prop.UseDisplayNameKey && !string.IsNullOrEmpty(prop.DisplayNameKey) && LocalizationService != null)
+        {
+            var localized = LocalizationService.GetString(prop.DisplayNameKey);
+            if (!string.IsNullOrEmpty(localized))
+            {
+                labelText = localized;
+            }
+        }
+        
         var label = new TextBlock 
         { 
-            Text = prop.DisplayName
+            Text = labelText
         };
         label.Classes.Add("label");
+        
+        if (prop.UseDisplayNameKey)
+        {
+            _localizedTextBlocks.Add((label, prop.DisplayNameKey, prop.DisplayName));
+        }
+        
         global::Avalonia.Controls.Grid.SetColumn(label, 0);
         panel.Children.Add(label);
 
@@ -893,6 +1041,17 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
             Text = _accessor?.GetValue(target, prop.PropertyName)?.ToString() ?? "",
             IsReadOnly = isReadOnly
         };
+
+        // Apply placeholder if specified
+        if (!string.IsNullOrEmpty(prop.PlaceholderText))
+        {
+            textBox.Watermark = prop.PlaceholderText;
+            
+            if (prop.UsePlaceholderKey)
+            {
+                _localizedPlaceholders.Add((textBox, prop.PlaceholderKey, prop.PlaceholderText));
+            }
+        }
 
         // Apply password masking if needed
         if (isPassword)

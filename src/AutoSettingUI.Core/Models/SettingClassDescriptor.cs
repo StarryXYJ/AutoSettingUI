@@ -20,6 +20,16 @@ public sealed class SettingClassDescriptor
     /// Gets the main header title, if specified.
     /// </summary>
     public string? MainHeader { get; }
+    
+    /// <summary>
+    /// Gets the resource key for the main header title, if using localization.
+    /// </summary>
+    public string? MainHeaderKey { get; }
+    
+    /// <summary>
+    /// Gets whether the main header uses a resource key for localization.
+    /// </summary>
+    public bool UseMainHeaderKey => !string.IsNullOrEmpty(MainHeaderKey);
 
     /// <summary>
     /// Gets the default control factory type name for this class.
@@ -51,11 +61,13 @@ public sealed class SettingClassDescriptor
         IReadOnlyList<PropertyDescriptor> properties,
         IReadOnlyList<SubSectionInfo> subSections,
         string? defaultControlFactoryTypeName = null,
-        string? defaultFactoryMethod = null)
+        string? defaultFactoryMethod = null,
+        string? mainHeaderKey = null)
     {
         TypeName = typeName;
         DisplayName = displayName;
         MainHeader = mainHeader;
+        MainHeaderKey = mainHeaderKey;
         Properties = properties;
         SubSections = subSections;
         DefaultControlFactoryTypeName = defaultControlFactoryTypeName;
@@ -72,6 +84,16 @@ public sealed class SubSectionInfo
     /// Gets the title of the subsection.
     /// </summary>
     public string Title { get; }
+    
+    /// <summary>
+    /// Gets the resource key for the title, if using localization.
+    /// </summary>
+    public string? TitleKey { get; }
+    
+    /// <summary>
+    /// Gets whether the title uses a resource key for localization.
+    /// </summary>
+    public bool UseTitleKey => !string.IsNullOrEmpty(TitleKey);
 
     /// <summary>
     /// Gets the properties in this subsection.
@@ -81,9 +103,10 @@ public sealed class SubSectionInfo
     /// <summary>
     /// Initializes a new instance of the <see cref="SubSectionInfo"/> class.
     /// </summary>
-    public SubSectionInfo(string title, IReadOnlyList<PropertyDescriptor> properties)
+    public SubSectionInfo(string title, IReadOnlyList<PropertyDescriptor> properties, string? titleKey = null)
     {
         Title = title;
+        TitleKey = titleKey;
         Properties = properties;
     }
 }

@@ -17,6 +17,16 @@ public sealed class PropertyDescriptor
     /// Gets the display name for the property.
     /// </summary>
     public string DisplayName { get; }
+    
+    /// <summary>
+    /// Gets the resource key for the display name, if using localization.
+    /// </summary>
+    public string? DisplayNameKey { get; }
+    
+    /// <summary>
+    /// Gets whether the display name uses a resource key for localization.
+    /// </summary>
+    public bool UseDisplayNameKey => !string.IsNullOrEmpty(DisplayNameKey);
 
     /// <summary>
     /// Gets the full type name of the property.
@@ -148,11 +158,31 @@ public sealed class PropertyDescriptor
     /// Gets the placeholder text for input controls, if specified.
     /// </summary>
     public string? PlaceholderText { get; }
+    
+    /// <summary>
+    /// Gets the resource key for the placeholder text, if using localization.
+    /// </summary>
+    public string? PlaceholderKey { get; }
+    
+    /// <summary>
+    /// Gets whether the placeholder text uses a resource key for localization.
+    /// </summary>
+    public bool UsePlaceholderKey => !string.IsNullOrEmpty(PlaceholderKey);
 
     /// <summary>
     /// Gets the description/tooltip text for the property, if specified.
     /// </summary>
     public string? DescriptionText { get; }
+    
+    /// <summary>
+    /// Gets the resource key for the description text, if using localization.
+    /// </summary>
+    public string? DescriptionKey { get; }
+    
+    /// <summary>
+    /// Gets whether the description text uses a resource key for localization.
+    /// </summary>
+    public bool UseDescriptionKey => !string.IsNullOrEmpty(DescriptionKey);
 
     /// <summary>
     /// Gets whether the property should be treated as a password field.
@@ -229,10 +259,14 @@ public sealed class PropertyDescriptor
         double numericMinimum = 0,
         double numericMaximum = 0,
         double numericIncrement = 0,
-        int displayOrder = 0)
+        int displayOrder = 0,
+        string? displayNameKey = null,
+        string? placeholderKey = null,
+        string? descriptionKey = null)
     {
         PropertyName = propertyName;
         DisplayName = displayName;
+        DisplayNameKey = displayNameKey;
         PropertyTypeName = propertyTypeName;
         PropertyType = propertyType;
         IsEnum = isEnum;
@@ -258,7 +292,9 @@ public sealed class PropertyDescriptor
         CollectionAllowEditItems = collectionAllowEditItems;
         CollectionElementTypeName = collectionElementTypeName;
         PlaceholderText = placeholderText;
+        PlaceholderKey = placeholderKey;
         DescriptionText = descriptionText;
+        DescriptionKey = descriptionKey;
         IsPassword = isPassword;
         PasswordMaskChar = passwordMaskChar;
         IsNumericUpDown = isNumericUpDown;

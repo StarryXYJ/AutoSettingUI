@@ -332,6 +332,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
         sb.AppendLine("            var subSections = new List<SubSectionInfo>();");
         sb.AppendLine("            List<PropertyDescriptor>? currentSub = null;");
         sb.AppendLine("            string? currentSubTitle = null;");
+        sb.AppendLine("            string? currentSubTitleKey = null;");
         sb.AppendLine();
 
         var allProps = GetPublicInstanceProperties(cls, context).ToList();
@@ -352,15 +353,19 @@ public class AutoSettingGenerator : IIncrementalGenerator
             {
                 // Flush previous subsection
                 sb.AppendLine("            if (currentSub != null && currentSubTitle != null)");
-                sb.AppendLine("                subSections.Add(new SubSectionInfo(currentSubTitle, currentSub));");
+                sb.AppendLine("                subSections.Add(new SubSectionInfo(currentSubTitle, currentSub, currentSubTitleKey));");
                 var subTitle = GetConstructorArgString(subHeaderAttr, 0) ?? $"\"{prop.Name}\"";
+                var subUseResourceKey = GetNamedArgRaw(subHeaderAttr, "UseResourceKey") == "True";
                 sb.AppendLine($"            currentSubTitle = {subTitle};");
+                sb.AppendLine($"            currentSubTitleKey = {(subUseResourceKey ? subTitle : "null")};");
                 sb.AppendLine("            currentSub = new List<PropertyDescriptor>();");
                 // Do NOT continue — fall through to render the property itself into the new sub-section
             }
 
             var titleAttr = GetAttr(prop, TitleAttributeName);
             var displayName = GetConstructorArgString(titleAttr, 0) ?? $"\"{prop.Name}\"";
+            var titleUseResourceKey = GetNamedArgRaw(titleAttr, "UseResourceKey") == "True";
+            var displayNameKey = titleUseResourceKey ? displayName : "null";
 
             var isEnum = prop.Type.TypeKind == TypeKind.Enum;
 
@@ -487,9 +492,17 @@ public class AutoSettingGenerator : IIncrementalGenerator
             // Placeholder / Description / Password
             var placeholderAttr = GetAttr(prop, PlaceholderAttributeName);
             var placeholderText = GetConstructorArgString(placeholderAttr, 0);
+            var placeholderUseResourceKey = GetNamedArgRaw(placeholderAttr, "UseResourceKey") == "True";
+            var placeholderKey = placeholderUseResourceKey ? placeholderText : "null";
 
             var descriptionAttr = GetAttr(prop, DescriptionAttributeName);
             var descriptionText = GetConstructorArgString(descriptionAttr, 0);
+            var descriptionUseResourceKey = GetNamedArgRaw(descriptionAttr, "UseResourceKey") == "True";
+            
+            // Also check TitleAttribute's UseDescriptionKey
+            var titleUseDescriptionKey = GetNamedArgRaw(titleAttr, "UseDescriptionKey") == "True";
+            var titleDescriptionText = GetNamedArgRaw(titleAttr, "Description");
+            var descriptionKey = descriptionUseResourceKey ? descriptionText : (titleUseDescriptionKey ? titleDescriptionText : "null");
 
             var passwordAttr = GetAttr(prop, PasswordAttributeName);
             bool isPassword = false;
@@ -635,7 +648,10 @@ public class AutoSettingGenerator : IIncrementalGenerator
             sb.AppendLine($"                {numericMin},");
             sb.AppendLine($"                {numericMax},");
             sb.AppendLine($"                {numericInc},");
-            sb.AppendLine($"                {displayOrder});");
+            sb.AppendLine($"                {displayOrder},");
+            sb.AppendLine($"                {displayNameKey},");
+            sb.AppendLine($"                {placeholderKey},");
+            sb.AppendLine($"                {descriptionKey});");
 
             var varName = $"pd_{safeName}_{EscapeName(prop.Name)}";
             sb.AppendLine($"            if (currentSub != null) currentSub.Add({varName}); else directProps.Add({varName});");
@@ -644,8 +660,13 @@ public class AutoSettingGenerator : IIncrementalGenerator
 
         // Flush last subsection
         sb.AppendLine("            if (currentSub != null && currentSubTitle != null)");
-        sb.AppendLine("                subSections.Add(new SubSectionInfo(currentSubTitle, currentSub));");
+        sb.AppendLine("                subSections.Add(new SubSectionInfo(currentSubTitle, currentSub, currentSubTitleKey));");
         sb.AppendLine();
+        
+        // MainHeader resource key
+        var mainHeaderUseResourceKey = GetNamedArgRaw(mainHeaderAttr, "UseResourceKey") == "True";
+        var mainHeaderKey = mainHeaderUseResourceKey ? mainHeader : "null";
+        
         sb.AppendLine("            var descriptor = new SettingClassDescriptor(");
         sb.AppendLine($"                \"{fqn}\",");
         sb.AppendLine($"                \"{cls.Name}\",");
@@ -653,7 +674,8 @@ public class AutoSettingGenerator : IIncrementalGenerator
         sb.AppendLine("                directProps,");
         sb.AppendLine("                subSections,");
         sb.AppendLine($"                {(controlFactoryTypeName != null ? $"\"{controlFactoryTypeName}\"" : "null")},");
-        sb.AppendLine($"                {factoryMethod});");
+        sb.AppendLine($"                {factoryMethod},");
+        sb.AppendLine($"                {mainHeaderKey});");
         sb.AppendLine($"            _descriptors[\"{fqn}\"] = descriptor;");
         sb.AppendLine("        }");
         sb.AppendLine();

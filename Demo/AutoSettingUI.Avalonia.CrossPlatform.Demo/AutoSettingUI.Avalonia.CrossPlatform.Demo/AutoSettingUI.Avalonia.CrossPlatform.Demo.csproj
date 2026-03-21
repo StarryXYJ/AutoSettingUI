@@ -1,19 +1,21 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
         <Nullable>enable</Nullable>
         <LangVersion>latest</LangVersion>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <NoWarn>$(NoWarn);IL2026;IL2057;IL2067;IL2070;IL2072;IL2075;IL2104;IL3050</NoWarn>
-<IsPackable>false</IsPackable>
-  <PublishAot>true</PublishAot>
-  <SelfContained>true</SelfContained>
-  <PublishTrimmed>true</PublishTrimmed>
-  <TrimMode>link</TrimMode>
+        <IsPackable>false</IsPackable>
+        <PublishAot>true</PublishAot>
+        <SelfContained>true</SelfContained>
+        <PublishTrimmed>true</PublishTrimmed>
+        <TrimMode>link</TrimMode>
+        <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
     </PropertyGroup>
 
     <ItemGroup>
         <AvaloniaResource Include="Assets\**"/>
+        <EmbeddedResource Include="Resources\*.resx"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -40,7 +42,5 @@
                           ReferenceOutputAssembly="false"/>
     </ItemGroup>
 
-    <ItemGroup Condition="'$(PublishAot)' == 'true'">
-        <Analyzer Include="..\..\..\src\AutoSettingUI.Generator\bin\Release\netstandard2.0\AutoSettingUI.Generator.dll" />
-    </ItemGroup>
+
 </Project>

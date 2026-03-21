@@ -77,10 +77,11 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
         var mainHeaderAttr = type.GetCustomAttribute<MainHeaderAttribute>();
 
         // Use ordered list to preserve declaration order of subsections
-        var subSectionList = new List<(string Title, List<PropertyDescriptor> Props)>();
+        var subSectionList = new List<(string Title, string? TitleKey, List<PropertyDescriptor> Props)>();
         var directProperties = new List<PropertyDescriptor>();
         List<PropertyDescriptor>? currentSubProps = null;
         string? currentSubHeader = null;
+        string? currentSubHeaderKey = null;
 
         // Get all properties with their declaration order
         var props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
@@ -112,8 +113,9 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
             if (subHeader is not null)
             {
                 if (currentSubHeader is not null && currentSubProps is not null)
-                    subSectionList.Add((currentSubHeader, currentSubProps));
+                    subSectionList.Add((currentSubHeader, currentSubHeaderKey, currentSubProps));
                 currentSubHeader = subHeader.Title;
+                currentSubHeaderKey = subHeader.UseResourceKey ? subHeader.Title : null;
                 currentSubProps = new List<PropertyDescriptor>();
                 // fall-through: the property itself is added below
             }
@@ -186,7 +188,10 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
                 0,
                 0,
                 0,
-                displayOrderAttr?.Order ?? 0
+                displayOrderAttr?.Order ?? 0,
+                titleAttr?.UseResourceKey == true ? titleAttr.Name : null,
+                placeholderAttr?.UseResourceKey == true ? placeholderAttr.Text : null,
+                descriptionAttr?.UseResourceKey == true ? descriptionAttr.Text : (titleAttr?.UseDescriptionKey == true ? titleAttr.Description : null)
             );
 
             if (currentSubProps is not null)
@@ -197,11 +202,11 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
 
         // Flush final subsection
         if (currentSubHeader is not null && currentSubProps is not null)
-            subSectionList.Add((currentSubHeader, currentSubProps));
+            subSectionList.Add((currentSubHeader, currentSubHeaderKey, currentSubProps));
 
         var subSections = subSectionList
             .Where(s => s.Props.Count > 0)
-            .Select(s => new SubSectionInfo(s.Title, s.Props))
+            .Select(s => new SubSectionInfo(s.Title, s.Props, s.TitleKey))
             .ToList();
 
         return new SettingClassDescriptor(
@@ -211,7 +216,8 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
             directProperties,
             subSections,
             settingAttr.ControlFactory?.AssemblyQualifiedName,
-            settingAttr.FactoryMethod
+            settingAttr.FactoryMethod,
+            mainHeaderAttr?.UseResourceKey == true ? mainHeaderAttr.Title : null
         );
     }
 

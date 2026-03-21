@@ -160,3 +160,80 @@ public class FancySlider : Slider
 [ControlBinding(typeof(FancySlider), BindingProperty = "FancyValue")]
 public double Volume { get; set; } = 0.5;
 ```
+
+---
+
+## 10. Localization (i18n)
+
+AutoSettingUI supports dynamic language switching using resource keys.
+
+### Step 1: Create Resource Files
+
+Create `.resx` files for each language:
+
+**Strings.resx** (default/English):
+```xml
+<data name="Settings.Theme" xml:space="preserve">
+    <value>Theme Personalization</value>
+</data>
+<data name="Settings.Volume" xml:space="preserve">
+    <value>Master Volume</value>
+</data>
+```
+
+**Strings.zh-CN.resx** (Chinese):
+```xml
+<data name="Settings.Theme" xml:space="preserve">
+    <value>主题个性化</value>
+</data>
+<data name="Settings.Volume" xml:space="preserve">
+    <value>主音量</value>
+</data>
+```
+
+### Step 2: Use Resource Keys in Attributes
+
+```csharp
+[SettingUI]
+[MainHeader("Settings.Theme", UseResourceKey = true)]
+public class ThemeSettings
+{
+    [Title("Settings.Volume", UseResourceKey = true)]
+    [Range(0, 100)]
+    public int Volume { get; set; } = 50;
+
+    [SubHeader("Settings.Equalizer", UseResourceKey = true)]
+    public bool EqEnabled { get; set; }
+}
+```
+
+### Step 3: Setup LocalizationService
+
+```csharp
+// In ViewModel
+using AutoSettingUI.Core.Interfaces;
+using AutoSettingUI.Core.Services;
+
+public class MainViewModel
+{
+    public ILocalizationService LocalizationService { get; }
+
+    public MainViewModel()
+    {
+        LocalizationService = new ResxLocalizationService(Strings.ResourceManager);
+    }
+
+    public void SwitchToChinese() => LocalizationService.SetCulture("zh-CN");
+    public void SwitchToEnglish() => LocalizationService.SetCulture("en");
+}
+```
+
+### Step 4: Bind to Panel
+
+```xml
+<controls:UrsaAutoSettingPanel 
+    Targets="{Binding Settings}"
+    LocalizationService="{Binding LocalizationService}" />
+```
+
+When `SetCulture()` is called, all text elements (headers, labels, navigation nodes) update automatically.

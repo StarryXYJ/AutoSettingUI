@@ -10,6 +10,12 @@ public sealed class DescriptionAttribute : Attribute
     /// Gets the description text.
     /// </summary>
     public string Text { get; }
+    
+    /// <summary>
+    /// Gets or sets whether the text is a resource key for localization.
+    /// When true, the Text value will be used as a key to lookup the localized string.
+    /// </summary>
+    public bool UseResourceKey { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DescriptionAttribute"/> class.
