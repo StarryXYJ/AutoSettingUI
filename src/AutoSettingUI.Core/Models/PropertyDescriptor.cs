@@ -221,6 +221,62 @@ public sealed class PropertyDescriptor
     /// </summary>
     public int DisplayOrder { get; }
 
+    #region Layout Properties
+
+    /// <summary>
+    /// Gets the width for the control. double.NaN means Auto.
+    /// </summary>
+    public double LayoutWidth { get; }
+
+    /// <summary>
+    /// Gets the height for the control. double.NaN means Auto.
+    /// </summary>
+    public double LayoutHeight { get; }
+
+    /// <summary>
+    /// Gets the minimum width for the control.
+    /// </summary>
+    public double LayoutMinWidth { get; }
+
+    /// <summary>
+    /// Gets the minimum height for the control.
+    /// </summary>
+    public double LayoutMinHeight { get; }
+
+    /// <summary>
+    /// Gets the maximum width for the control.
+    /// </summary>
+    public double LayoutMaxWidth { get; }
+
+    /// <summary>
+    /// Gets the maximum height for the control.
+    /// </summary>
+    public double LayoutMaxHeight { get; }
+
+    /// <summary>
+    /// Gets the horizontal alignment for the control.
+    /// Values: "Left", "Center", "Right", "Stretch"
+    /// </summary>
+    public string? LayoutHorizontalAlignment { get; }
+
+    /// <summary>
+    /// Gets the vertical alignment for the control.
+    /// Values: "Top", "Center", "Bottom", "Stretch"
+    /// </summary>
+    public string? LayoutVerticalAlignment { get; }
+
+    /// <summary>
+    /// Gets the margin for the control.
+    /// </summary>
+    public string? LayoutMargin { get; }
+
+    /// <summary>
+    /// Gets the padding for the control.
+    /// </summary>
+    public string? LayoutPadding { get; }
+
+    #endregion
+
     /// <summary>
     /// Initializes a new instance of the <see cref="PropertyDescriptor"/> class.
     /// </summary>
@@ -262,7 +318,17 @@ public sealed class PropertyDescriptor
         int displayOrder = 0,
         string? displayNameKey = null,
         string? placeholderKey = null,
-        string? descriptionKey = null)
+        string? descriptionKey = null,
+        double layoutWidth = double.NaN,
+        double layoutHeight = double.NaN,
+        double layoutMinWidth = double.NaN,
+        double layoutMinHeight = double.NaN,
+        double layoutMaxWidth = double.NaN,
+        double layoutMaxHeight = double.NaN,
+        string? layoutHorizontalAlignment = null,
+        string? layoutVerticalAlignment = null,
+        string? layoutMargin = null,
+        string? layoutPadding = null)
     {
         PropertyName = propertyName;
         DisplayName = displayName;
@@ -302,6 +368,16 @@ public sealed class PropertyDescriptor
         NumericMaximum = numericMaximum;
         NumericIncrement = numericIncrement;
         DisplayOrder = displayOrder;
+        LayoutWidth = layoutWidth;
+        LayoutHeight = layoutHeight;
+        LayoutMinWidth = layoutMinWidth;
+        LayoutMinHeight = layoutMinHeight;
+        LayoutMaxWidth = layoutMaxWidth;
+        LayoutMaxHeight = layoutMaxHeight;
+        LayoutHorizontalAlignment = layoutHorizontalAlignment;
+        LayoutVerticalAlignment = layoutVerticalAlignment;
+        LayoutMargin = layoutMargin;
+        LayoutPadding = layoutPadding;
     }
 }
 

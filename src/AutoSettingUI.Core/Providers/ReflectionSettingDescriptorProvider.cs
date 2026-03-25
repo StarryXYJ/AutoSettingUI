@@ -132,6 +132,7 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
             var descriptionAttr = prop.GetCustomAttribute<DescriptionAttribute>();
             var passwordAttr = prop.GetCustomAttribute<PasswordAttribute>();
             var displayOrderAttr = prop.GetCustomAttribute<DisplayOrderAttribute>();
+            var layoutAttr = prop.GetCustomAttribute<LayoutAttribute>();
 
             // Pre-compute enum values to avoid runtime Enum.GetValues in non-AOT path
             string[]? enumValues = null;
@@ -191,7 +192,17 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
                 displayOrderAttr?.Order ?? 0,
                 titleAttr?.UseResourceKey == true ? titleAttr.Name : null,
                 placeholderAttr?.UseResourceKey == true ? placeholderAttr.Text : null,
-                descriptionAttr?.UseResourceKey == true ? descriptionAttr.Text : (titleAttr?.UseDescriptionKey == true ? titleAttr.Description : null)
+                descriptionAttr?.UseResourceKey == true ? descriptionAttr.Text : (titleAttr?.UseDescriptionKey == true ? titleAttr.Description : null),
+                layoutAttr?.Width ?? double.NaN,
+                layoutAttr?.Height ?? double.NaN,
+                layoutAttr?.MinWidth ?? double.NaN,
+                layoutAttr?.MinHeight ?? double.NaN,
+                layoutAttr?.MaxWidth ?? double.NaN,
+                layoutAttr?.MaxHeight ?? double.NaN,
+                layoutAttr?.HorizontalAlignment,
+                layoutAttr?.VerticalAlignment,
+                layoutAttr?.Margin,
+                layoutAttr?.Padding
             );
 
             if (currentSubProps is not null)

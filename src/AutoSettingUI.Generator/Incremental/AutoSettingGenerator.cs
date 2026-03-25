@@ -34,6 +34,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
     private const string NumericUpDownAttributeName = "NumericUpDownAttribute"; // Special handling needed - type depends on property type
     private const string ControlBindingDefaultsAttributeName = "ControlBindingDefaultsAttribute";
     private const string DisplayOrderAttributeName = "DisplayOrderAttribute";
+    private const string LayoutAttributeName = "LayoutAttribute";
 
     // Diagnostic descriptors
     private static readonly DiagnosticDescriptor NonPublicClassWarning = new(
@@ -546,6 +547,32 @@ public class AutoSettingGenerator : IIncrementalGenerator
                     displayOrder = orderVal;
             }
 
+            // Layout
+            var layoutAttr = GetAttr(prop, LayoutAttributeName);
+            double layoutWidth = double.NaN;
+            double layoutHeight = double.NaN;
+            double layoutMinWidth = double.NaN;
+            double layoutMinHeight = double.NaN;
+            double layoutMaxWidth = double.NaN;
+            double layoutMaxHeight = double.NaN;
+            string? layoutHAlign = null;
+            string? layoutVAlign = null;
+            string? layoutMargin = null;
+            string? layoutPadding = null;
+            if (layoutAttr != null)
+            {
+                layoutWidth = TryGetNamedArgDouble(layoutAttr, "Width") ?? double.NaN;
+                layoutHeight = TryGetNamedArgDouble(layoutAttr, "Height") ?? double.NaN;
+                layoutMinWidth = TryGetNamedArgDouble(layoutAttr, "MinWidth") ?? double.NaN;
+                layoutMinHeight = TryGetNamedArgDouble(layoutAttr, "MinHeight") ?? double.NaN;
+                layoutMaxWidth = TryGetNamedArgDouble(layoutAttr, "MaxWidth") ?? double.NaN;
+                layoutMaxHeight = TryGetNamedArgDouble(layoutAttr, "MaxHeight") ?? double.NaN;
+                layoutHAlign = GetNamedArgString(layoutAttr, "HorizontalAlignment");
+                layoutVAlign = GetNamedArgString(layoutAttr, "VerticalAlignment");
+                layoutMargin = GetNamedArgString(layoutAttr, "Margin");
+                layoutPadding = GetNamedArgString(layoutAttr, "Padding");
+            }
+
             // CollectionEditor
             var collEditorAttr = GetAttr(prop, CollectionEditorAttributeName);
             string? collEditorTypeName = null;
@@ -651,7 +678,17 @@ public class AutoSettingGenerator : IIncrementalGenerator
             sb.AppendLine($"                {displayOrder},");
             sb.AppendLine($"                {displayNameKey},");
             sb.AppendLine($"                {placeholderKey},");
-            sb.AppendLine($"                {descriptionKey});");
+            sb.AppendLine($"                {descriptionKey},");
+            sb.AppendLine($"                {FormatDouble(layoutWidth)},");
+            sb.AppendLine($"                {FormatDouble(layoutHeight)},");
+            sb.AppendLine($"                {FormatDouble(layoutMinWidth)},");
+            sb.AppendLine($"                {FormatDouble(layoutMinHeight)},");
+            sb.AppendLine($"                {FormatDouble(layoutMaxWidth)},");
+            sb.AppendLine($"                {FormatDouble(layoutMaxHeight)},");
+            sb.AppendLine($"                {layoutHAlign ?? "null"},");
+            sb.AppendLine($"                {layoutVAlign ?? "null"},");
+            sb.AppendLine($"                {layoutMargin ?? "null"},");
+            sb.AppendLine($"                {layoutPadding ?? "null"});");
 
             var varName = $"pd_{safeName}_{EscapeName(prop.Name)}";
             sb.AppendLine($"            if (currentSub != null) currentSub.Add({varName}); else directProps.Add({varName});");
@@ -974,6 +1011,14 @@ public class AutoSettingGenerator : IIncrementalGenerator
         if (raw == null) return null;
         if (double.TryParse(raw, out var val)) return val;
         return null;
+    }
+
+    private static string FormatDouble(double value)
+    {
+        if (double.IsNaN(value)) return "double.NaN";
+        if (double.IsPositiveInfinity(value)) return "double.PositiveInfinity";
+        if (double.IsNegativeInfinity(value)) return "double.NegativeInfinity";
+        return value.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
 
     /// <summary>Gets a named argument value as a Type symbol.</summary>
