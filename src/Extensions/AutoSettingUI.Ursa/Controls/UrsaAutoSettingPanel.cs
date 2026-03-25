@@ -1005,32 +1005,98 @@ public class UrsaAutoSettingPanel : TemplatedControl
     /// </summary>
     private void ApplyControlAttributes(global::Avalonia.Controls.Control control, Core.Models.PropertyDescriptor prop, object target)
     {
-        var propertyInfo = GetPropertyInfo(target, prop.PropertyName);
-        if (propertyInfo != null)
+        // Apply layout from pre-generated PropertyDescriptor (AOT-safe)
+        ApplyLayoutFromDescriptor(control, prop);
+
+        // Apply placeholder to TextBox
+        if (control is TextBox textBox && !string.IsNullOrEmpty(prop.PlaceholderText))
         {
-            // Apply layout attributes
-            control.ApplyLayout(propertyInfo);
-
-            // Apply placeholder to TextBox
-            if (control is TextBox textBox)
-            {
-                textBox.ApplyPlaceholder(propertyInfo);
-            }
-
-            // Apply description (tooltip)
-            control.ApplyDescription(propertyInfo);
+            textBox.Watermark = prop.PlaceholderText;
         }
 
-        // AOT-safe fallback using generated metadata
-        if (control is TextBox tb && !string.IsNullOrEmpty(prop.PlaceholderText))
-        {
-            tb.Watermark = prop.PlaceholderText;
-        }
-
+        // Apply description (tooltip)
         if (!string.IsNullOrEmpty(prop.DescriptionText))
         {
             ToolTip.SetTip(control, prop.DescriptionText);
         }
+
+        // Fix for TagInput: prevent infinite width constraint crash
+        // TagInputPanel.MeasureOverride() doesn't handle infinite width correctly
+        if (control is global::Ursa.Controls.TagInput tagInput)
+        {
+            tagInput.MaxWidth = 800;
+            tagInput.HorizontalAlignment = HorizontalAlignment.Stretch;
+        }
+    }
+
+    /// <summary>
+    /// Applies layout properties from PropertyDescriptor (AOT-safe, no reflection).
+    /// </summary>
+    private static void ApplyLayoutFromDescriptor(global::Avalonia.Controls.Control control, Core.Models.PropertyDescriptor prop)
+    {
+        if (!double.IsNaN(prop.LayoutWidth)) control.Width = prop.LayoutWidth;
+        if (!double.IsNaN(prop.LayoutHeight)) control.Height = prop.LayoutHeight;
+        if (!double.IsNaN(prop.LayoutMinWidth)) control.MinWidth = prop.LayoutMinWidth;
+        if (!double.IsNaN(prop.LayoutMinHeight)) control.MinHeight = prop.LayoutMinHeight;
+        if (!double.IsNaN(prop.LayoutMaxWidth)) control.MaxWidth = prop.LayoutMaxWidth;
+        if (!double.IsNaN(prop.LayoutMaxHeight)) control.MaxHeight = prop.LayoutMaxHeight;
+
+        if (!string.IsNullOrEmpty(prop.LayoutHorizontalAlignment))
+            control.HorizontalAlignment = ParseHorizontalAlignment(prop.LayoutHorizontalAlignment);
+
+        if (!string.IsNullOrEmpty(prop.LayoutVerticalAlignment))
+            control.VerticalAlignment = ParseVerticalAlignment(prop.LayoutVerticalAlignment);
+
+        if (!string.IsNullOrEmpty(prop.LayoutMargin))
+            control.Margin = ParseThickness(prop.LayoutMargin);
+
+        if (!string.IsNullOrEmpty(prop.LayoutPadding))
+        {
+            var padding = ParseThickness(prop.LayoutPadding);
+            if (control is ContentControl contentControl)
+                contentControl.Padding = padding;
+            else if (control is Decorator decorator)
+                decorator.Padding = padding;
+        }
+    }
+
+    private static HorizontalAlignment ParseHorizontalAlignment(string? value)
+        => value?.ToLowerInvariant() switch
+        {
+            "left" => HorizontalAlignment.Left,
+            "center" => HorizontalAlignment.Center,
+            "right" => HorizontalAlignment.Right,
+            "stretch" => HorizontalAlignment.Stretch,
+            _ => HorizontalAlignment.Stretch
+        };
+
+    private static VerticalAlignment ParseVerticalAlignment(string? value)
+        => value?.ToLowerInvariant() switch
+        {
+            "top" => VerticalAlignment.Top,
+            "center" => VerticalAlignment.Center,
+            "bottom" => VerticalAlignment.Bottom,
+            "stretch" => VerticalAlignment.Stretch,
+            _ => VerticalAlignment.Stretch
+        };
+
+    private static Thickness ParseThickness(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return new Thickness(0);
+
+        var parts = value.Split(',').Select(p => p.Trim()).ToArray();
+
+        if (parts.Length == 1 && double.TryParse(parts[0], out var uniform))
+            return new Thickness(uniform);
+
+        if (parts.Length == 4 &&
+            double.TryParse(parts[0], out var left) &&
+            double.TryParse(parts[1], out var top) &&
+            double.TryParse(parts[2], out var right) &&
+            double.TryParse(parts[3], out var bottom))
+            return new Thickness(left, top, right, bottom);
+
+        return new Thickness(0);
     }
 
     /// <summary>

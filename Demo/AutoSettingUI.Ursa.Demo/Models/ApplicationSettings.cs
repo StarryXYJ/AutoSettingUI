@@ -162,7 +162,7 @@ public class UserPreferences : INotifyPropertyChanged
     [Description("Your display name (3-20 characters)")]
     [Placeholder("Enter username")]
     [Validation(Required = true, MinLength = 3, MaxLength = 20, ErrorMessage = "Username must be 3-20 characters")]
-    [Layout(Width = 200, Height = 28, Margin = "0,2,0,2")]
+    [Layout(Width = 200, Height = 58, Margin = "0,2,0,2")]
     public string Username { get; set; } = "";
 
     // Password: Custom mask character
@@ -342,6 +342,7 @@ public partial class ExtendedControlsSettings  : ObservableObject
     [Title("Settings.SelectionTags", UseResourceKey = true)]
     [TagInput]
     public ObservableCollection<string> ProjectTags { get; set; } = ["Ursa", "Avalonia", "AutoSettingUI"];
+    
 
     [Title("Settings.ReleaseDate", UseResourceKey = true)]
     [DatePicker]
