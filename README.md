@@ -16,7 +16,7 @@
 - ✨ **Attribute-driven** — Decorate properties with attributes to customize rendering
 - ⚡ **AOT-compatible** — Incremental Roslyn Source Generator enables full Native AOT and trimming support
 - 🔄 **MVVM Support** — Works with CommunityToolkit.Mvvm `[ObservableProperty]`
-- 🌐 **i18n Support** — Built-in localization service with dynamic language switching
+- 🌐 **i18n Support** — Built-in localization service with dynamic language switching powered by [DynamicLocalization](https://github.com/StarryXYJ/Avalonia.DynamicLocalization)
 - 🔌 **Extensible** — Inject custom providers and accessors
 - 🧭 **Built-in navigation** — Sidebar tree navigation to sections
 - 🎯 **Extended Controls** — ColorPicker, DatePicker, TimePicker, NumericUpDown, and more
@@ -156,7 +156,7 @@ AotSettingRegistry.Accessor = AotSettingRegistry.Provider;
 
 ## Internationalization (i18n)
 
-AutoSettingUI supports dynamic language switching through the `ILocalizationService` interface.
+AutoSettingUI supports dynamic language switching powered by [DynamicLocalization](https://github.com/StarryXYJ/Avalonia.DynamicLocalization).
 
 ### Using Resource Keys
 
@@ -199,16 +199,23 @@ public static class Strings
 **3. Configure the localization service:**
 
 ```csharp
-using AutoSettingUI.Core.Interfaces;
-using AutoSettingUI.Core.Services;
+using DynamicLocalization.Core;
+using DynamicLocalization.Core.Providers;
 
 public class MainViewModel
 {
-    public ILocalizationService LocalizationService { get; }
+    public ICultureService LocalizationService { get; }
 
     public MainViewModel()
     {
-        LocalizationService = new ResxLocalizationService(Strings.ResourceManager);
+        var cultureService = new CultureService();
+        var resxProvider = new ResxLocalizationProvider();
+        resxProvider.Initialize(new ResxLocalizationProviderOptions
+        {
+            ResourceType = typeof(Strings)
+        });
+        cultureService.RegisterProvider(resxProvider);
+        LocalizationService = cultureService;
     }
 
     public void SwitchToEnglish() => LocalizationService.SetCulture("en");
@@ -224,12 +231,14 @@ public class MainViewModel
     LocalizationService="{Binding LocalizationService}" />
 ```
 
-### Localization Services
+### Localization Providers
 
-| Service | Description |
-|---------|-------------|
-| `ResxLocalizationService` | Uses .NET .resx resource files |
-| `DictionaryLocalizationService` | In-memory dictionary-based translations |
+| Provider | Description |
+|----------|-------------|
+| `ResxLocalizationProvider` | Uses .NET .resx resource files |
+| `JsonLocalizationProvider` | JSON file-based translations |
+
+For more providers and advanced usage, see [DynamicLocalization](https://github.com/StarryXYJ/Avalonia.DynamicLocalization).
 
 ## Available Attributes
 
@@ -323,7 +332,7 @@ The repository includes demo applications showcasing all features:
 | `AutoSettingUI.Ursa`      | Ursa-themed Avalonia panel       | Core, Extension.Shared    |
 | `AutoSettingUI.WPF`       | WPF panel                        | Core, Extension.Shared    |
 | `AutoSettingUI.Generator` | Roslyn Source Generator for AOT  | Standalone (Analyzer)     |
-| `AutoSettingUI.Core`      | Attributes, interfaces, models   | Standalone                |
+| `AutoSettingUI.Core`      | Attributes, interfaces, models   | DynamicLocalization.Core  |
 
 > **Note:** `Core` and `Extension.Shared` are automatically included when installing UI framework packages.
 

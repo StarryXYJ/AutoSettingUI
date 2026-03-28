@@ -8,6 +8,7 @@ using AutoSettingUI.Core.Interfaces;
 using AutoSettingUI.Core.Models;
 using AutoSettingUI.Core.Providers;
 using AutoSettingUI.WPF.Factories;
+using DynamicLocalization.Core;
 using PropertyChangedEventHandler = System.ComponentModel.PropertyChangedEventHandler;
 using PropertyChangedEventArgs = System.ComponentModel.PropertyChangedEventArgs;
 using INotifyPropertyChanged = System.ComponentModel.INotifyPropertyChanged;
@@ -49,7 +50,7 @@ public class WpfAutoSettingPanel : Control
         new PropertyMetadata(null, OnPropertyAccessorChanged));
 
     public static readonly DependencyProperty LocalizationServiceProperty = DependencyProperty.Register(
-        nameof(LocalizationService), typeof(ILocalizationService), typeof(WpfAutoSettingPanel),
+        nameof(LocalizationService), typeof(ICultureService), typeof(WpfAutoSettingPanel),
         new PropertyMetadata(null, OnLocalizationServiceChanged));
 
     #endregion
@@ -111,9 +112,9 @@ public class WpfAutoSettingPanel : Control
     /// Gets or sets the localization service for dynamic language switching.
     /// When set, all text in the panel will be automatically updated when the culture changes.
     /// </summary>
-    public ILocalizationService? LocalizationService
+    public ICultureService? LocalizationService
     {
-        get => (ILocalizationService?)GetValue(LocalizationServiceProperty);
+        get => (ICultureService?)GetValue(LocalizationServiceProperty);
         set => SetValue(LocalizationServiceProperty, value);
     }
 
@@ -130,7 +131,7 @@ public class WpfAutoSettingPanel : Control
     private readonly List<(TextBlock TextBlock, string? ResourceKey, string FallbackText)> _localizedTextBlocks = new();
     private readonly List<(FrameworkElement Control, string? PlaceholderKey, string? PlaceholderFallback)> _localizedPlaceholders = new();
     private readonly HashSet<INotifyPropertyChanged> _subscribedTargets = new();
-    private ILocalizationService? _localizationService;
+    private ICultureService? _localizationService;
 
     public WpfAutoSettingPanel()
     {
@@ -300,19 +301,19 @@ public class WpfAutoSettingPanel : Control
     {
         if (d is WpfAutoSettingPanel panel)
         {
-            if (e.OldValue is ILocalizationService oldService)
+            if (e.OldValue is ICultureService oldService)
             {
                 oldService.CultureChanged -= panel.OnCultureChanged;
                 oldService.PropertyChanged -= panel.OnLocalizationServicePropertyChanged;
             }
             
-            if (e.NewValue is ILocalizationService newService)
+            if (e.NewValue is ICultureService newService)
             {
                 newService.CultureChanged += panel.OnCultureChanged;
                 newService.PropertyChanged += panel.OnLocalizationServicePropertyChanged;
             }
             
-            panel._localizationService = e.NewValue as ILocalizationService;
+            panel._localizationService = e.NewValue as ICultureService;
             panel.UpdateLocalizedTexts();
         }
     }
@@ -430,7 +431,7 @@ public class WpfAutoSettingPanel : Control
         }
     }
 
-    private void UpdateNavigationNodeTitle(NavigationNode node, ILocalizationService service)
+    private void UpdateNavigationNodeTitle(NavigationNode node, ICultureService service)
     {
         if (!string.IsNullOrEmpty(node.TitleKey))
         {

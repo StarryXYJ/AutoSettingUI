@@ -16,6 +16,7 @@ using AutoSettingUI.Core.Attributes;
 using AutoSettingUI.Core.Interfaces;
 using AutoSettingUI.Core.Models;
 using AutoSettingUI.Core.Providers;
+using DynamicLocalization.Core;
 
 namespace AutoSettingUI.Ursa.Controls;
 
@@ -85,8 +86,8 @@ public class UrsaAutoSettingPanel : TemplatedControl
     /// <summary>
     /// Defines the <see cref="LocalizationService"/> property.
     /// </summary>
-    public static readonly StyledProperty<ILocalizationService?> LocalizationServiceProperty =
-        AvaloniaProperty.Register<UrsaAutoSettingPanel, ILocalizationService?>(nameof(LocalizationService));
+    public static readonly StyledProperty<ICultureService?> LocalizationServiceProperty =
+        AvaloniaProperty.Register<UrsaAutoSettingPanel, ICultureService?>(nameof(LocalizationService));
 
     #endregion
 
@@ -171,7 +172,7 @@ public class UrsaAutoSettingPanel : TemplatedControl
     /// Gets or sets the localization service for dynamic language switching.
     /// When set, all text in the panel will be automatically updated when the culture changes.
     /// </summary>
-    public ILocalizationService? LocalizationService
+    public ICultureService? LocalizationService
     {
         get => GetValue(LocalizationServiceProperty);
         set => SetValue(LocalizationServiceProperty, value);
@@ -283,7 +284,7 @@ public class UrsaAutoSettingPanel : TemplatedControl
         }
     }
 
-    private void UpdateNavigationNodeTitle(NavigationNode node, ILocalizationService service)
+    private void UpdateNavigationNodeTitle(NavigationNode node, ICultureService service)
     {
         if (!string.IsNullOrEmpty(node.TitleKey))
         {
@@ -335,13 +336,13 @@ public class UrsaAutoSettingPanel : TemplatedControl
         }
         else if (change.Property == LocalizationServiceProperty)
         {
-            if (change.OldValue is ILocalizationService oldService)
+            if (change.OldValue is ICultureService oldService)
             {
                 oldService.CultureChanged -= OnCultureChanged;
                 oldService.PropertyChanged -= OnLocalizationServicePropertyChanged;
             }
             
-            if (change.NewValue is ILocalizationService newService)
+            if (change.NewValue is ICultureService newService)
             {
                 newService.CultureChanged += OnCultureChanged;
                 newService.PropertyChanged += OnLocalizationServicePropertyChanged;
