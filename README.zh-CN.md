@@ -156,7 +156,7 @@ AotSettingRegistry.Accessor = AotSettingRegistry.Provider;
 
 ## 国际化（i18n）
 
-AutoSettingUI 通过 `ILocalizationService` 接口支持动态语言切换。
+AutoSettingUI 通过 [DynamicLocalization](https://github.com/StarryXYJ/DynamicLocalization) 支持动态语言切换。
 
 ### 使用资源键
 
@@ -199,16 +199,23 @@ public static class Strings
 **3. 配置本地化服务：**
 
 ```csharp
-using AutoSettingUI.Core.Interfaces;
-using AutoSettingUI.Core.Services;
+using DynamicLocalization.Core;
+using DynamicLocalization.Core.Providers;
 
 public class MainViewModel
 {
-    public ILocalizationService LocalizationService { get; }
+    public ICultureService LocalizationService { get; }
 
     public MainViewModel()
     {
-        LocalizationService = new ResxLocalizationService(Strings.ResourceManager);
+        var cultureService = new CultureService();
+        var resxProvider = new ResxLocalizationProvider();
+        resxProvider.Initialize(new ResxLocalizationProviderOptions
+        {
+            ResourceType = typeof(Strings)
+        });
+        cultureService.RegisterProvider(resxProvider);
+        LocalizationService = cultureService;
     }
 
     public void SwitchToEnglish() => LocalizationService.SetCulture("en");
@@ -224,12 +231,17 @@ public class MainViewModel
     LocalizationService="{Binding LocalizationService}" />
 ```
 
-### 本地化服务
+### 本地化数据源
 
-| 服务 | 说明 |
-|------|------|
-| `ResxLocalizationService` | 使用 .NET .resx 资源文件 |
-| `DictionaryLocalizationService` | 基于内存字典的翻译 |
+DynamicLocalization 支持多种翻译数据源：
+
+| 提供者 | 说明 |
+|--------|------|
+| `ResxLocalizationProvider` | 使用 .NET .resx 资源文件 |
+| `JsonLocalizationProvider` | 基于 JSON 文件的翻译 |
+| 自定义提供者 | 实现 `ILocalizationProvider` 接口，支持数据库、API 等 |
+
+更多数据源和高级用法，请参阅 [DynamicLocalization](https://github.com/StarryXYJ/DynamicLocalization)。
 
 ## 可用特性一览
 

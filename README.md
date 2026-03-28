@@ -156,7 +156,7 @@ AotSettingRegistry.Accessor = AotSettingRegistry.Provider;
 
 ## Internationalization (i18n)
 
-AutoSettingUI supports dynamic language switching powered by [DynamicLocalization](https://github.com/StarryXYJ/Avalonia.DynamicLocalization).
+AutoSettingUI supports dynamic language switching powered by [DynamicLocalization](https://github.com/StarryXYJ/DynamicLocalization).
 
 ### Using Resource Keys
 
@@ -233,12 +233,15 @@ public class MainViewModel
 
 ### Localization Providers
 
+DynamicLocalization supports multiple data sources for translations:
+
 | Provider | Description |
 |----------|-------------|
 | `ResxLocalizationProvider` | Uses .NET .resx resource files |
 | `JsonLocalizationProvider` | JSON file-based translations |
+| Custom Provider | Implement `ILocalizationProvider` for database, API, etc. |
 
-For more providers and advanced usage, see [DynamicLocalization](https://github.com/StarryXYJ/Avalonia.DynamicLocalization).
+For more providers and advanced usage, see [DynamicLocalization](https://github.com/StarryXYJ/DynamicLocalization).
 
 ## Available Attributes
 
