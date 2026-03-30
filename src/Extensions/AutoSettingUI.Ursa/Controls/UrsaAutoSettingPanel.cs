@@ -36,6 +36,7 @@ public class UrsaAutoSettingPanel : TemplatedControl
     private readonly List<UrsaDelegateCommand> _commands = new();
     private readonly List<INotifyPropertyChanged> _subscribedTargets = new();
     private readonly List<(global::Avalonia.Controls.Control Control, Func<bool> IsReadOnlyGetter)> _readOnlyControls = new();
+    private readonly List<(global::Avalonia.Controls.Control Control, Func<bool> IsVisibleGetter)> _visibilityControls = new();
     private readonly List<(TextBlock TextBlock, string? ResourceKey, string FallbackText)> _localizedTextBlocks = new();
     private readonly List<(global::Avalonia.Controls.Control Control, string? PlaceholderKey, string? PlaceholderFallback)> _localizedPlaceholders = new();
 
@@ -211,6 +212,10 @@ public class UrsaAutoSettingPanel : TemplatedControl
             {
                 toggleButton.IsEnabled = !isReadOnly;
             }
+            else if (control is CheckBox checkBox)
+            {
+                checkBox.IsEnabled = !isReadOnly;
+            }
             else if (control is ComboBox comboBox)
             {
                 comboBox.IsEnabled = !isReadOnly;
@@ -223,11 +228,21 @@ public class UrsaAutoSettingPanel : TemplatedControl
             {
                 button.IsEnabled = !isReadOnly;
             }
+            else if (control is global::Ursa.Controls.NumericUpDown numericUpDown)
+            {
+                numericUpDown.IsEnabled = !isReadOnly;
+            }
             else
             {
                 // Generic fallback
                 control.IsEnabled = !isReadOnly;
             }
+        }
+
+        // Update IsVisible state for controls with dynamic visibility
+        foreach (var (control, isVisibleGetter) in _visibilityControls)
+        {
+            control.IsVisible = isVisibleGetter();
         }
     }
 
@@ -506,6 +521,7 @@ public class UrsaAutoSettingPanel : TemplatedControl
         _sectionControlMap.Clear();
         _commands.Clear();
         _readOnlyControls.Clear();
+        _visibilityControls.Clear();
         _localizedTextBlocks.Clear();
         _localizedPlaceholders.Clear();
 
@@ -813,7 +829,7 @@ public class UrsaAutoSettingPanel : TemplatedControl
                 // Track dynamic ReadOnly controls for refresh
                 if (prop.IsReadOnlyDynamic && !string.IsNullOrEmpty(prop.ReadOnlyMethodName))
                 {
-                    _readOnlyControls.Add((comboBox, () => !IsEffectivelyReadOnly(prop, target)));
+                    _readOnlyControls.Add((comboBox, () => IsEffectivelyReadOnly(prop, target)));
                 }
 
                 control = comboBox;
@@ -836,7 +852,7 @@ public class UrsaAutoSettingPanel : TemplatedControl
                 // Track dynamic ReadOnly controls for refresh
                 if (prop.IsReadOnlyDynamic && !string.IsNullOrEmpty(prop.ReadOnlyMethodName))
                 {
-                    _readOnlyControls.Add((toggleSwitch, () => !IsEffectivelyReadOnly(prop, target)));
+                    _readOnlyControls.Add((toggleSwitch, () => IsEffectivelyReadOnly(prop, target)));
                 }
 
                 control = toggleSwitch;
@@ -857,6 +873,13 @@ public class UrsaAutoSettingPanel : TemplatedControl
             ApplyControlAttributes(control, prop, target);
             global::Avalonia.Controls.Grid.SetColumn(control, 1);
             panel.Children.Add(control);
+        }
+
+        // Handle dynamic visibility
+        if (prop.IsHideDynamic && !string.IsNullOrEmpty(prop.HideMethodName))
+        {
+            panel.IsVisible = !IsPropertyHidden(prop, target);
+            _visibilityControls.Add((panel, () => !IsPropertyHidden(prop, target)));
         }
 
         return panel;
@@ -900,6 +923,7 @@ public class UrsaAutoSettingPanel : TemplatedControl
             button.IsEnabled = CanExecuteDelegate(prop, target);
 
             // Track button for dynamic IsEnabled updates (similar to ReadOnly controls)
+            // Note: For buttons, we use the inverse logic: CanExecute returns true when enabled
             _readOnlyControls.Add((button, () => !CanExecuteDelegate(prop, target)));
         }
 
@@ -1019,6 +1043,38 @@ public class UrsaAutoSettingPanel : TemplatedControl
         if (!string.IsNullOrEmpty(prop.DescriptionText))
         {
             ToolTip.SetTip(control, prop.DescriptionText);
+        }
+
+        // Handle dynamic ReadOnly for ControlBinding controls
+        if (prop.IsReadOnlyDynamic && !string.IsNullOrEmpty(prop.ReadOnlyMethodName))
+        {
+            var isReadOnly = IsEffectivelyReadOnly(prop, target);
+            if (control is TextBox tb)
+            {
+                tb.IsReadOnly = isReadOnly;
+            }
+            else if (control is global::Avalonia.Controls.Primitives.ToggleButton toggleButton)
+            {
+                toggleButton.IsEnabled = !isReadOnly;
+            }
+            else if (control is CheckBox checkBox)
+            {
+                checkBox.IsEnabled = !isReadOnly;
+            }
+            else if (control is ComboBox comboBox)
+            {
+                comboBox.IsEnabled = !isReadOnly;
+            }
+            else if (control is global::Ursa.Controls.NumericUpDown numericUpDown)
+            {
+                numericUpDown.IsEnabled = !isReadOnly;
+            }
+            else
+            {
+                control.IsEnabled = !isReadOnly;
+            }
+            
+            _readOnlyControls.Add((control, () => IsEffectivelyReadOnly(prop, target)));
         }
 
         // Fix for TagInput: prevent infinite width constraint crash
@@ -1542,17 +1598,59 @@ public class UrsaAutoSettingPanel : TemplatedControl
         // If dynamic method is specified, call that
         if (prop.IsReadOnlyDynamic && !string.IsNullOrEmpty(prop.ReadOnlyMethodName))
         {
+            // First try to find a method
             var method = target.GetType().GetMethod(prop.ReadOnlyMethodName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
             if (method != null)
-                {
+            {
                 var result = method.IsStatic
                     ? method.Invoke(null, null)
                     : method.Invoke(target, null);
                 return result is bool b && b;
             }
+
+            // If no method found, try to find a property
+            var property = target.GetType().GetProperty(prop.ReadOnlyMethodName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+            if (property != null)
+            {
+                var result = property.GetMethod != null && property.GetMethod.IsStatic
+                    ? property.GetValue(null)
+                    : property.GetValue(target);
+                return result is bool b && b;
+            }
         }
 
         return prop.IsReadOnly;
+    }
+
+    /// <summary>
+    /// Determines if a property should be hidden based on Hide attribute.
+    /// </summary>
+    private bool IsPropertyHidden(Core.Models.PropertyDescriptor prop, object target)
+    {
+        if (prop.IsHideDynamic && !string.IsNullOrEmpty(prop.HideMethodName))
+        {
+            // First try to find a method
+            var method = target.GetType().GetMethod(prop.HideMethodName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+            if (method != null)
+            {
+                var result = method.IsStatic
+                    ? method.Invoke(null, null)
+                    : method.Invoke(target, null);
+                return result is bool b && b;
+            }
+
+            // If no method found, try to find a property
+            var property = target.GetType().GetProperty(prop.HideMethodName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+            if (property != null)
+            {
+                var result = property.GetMethod != null && property.GetMethod.IsStatic
+                    ? property.GetValue(null)
+                    : property.GetValue(target);
+                return result is bool b && b;
+            }
+        }
+
+        return prop.IsHidden;
     }
 
     /// <summary>

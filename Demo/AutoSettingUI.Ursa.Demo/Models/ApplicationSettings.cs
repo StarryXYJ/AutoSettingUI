@@ -36,10 +36,12 @@ public partial class ApplicationSettings:ObservableObject
     private bool _enableLogging;
 
     [Title("Settings.LogLevel", UseResourceKey = true)]
+    [Hide(nameof(ShouldHideLogging))]
     public LogLevel LogLevel { get; set; } = LogLevel.Info;
 
     [Title("Settings.MaxLogSize", UseResourceKey = true)]
     [Range(1, 100)]
+    [Hide(nameof(ShouldHideLogging))]
     public int MaxLogSize { get; set; } = 10;
 
     [Title("Settings.Volume", UseResourceKey = true)]
@@ -48,6 +50,9 @@ public partial class ApplicationSettings:ObservableObject
 
     [Hide]
     public string InternalId { get; set; } = Guid.NewGuid().ToString();
+
+    public bool ShouldHideLogging => !EnableLogging;
+
     public Slider VolumeFactory()
     {
         var slider = new Slider
@@ -66,18 +71,9 @@ public partial class ApplicationSettings:ObservableObject
 /// </summary>
 [SettingUI]
 
-public class UserPreferences : INotifyPropertyChanged
+public partial class UserPreferences : ObservableObject
 {
-    private bool _isAdmin = true;
     private string _email = "";
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    protected virtual void OnPropertyChanged(string propertyName)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
-    
     
     [SubHeader("Display")]
     [Title("Theme")]
@@ -109,32 +105,40 @@ public class UserPreferences : INotifyPropertyChanged
     [SubHeader("ReadOnly Examples")]
     [Title("Read-Only Field")]
     [ReadOnly(true)]
-    public string ReadOnlyField { get; set; } = "This field is read-only";
+    [ObservableProperty]
+    private string _readOnlyField  = "This field is read-only";
 
     [Title("Dynamic ReadOnly")]
     [ReadOnly(nameof(CanEdit))]
-    public string DynamicReadOnlyField { get; set; } = "Only editable by admins";
+    [ObservableProperty]
+    private string _dynamicReadOnlyField= "Only editable by admins";
+
+    [Title("Dynamic ReadOnly")]
+    [ReadOnly(nameof(CanEdit))]
+    [ObservableProperty]
+    [NumericUpDown(Minimum = 0, Maximum = 100, Increment = 1)]
+    private int _dynamicReadOnlyFieldInt= 42;
 
     [ControlBinding(typeof(CheckBox), "IsChecked")]
-    public bool IsAdmin
-    {
-        get => _isAdmin;
-        set
-        {
-            if (_isAdmin != value)
-            {
-                _isAdmin = value;
-                OnPropertyChanged(nameof(IsAdmin));
-            }
-        }
-    }
+    [ObservableProperty]
+    private bool _isAdmin = true;
 
     [SubHeader("Notifications")]
     [Title("Enable Notifications")]
-    public bool EnableNotifications { get; set; } = true;
+    [ObservableProperty]
+    private bool _enableNotifications = true;
 
     [Title("Notification Sound")]
+    [Hide(nameof(ShouldHideNotifications))]
     public bool NotificationSound { get; set; } = true;
+
+    [Title("Notification Email")]
+    [Description("Email address for sending notifications")]
+    [Hide(nameof(ShouldHideNotifications))]
+    [Placeholder("notifications@example.com")]
+    public string NotificationEmail { get; set; } = "";
+
+    public bool ShouldHideNotifications => !EnableNotifications;
 
     [Title("Email Address")]
     [Description("Your email address for notifications and account recovery")]

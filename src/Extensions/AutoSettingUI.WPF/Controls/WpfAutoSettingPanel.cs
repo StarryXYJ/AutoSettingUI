@@ -128,6 +128,7 @@ public class WpfAutoSettingPanel : Control
     private readonly Dictionary<string, FrameworkElement> _sectionControlMap = new();
     private IEnumerable? _previousTargets;
     private readonly List<(FrameworkElement Control, Func<bool> IsReadOnlyGetter)> _readOnlyControls = new();
+    private readonly List<(FrameworkElement Control, Func<bool> IsVisibleGetter)> _visibilityControls = new();
     private readonly List<(TextBlock TextBlock, string? ResourceKey, string FallbackText)> _localizedTextBlocks = new();
     private readonly List<(FrameworkElement Control, string? PlaceholderKey, string? PlaceholderFallback)> _localizedPlaceholders = new();
     private readonly HashSet<INotifyPropertyChanged> _subscribedTargets = new();
@@ -380,11 +381,22 @@ public class WpfAutoSettingPanel : Control
                 control.IsEnabled = !isReadOnly;
             }
         }
+
+        // Update Visibility state for controls with dynamic visibility
+        foreach (var (control, isVisibleGetter) in _visibilityControls)
+        {
+            control.Visibility = isVisibleGetter() ? Visibility.Visible : Visibility.Collapsed;
+        }
     }
 
     private void OnReadOnlyControlCreated(FrameworkElement control, Func<bool> isReadOnlyGetter)
     {
         _readOnlyControls.Add((control, isReadOnlyGetter));
+    }
+
+    private void OnVisibilityControlCreated(FrameworkElement control, Func<bool> isVisibleGetter)
+    {
+        _visibilityControls.Add((control, isVisibleGetter));
     }
 
     private void OnCultureChanged(object? sender, CultureChangedEventArgs e)
@@ -497,6 +509,7 @@ public class WpfAutoSettingPanel : Control
         _formSections.Clear();
         _sectionControlMap.Clear();
         _readOnlyControls.Clear();
+        _visibilityControls.Clear();
         _localizedTextBlocks.Clear();
         _localizedPlaceholders.Clear();
         
@@ -535,6 +548,7 @@ public class WpfAutoSettingPanel : Control
             // Create factory with class descriptor for default factory support
             var factory = new WpfControlFactory(descriptor, PropertyAccessor);
             factory.ReadOnlyControlCreated += OnReadOnlyControlCreated;
+            factory.VisibilityControlCreated += OnVisibilityControlCreated;
 
             var classSectionId = $"class_{classIndex}";
             

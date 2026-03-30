@@ -252,6 +252,7 @@ DynamicLocalization 支持多种翻译数据源：
 | `[Title]`          | 属性   | 设置属性标签               |
 | `[SubHeader]`      | 属性   | 创建子分区                 |
 | `[Hide]`           | 属性   | 从 UI 中隐藏               |
+| `[VisibleIf]`      | 属性   | 条件显示（基于方法返回值） |
 | `[Range]`          | 属性   | 数值范围（渲染为滑块）     |
 | `[ItemsSource]`    | 属性   | 下拉框数据源               |
 | `[ControlBinding]` | 属性   | 自定义控件绑定             |

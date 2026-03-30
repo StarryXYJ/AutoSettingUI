@@ -142,6 +142,42 @@ public string InternalId { get; set; } = Guid.NewGuid().ToString();
 
 ---
 
+## `[VisibleIf]`
+
+Conditionally shows or hides a property based on a method's return value.
+
+**Target:** `Property | Field`
+
+| Parameter         | Type     | Description                                                              |
+| ----------------- | -------- | ------------------------------------------------------------------------ |
+| `methodName` (ctor) | `string` | Name of the method that returns a boolean indicating visibility.       |
+
+The method must be parameterless and return `bool`. When the method returns `true`, the property is visible; when `false`, it is hidden.
+
+```csharp
+[SettingUI]
+public class ProxySettings
+{
+    [Title("Use Proxy")]
+    public bool UseProxy { get; set; }
+
+    [Title("Proxy Address")]
+    [VisibleIf(nameof(ShouldShowProxySettings))]
+    public string ProxyAddress { get; set; } = "";
+
+    [Title("Proxy Port")]
+    [VisibleIf(nameof(ShouldShowProxySettings))]
+    public int ProxyPort { get; set; } = 8080;
+
+    // This method controls the visibility of ProxyAddress and ProxyPort
+    public bool ShouldShowProxySettings() => UseProxy;
+}
+```
+
+> **Note:** The visibility is updated automatically when any property in the settings class changes. Make sure your settings class implements `INotifyPropertyChanged` (or uses `[ObservableProperty]` from CommunityToolkit.Mvvm) for real-time updates.
+
+---
+
 ## `[Range]`
 
 Specifies minimum and maximum bounds for a numeric property. The panel will render a slider when this attribute is present.
