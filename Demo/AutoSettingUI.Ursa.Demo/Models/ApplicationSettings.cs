@@ -66,7 +66,7 @@ public partial class ApplicationSettings:ObservableObject
 /// </summary>
 [SettingUI]
 
-public class UserPreferences : INotifyPropertyChanged
+public partial class UserPreferences : ObservableObject
 {
     private bool _isAdmin = true;
     private string _email = "";
@@ -113,7 +113,14 @@ public class UserPreferences : INotifyPropertyChanged
 
     [Title("Dynamic ReadOnly")]
     [ReadOnly(nameof(CanEdit))]
-    public string DynamicReadOnlyField { get; set; } = "Only editable by admins";
+    [ObservableProperty]
+    public string _dynamicReadOnlyField= "Only editable by admins";
+
+    [Title("Dynamic ReadOnly")]
+    [ReadOnly(nameof(CanEdit))]
+    [ObservableProperty]
+    [NumericUpDown(Minimum = 0, Maximum = 100, Increment = 1)]
+    public int _dynamicReadOnlyFieldInt= 42;
 
     [ControlBinding(typeof(CheckBox), "IsChecked")]
     public bool IsAdmin

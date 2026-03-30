@@ -120,6 +120,16 @@ public sealed class PropertyDescriptor
     public bool IsReadOnlyDynamic => !string.IsNullOrEmpty(ReadOnlyMethodName);
 
     /// <summary>
+    /// Gets the name of the method that returns whether the property should be visible.
+    /// </summary>
+    public string? VisibleIfMethodName { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether the visibility is determined dynamically.
+    /// </summary>
+    public bool IsVisibleDynamic => !string.IsNullOrEmpty(VisibleIfMethodName);
+
+    /// <summary>
     /// Gets the collection editor type name, if specified.
     /// </summary>
     public string? CollectionEditorTypeName { get; }
@@ -300,6 +310,7 @@ public sealed class PropertyDescriptor
         string? canExecuteMethodName = null,
         bool isReadOnly = false,
         string? readOnlyMethodName = null,
+        string? visibleIfMethodName = null,
         string? collectionEditorTypeName = null,
         string? collectionEditorFactoryMethod = null,
         bool collectionAllowAdd = true,
@@ -350,6 +361,7 @@ public sealed class PropertyDescriptor
         CanExecuteMethodName = canExecuteMethodName;
         IsReadOnly = isReadOnly;
         ReadOnlyMethodName = readOnlyMethodName;
+        VisibleIfMethodName = visibleIfMethodName;
         CollectionEditorTypeName = collectionEditorTypeName;
         CollectionEditorFactoryMethod = collectionEditorFactoryMethod;
         CollectionAllowAdd = collectionAllowAdd;

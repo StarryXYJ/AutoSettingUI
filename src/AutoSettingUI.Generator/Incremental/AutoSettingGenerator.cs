@@ -27,6 +27,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
     private const string ControlBindingAttributeName = "ControlBindingAttribute";
     private const string CommandCanExecuteAttributeName = "CommandCanExecuteAttribute";
     private const string ReadOnlyAttributeName = "ReadOnlyAttribute";
+    private const string VisibleIfAttributeName = "VisibleIfAttribute";
     private const string CollectionEditorAttributeName = "CollectionEditorAttribute";
     private const string PlaceholderAttributeName = "PlaceholderAttribute";
     private const string DescriptionAttributeName = "DescriptionAttribute";
@@ -490,6 +491,10 @@ public class AutoSettingGenerator : IIncrementalGenerator
                 }
             }
 
+            // VisibleIf
+            var visibleIfAttr = GetAttr(prop, VisibleIfAttributeName);
+            var visibleIfMethodName = GetConstructorArgRaw(visibleIfAttr, 0);
+
             // Placeholder / Description / Password
             var placeholderAttr = GetAttr(prop, PlaceholderAttributeName);
             var placeholderText = GetConstructorArgString(placeholderAttr, 0);
@@ -660,6 +665,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
             sb.AppendLine($"                {(canExecuteMethodName != null ? $"\"{canExecuteMethodName}\"" : "null")},");
             sb.AppendLine($"                {(isReadOnly ? "true" : "false")},");
             sb.AppendLine($"                {(readOnlyMethodName != null ? $"\"{readOnlyMethodName}\"" : "null")},");
+            sb.AppendLine($"                {(visibleIfMethodName != null ? $"\"{visibleIfMethodName}\"" : "null")},");
             sb.AppendLine($"                {(collEditorTypeName != null ? $"\"{collEditorTypeName}\"" : "null")},");
             sb.AppendLine($"                {(collEditorFactoryMethod != null ? $"\"{collEditorFactoryMethod}\"" : "null")},");
             sb.AppendLine($"                {(collAllowAdd ? "true" : "false")},");

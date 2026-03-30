@@ -23,6 +23,11 @@ public class WpfControlFactory
     public event Action<FrameworkElement, Func<bool>>? ReadOnlyControlCreated;
 
     /// <summary>
+    /// Event raised when a control with dynamic visibility state is created.
+    /// </summary>
+    public event Action<FrameworkElement, Func<bool>>? VisibilityControlCreated;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="WpfControlFactory"/> class.
     /// </summary>
     public WpfControlFactory()
@@ -79,7 +84,11 @@ public class WpfControlFactory
         if (prop.IsEnum)
         {
             var control = CreateEnumControl(prop, target);
-            if (control is FrameworkElement fe) ApplyAttributes(fe, prop, target);
+            if (control is FrameworkElement fe)
+            {
+                ApplyAttributes(fe, prop, target);
+                CheckAndRaiseVisibilityEvent(fe, prop, target);
+            }
             return control;
         }
 
@@ -89,7 +98,11 @@ public class WpfControlFactory
         {
             // Use ToggleButton as default for bool in WPF as requested
             var control = CreateToggleButtonControl(prop, target);
-            if (control is FrameworkElement fe) ApplyAttributes(fe, prop, target);
+            if (control is FrameworkElement fe)
+            {
+                ApplyAttributes(fe, prop, target);
+                CheckAndRaiseVisibilityEvent(fe, prop, target);
+            }
             return control;
         }
 
@@ -98,28 +111,56 @@ public class WpfControlFactory
             typeName == "system.double" || typeName == "double")
         {
             var control = CreateNumericControl(prop, target);
-            if (control is FrameworkElement fe) ApplyAttributes(fe, prop, target);
+            if (control is FrameworkElement fe)
+            {
+                ApplyAttributes(fe, prop, target);
+                CheckAndRaiseVisibilityEvent(fe, prop, target);
+            }
             return control;
         }
 
         if (typeName == "system.string" || typeName == "string")
         {
             var control = CreateStringControl(prop, target);
-            if (control is FrameworkElement fe) ApplyAttributes(fe, prop, target);
+            if (control is FrameworkElement fe)
+            {
+                ApplyAttributes(fe, prop, target);
+                CheckAndRaiseVisibilityEvent(fe, prop, target);
+            }
             return control;
         }
 
         if (typeName == "system.datetime" || typeName.Contains("datetime"))
         {
             var control = CreateDateTimeControl(prop, target);
-            if (control is FrameworkElement fe) ApplyAttributes(fe, prop, target);
+            if (control is FrameworkElement fe)
+            {
+                ApplyAttributes(fe, prop, target);
+                CheckAndRaiseVisibilityEvent(fe, prop, target);
+            }
             return control;
         }
 
         // Default to text box
         var textBoxControl = CreateTextBox(prop, target);
-        if (textBoxControl is FrameworkElement textBoxFe) ApplyAttributes(textBoxFe, prop, target);
+        if (textBoxControl is FrameworkElement textBoxFe)
+        {
+            ApplyAttributes(textBoxFe, prop, target);
+            CheckAndRaiseVisibilityEvent(textBoxFe, prop, target);
+        }
         return textBoxControl;
+    }
+
+    /// <summary>
+    /// Checks if the property has dynamic visibility and raises the VisibilityControlCreated event.
+    /// </summary>
+    private void CheckAndRaiseVisibilityEvent(FrameworkElement control, PropertyDescriptor prop, object target)
+    {
+        if (prop.IsVisibleDynamic && !string.IsNullOrEmpty(prop.VisibleIfMethodName))
+        {
+            control.Visibility = IsEffectivelyVisible(prop, target) ? Visibility.Visible : Visibility.Collapsed;
+            VisibilityControlCreated?.Invoke(control, () => IsEffectivelyVisible(prop, target));
+        }
     }
 
     private UIElement CreateBooleanControl(PropertyDescriptor prop, object target)
@@ -1024,6 +1065,26 @@ public class WpfControlFactory
         }
 
         return prop.IsReadOnly;
+    }
+
+    /// <summary>
+    /// Determines if a property should be visible based on VisibleIf attribute.
+    /// </summary>
+    private bool IsEffectivelyVisible(PropertyDescriptor prop, object target)
+    {
+        if (prop.IsVisibleDynamic && !string.IsNullOrEmpty(prop.VisibleIfMethodName))
+        {
+            var method = target.GetType().GetMethod(prop.VisibleIfMethodName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+            if (method != null)
+            {
+                var result = method.IsStatic
+                    ? method.Invoke(null, null)
+                    : method.Invoke(target, null);
+                return result is bool b && b;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>

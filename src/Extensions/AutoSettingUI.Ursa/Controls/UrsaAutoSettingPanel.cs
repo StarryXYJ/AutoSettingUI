@@ -36,6 +36,7 @@ public class UrsaAutoSettingPanel : TemplatedControl
     private readonly List<UrsaDelegateCommand> _commands = new();
     private readonly List<INotifyPropertyChanged> _subscribedTargets = new();
     private readonly List<(global::Avalonia.Controls.Control Control, Func<bool> IsReadOnlyGetter)> _readOnlyControls = new();
+    private readonly List<(global::Avalonia.Controls.Control Control, Func<bool> IsVisibleGetter)> _visibilityControls = new();
     private readonly List<(TextBlock TextBlock, string? ResourceKey, string FallbackText)> _localizedTextBlocks = new();
     private readonly List<(global::Avalonia.Controls.Control Control, string? PlaceholderKey, string? PlaceholderFallback)> _localizedPlaceholders = new();
 
@@ -228,6 +229,12 @@ public class UrsaAutoSettingPanel : TemplatedControl
                 // Generic fallback
                 control.IsEnabled = !isReadOnly;
             }
+        }
+
+        // Update IsVisible state for controls with dynamic visibility
+        foreach (var (control, isVisibleGetter) in _visibilityControls)
+        {
+            control.IsVisible = isVisibleGetter();
         }
     }
 
@@ -506,6 +513,7 @@ public class UrsaAutoSettingPanel : TemplatedControl
         _sectionControlMap.Clear();
         _commands.Clear();
         _readOnlyControls.Clear();
+        _visibilityControls.Clear();
         _localizedTextBlocks.Clear();
         _localizedPlaceholders.Clear();
 
@@ -857,6 +865,13 @@ public class UrsaAutoSettingPanel : TemplatedControl
             ApplyControlAttributes(control, prop, target);
             global::Avalonia.Controls.Grid.SetColumn(control, 1);
             panel.Children.Add(control);
+        }
+
+        // Handle dynamic visibility
+        if (prop.IsVisibleDynamic && !string.IsNullOrEmpty(prop.VisibleIfMethodName))
+        {
+            panel.IsVisible = IsPropertyVisible(prop, target);
+            _visibilityControls.Add((panel, () => IsPropertyVisible(prop, target)));
         }
 
         return panel;
@@ -1553,6 +1568,26 @@ public class UrsaAutoSettingPanel : TemplatedControl
         }
 
         return prop.IsReadOnly;
+    }
+
+    /// <summary>
+    /// Determines if a property should be visible based on VisibleIf attribute.
+    /// </summary>
+    private bool IsPropertyVisible(Core.Models.PropertyDescriptor prop, object target)
+    {
+        if (prop.IsVisibleDynamic && !string.IsNullOrEmpty(prop.VisibleIfMethodName))
+        {
+            var method = target.GetType().GetMethod(prop.VisibleIfMethodName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+            if (method != null)
+            {
+                var result = method.IsStatic
+                    ? method.Invoke(null, null)
+                    : method.Invoke(target, null);
+                return result is bool b && b;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>

@@ -127,6 +127,7 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
             var controlBindingDefaults = GetControlBindingDefaults(prop);
             var commandCanExecuteAttr = prop.GetCustomAttribute<CommandCanExecuteAttribute>();
             var readOnlyAttr = prop.GetCustomAttribute<ReadOnlyAttribute>();
+            var visibleIfAttr = prop.GetCustomAttribute<VisibleIfAttribute>();
             var collectionEditorAttr = prop.GetCustomAttribute<CollectionEditorAttribute>();
             var placeholderAttr = prop.GetCustomAttribute<PlaceholderAttribute>();
             var descriptionAttr = prop.GetCustomAttribute<DescriptionAttribute>();
@@ -174,6 +175,7 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
                 commandCanExecuteAttr?.MethodName,
                 readOnlyAttr?.IsReadOnly ?? false,
                 readOnlyAttr?.MethodName,
+                visibleIfAttr?.MethodName,
                 collectionEditorAttr?.EditorType?.AssemblyQualifiedName,
                 collectionEditorAttr?.FactoryMethod,
                 collectionEditorAttr?.AllowAdd ?? true,
