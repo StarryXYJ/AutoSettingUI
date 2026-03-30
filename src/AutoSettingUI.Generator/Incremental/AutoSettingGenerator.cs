@@ -27,7 +27,6 @@ public class AutoSettingGenerator : IIncrementalGenerator
     private const string ControlBindingAttributeName = "ControlBindingAttribute";
     private const string CommandCanExecuteAttributeName = "CommandCanExecuteAttribute";
     private const string ReadOnlyAttributeName = "ReadOnlyAttribute";
-    private const string VisibleIfAttributeName = "VisibleIfAttribute";
     private const string CollectionEditorAttributeName = "CollectionEditorAttribute";
     private const string PlaceholderAttributeName = "PlaceholderAttribute";
     private const string DescriptionAttributeName = "DescriptionAttribute";
@@ -348,7 +347,15 @@ public class AutoSettingGenerator : IIncrementalGenerator
         foreach (var item in propsWithOrder.OrderBy(p => p.DisplayOrder).ThenBy(p => p.DeclarationOrder))
         {
             var prop = item.Property;
-            if (GetAttr(prop, HideAttributeName) != null) continue;
+            var hideAttr = GetAttr(prop, HideAttributeName);
+            if (hideAttr != null)
+            {
+                // Check if it's dynamic hide (has constructor argument)
+                var hideMethodNameCheck = GetConstructorArgRaw(hideAttr, 0);
+                if (hideMethodNameCheck == null)
+                    continue; // Static hide, skip this property
+                // Dynamic hide will be handled below
+            }
 
             var subHeaderAttr = GetAttr(prop, SubHeaderAttributeName);
             if (subHeaderAttr != null)
@@ -491,9 +498,17 @@ public class AutoSettingGenerator : IIncrementalGenerator
                 }
             }
 
-            // VisibleIf
-            var visibleIfAttr = GetAttr(prop, VisibleIfAttributeName);
-            var visibleIfMethodName = GetConstructorArgRaw(visibleIfAttr, 0);
+            // Hide (supports both static and dynamic)
+            bool isHidden = false;
+            string? hideMethodName = null;
+            if (hideAttr != null && hideAttr.ConstructorArguments.Length > 0)
+            {
+                var arg = hideAttr.ConstructorArguments[0];
+                if (arg.Value is bool boolVal)
+                    isHidden = boolVal;
+                else if (arg.Value is string strVal)
+                    hideMethodName = strVal;
+            }
 
             // Placeholder / Description / Password
             var placeholderAttr = GetAttr(prop, PlaceholderAttributeName);
@@ -665,7 +680,8 @@ public class AutoSettingGenerator : IIncrementalGenerator
             sb.AppendLine($"                {(canExecuteMethodName != null ? $"\"{canExecuteMethodName}\"" : "null")},");
             sb.AppendLine($"                {(isReadOnly ? "true" : "false")},");
             sb.AppendLine($"                {(readOnlyMethodName != null ? $"\"{readOnlyMethodName}\"" : "null")},");
-            sb.AppendLine($"                {(visibleIfMethodName != null ? $"\"{visibleIfMethodName}\"" : "null")},");
+            sb.AppendLine($"                {(isHidden ? "true" : "false")},");
+            sb.AppendLine($"                {(hideMethodName != null ? $"\"{hideMethodName}\"" : "null")},");
             sb.AppendLine($"                {(collEditorTypeName != null ? $"\"{collEditorTypeName}\"" : "null")},");
             sb.AppendLine($"                {(collEditorFactoryMethod != null ? $"\"{collEditorFactoryMethod}\"" : "null")},");
             sb.AppendLine($"                {(collAllowAdd ? "true" : "false")},");

@@ -156,10 +156,10 @@ public class WpfControlFactory
     /// </summary>
     private void CheckAndRaiseVisibilityEvent(FrameworkElement control, PropertyDescriptor prop, object target)
     {
-        if (prop.IsVisibleDynamic && !string.IsNullOrEmpty(prop.VisibleIfMethodName))
+        if (prop.IsHideDynamic && !string.IsNullOrEmpty(prop.HideMethodName))
         {
-            control.Visibility = IsEffectivelyVisible(prop, target) ? Visibility.Visible : Visibility.Collapsed;
-            VisibilityControlCreated?.Invoke(control, () => IsEffectivelyVisible(prop, target));
+            control.Visibility = !IsEffectivelyHidden(prop, target) ? Visibility.Visible : Visibility.Collapsed;
+            VisibilityControlCreated?.Invoke(control, () => !IsEffectivelyHidden(prop, target));
         }
     }
 
@@ -623,6 +623,30 @@ public class WpfControlFactory
                 // Auto-detect common dependency properties
                 TryAutoBind(control, prop, target, controlType);
             }
+            
+            // Handle dynamic ReadOnly for custom controls
+            if (control is FrameworkElement fe && prop.IsReadOnlyDynamic && !string.IsNullOrEmpty(prop.ReadOnlyMethodName))
+            {
+                var isReadOnly = IsEffectivelyReadOnly(prop, target);
+                if (control is TextBox textBox)
+                {
+                    textBox.IsReadOnly = isReadOnly;
+                }
+                else if (control is CheckBox checkBox)
+                {
+                    checkBox.IsEnabled = !isReadOnly;
+                }
+                else if (control is ComboBox comboBox)
+                {
+                    comboBox.IsEnabled = !isReadOnly;
+                }
+                else
+                {
+                    fe.IsEnabled = !isReadOnly;
+                }
+                ReadOnlyControlCreated?.Invoke(fe, () => IsEffectivelyReadOnly(prop, target));
+            }
+            
             return control;
         }
 
@@ -1054,6 +1078,7 @@ public class WpfControlFactory
         // If dynamic method is specified, call that
         if (prop.IsReadOnlyDynamic && !string.IsNullOrEmpty(prop.ReadOnlyMethodName))
         {
+            // First try to find a method
             var method = target.GetType().GetMethod(prop.ReadOnlyMethodName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
             if (method != null)
             {
@@ -1062,19 +1087,30 @@ public class WpfControlFactory
                     : method.Invoke(target, null);
                 return result is bool b && b;
             }
+
+            // If no method found, try to find a property
+            var property = target.GetType().GetProperty(prop.ReadOnlyMethodName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+            if (property != null)
+            {
+                var result = property.GetMethod != null && property.GetMethod.IsStatic
+                    ? property.GetValue(null)
+                    : property.GetValue(target);
+                return result is bool b && b;
+            }
         }
 
         return prop.IsReadOnly;
     }
 
     /// <summary>
-    /// Determines if a property should be visible based on VisibleIf attribute.
+    /// Determines if a property should be hidden based on Hide attribute.
     /// </summary>
-    private bool IsEffectivelyVisible(PropertyDescriptor prop, object target)
+    private bool IsEffectivelyHidden(PropertyDescriptor prop, object target)
     {
-        if (prop.IsVisibleDynamic && !string.IsNullOrEmpty(prop.VisibleIfMethodName))
+        if (prop.IsHideDynamic && !string.IsNullOrEmpty(prop.HideMethodName))
         {
-            var method = target.GetType().GetMethod(prop.VisibleIfMethodName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+            // First try to find a method
+            var method = target.GetType().GetMethod(prop.HideMethodName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
             if (method != null)
             {
                 var result = method.IsStatic
@@ -1082,9 +1118,19 @@ public class WpfControlFactory
                     : method.Invoke(target, null);
                 return result is bool b && b;
             }
+
+            // If no method found, try to find a property
+            var property = target.GetType().GetProperty(prop.HideMethodName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+            if (property != null)
+            {
+                var result = property.GetMethod != null && property.GetMethod.IsStatic
+                    ? property.GetValue(null)
+                    : property.GetValue(target);
+                return result is bool b && b;
+            }
         }
 
-        return true;
+        return prop.IsHidden;
     }
 
     /// <summary>

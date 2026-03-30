@@ -103,9 +103,10 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
         foreach (var item in sortedProps)
         {
             var prop = item.Property;
-            // Skip hidden properties
-            if (prop.GetCustomAttribute<HideAttribute>() is not null)
-                continue;
+            // Check Hide attribute (supports both static and dynamic)
+            var hideAttr = prop.GetCustomAttribute<HideAttribute>();
+            if (hideAttr is not null && !hideAttr.IsDynamic)
+                continue; // Skip statically hidden properties
 
             // SubHeader: flush previous subsection and start a new one.
             // Do NOT skip the property itself — it should be the first item in the new group.
@@ -127,7 +128,6 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
             var controlBindingDefaults = GetControlBindingDefaults(prop);
             var commandCanExecuteAttr = prop.GetCustomAttribute<CommandCanExecuteAttribute>();
             var readOnlyAttr = prop.GetCustomAttribute<ReadOnlyAttribute>();
-            var visibleIfAttr = prop.GetCustomAttribute<VisibleIfAttribute>();
             var collectionEditorAttr = prop.GetCustomAttribute<CollectionEditorAttribute>();
             var placeholderAttr = prop.GetCustomAttribute<PlaceholderAttribute>();
             var descriptionAttr = prop.GetCustomAttribute<DescriptionAttribute>();
@@ -175,7 +175,8 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
                 commandCanExecuteAttr?.MethodName,
                 readOnlyAttr?.IsReadOnly ?? false,
                 readOnlyAttr?.MethodName,
-                visibleIfAttr?.MethodName,
+                hideAttr?.IsHidden ?? false,
+                hideAttr?.MethodName,
                 collectionEditorAttr?.EditorType?.AssemblyQualifiedName,
                 collectionEditorAttr?.FactoryMethod,
                 collectionEditorAttr?.AllowAdd ?? true,
