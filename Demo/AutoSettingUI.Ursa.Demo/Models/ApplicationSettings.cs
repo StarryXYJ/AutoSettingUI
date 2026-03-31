@@ -47,12 +47,6 @@ public partial class ApplicationSettings:ObservableObject
     [Title("Settings.Volume", UseResourceKey = true)]
     [ControlBinding(typeof(global::Avalonia.Controls.Slider),"Value",nameof(VolumeFactory))]
     public double Volume { get; set; } = 50.0;
-
-    [Hide]
-    public string InternalId { get; set; } = Guid.NewGuid().ToString();
-
-    public bool ShouldHideLogging => !EnableLogging;
-
     public Slider VolumeFactory()
     {
         var slider = new Slider
@@ -64,6 +58,12 @@ public partial class ApplicationSettings:ObservableObject
         };
         return slider;
     }
+    [Hide]
+    public string InternalId { get; set; } = Guid.NewGuid().ToString();
+
+    public bool ShouldHideLogging => !EnableLogging;
+
+    
 }
 
 /// <summary>
@@ -200,18 +200,30 @@ public partial class UserPreferences : ObservableObject
 
     [SubHeader("Collection Examples")]
     [Title("Tags (Default Collection Editor)")]
+    [CollectionEditor(SelectedItemProperty = nameof(SelectedTag))]
     public ObservableCollection<string> Tags { get; set; } =  [ "Important", "Work" ];
+
+    [Title("Selected Tag")]
+    [Description("The currently selected tag from the list above")]
+    [ObservableProperty]
+    private string? _selectedTag;
 
     [Title("Versions (Read-Only Collection)")]
     [CollectionEditor(AllowAdd = false, AllowRemove = false, AllowReorder = false)]
     public ObservableCollection<string> Versions { get; set; } = ["1.0.0", "1.1.0", "2.0.0"];
 
     [Title("People (Complex Collection)")]
+    [CollectionEditor(SelectedItemProperty = nameof(SelectedPerson))]
     public ObservableCollection<Person> People { get; set; } =
     [
         new Person { Name = "John Doe", Age = 30, Email = "john@example.com" },
         new Person { Name = "Jane Smith", Age = 25, Email = "jane@example.com" }
     ];
+
+    [Title("Selected Person")]
+    [Description("The currently selected person - edit details below")]
+    [ObservableProperty]
+    private Person? _selectedPerson;
 
     public UserPreferences()
     {
@@ -364,6 +376,92 @@ public partial class ExtendedControlsSettings  : ObservableObject
     [ObservableProperty]
     [DisplayOrder(1)]
     private int _itemCount = 40;
+
+    #region ControlBinding Examples
+
+    [SubHeader("ControlBinding Examples")]
+
+    // Example 1: Auto-bind with BindingProperty specified
+    [Title("Progress (Auto-bind)")]
+    [Description("Uses ControlBinding with BindingProperty - auto binds to Value")]
+    [ControlBinding(typeof(global::Avalonia.Controls.ProgressBar), "Value")]
+    public double ProgressValue { get; set; } = 50.0;
+
+    // Example 2: Factory method with custom binding (no BindingProperty)
+    [Title("Custom Slider (Factory Method)")]
+    [Description("Factory method handles binding manually - can customize converter, etc.")]
+    [ControlBinding(typeof(global::Avalonia.Controls.Slider), FactoryMethod = nameof(CreateCustomSlider))]
+    public double CustomSliderValue { get; set; } = 75.0;
+
+    public global::Avalonia.Controls.Slider CreateCustomSlider()
+    {
+        var slider = new global::Avalonia.Controls.Slider
+        {
+            Minimum = 0,
+            Maximum = 100,
+            Width = 200
+        };
+        
+        // Custom binding with converter
+        slider.Bind(global::Avalonia.Controls.Slider.ValueProperty, 
+            new global::Avalonia.Data.Binding(nameof(CustomSliderValue)) 
+            { 
+                Source = this,
+                Mode = global::Avalonia.Data.BindingMode.TwoWay
+            });
+        
+        return slider;
+    }
+
+    // Example 3: Control type only - auto-detect binding
+    [Title("Auto-detected TextBox")]
+    [Description("Only control type specified - auto-detects Text property")]
+    [ControlBinding(typeof(global::Avalonia.Controls.TextBox))]
+    public string AutoDetectedText { get; set; } = "Auto-detected binding";
+
+    // Example 4: Factory method with complex control setup
+    [Title("Rating (Complex Factory)")]
+    [Description("Factory creates a custom rating control with full customization")]
+    [ControlBinding(typeof(global::Avalonia.Controls.StackPanel), FactoryMethod = nameof(CreateRatingControl))]
+    [ObservableProperty]
+    private int _rating = 3;
+
+    public global::Avalonia.Controls.StackPanel CreateRatingControl()
+    {
+        var panel = new global::Avalonia.Controls.StackPanel
+        {
+            Orientation = global::Avalonia.Layout.Orientation.Horizontal,
+            Spacing = 5
+        };
+
+        for (int i = 1; i <= 5; i++)
+        {
+            var starIndex = i;
+            var button = new global::Avalonia.Controls.Button
+            {
+                Content = "★",
+                FontSize = 24,
+                Width = 40,
+                Height = 40
+            };
+
+            button.Click += (s, e) => Rating = starIndex;
+            
+            // Update button appearance based on rating
+            button.Bind(global::Avalonia.Controls.Button.ForegroundProperty,
+                new global::Avalonia.Data.Binding(nameof(Rating))
+                {
+                    Source = this,
+                    Converter = new RatingConverter(starIndex)
+                });
+
+            panel.Children.Add(button);
+        }
+
+        return panel;
+    }
+
+    #endregion
 }
 
 /// <summary>
@@ -378,6 +476,35 @@ public enum AppTheme
     NightSky,
     Aquatic,
     Desert
+}
+
+/// <summary>
+/// Converter for rating control - highlights stars based on rating value.
+/// </summary>
+public class RatingConverter : global::Avalonia.Data.Converters.IValueConverter
+{
+    private readonly int _starIndex;
+
+    public RatingConverter(int starIndex)
+    {
+        _starIndex = starIndex;
+    }
+
+    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+    {
+        if (value is int rating)
+        {
+            return rating >= _starIndex 
+                ? global::Avalonia.Media.Brushes.Gold 
+                : global::Avalonia.Media.Brushes.Gray;
+        }
+        return global::Avalonia.Media.Brushes.Gray;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
 }
 
 /// <summary>

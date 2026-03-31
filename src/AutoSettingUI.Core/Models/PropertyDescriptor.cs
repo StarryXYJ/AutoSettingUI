@@ -170,6 +170,11 @@ public sealed class PropertyDescriptor
     public string? CollectionElementTypeName { get; }
 
     /// <summary>
+    /// Gets the name of the property that should be bound to the selected item.
+    /// </summary>
+    public string? CollectionSelectedItemProperty { get; }
+
+    /// <summary>
     /// Gets the placeholder text for input controls, if specified.
     /// </summary>
     public string? PlaceholderText { get; }
@@ -324,6 +329,7 @@ public sealed class PropertyDescriptor
         bool collectionAllowReorder = true,
         bool collectionAllowEditItems = true,
         string? collectionElementTypeName = null,
+        string? collectionSelectedItemProperty = null,
         string? placeholderText = null,
         string? descriptionText = null,
         bool isPassword = false,
@@ -376,6 +382,7 @@ public sealed class PropertyDescriptor
         CollectionAllowReorder = collectionAllowReorder;
         CollectionAllowEditItems = collectionAllowEditItems;
         CollectionElementTypeName = collectionElementTypeName;
+        CollectionSelectedItemProperty = collectionSelectedItemProperty;
         PlaceholderText = placeholderText;
         PlaceholderKey = placeholderKey;
         DescriptionText = descriptionText;

@@ -28,6 +28,11 @@ public class WpfControlFactory
     public event Action<FrameworkElement, Func<bool>>? VisibilityControlCreated;
 
     /// <summary>
+    /// Event raised when a control that needs value updates on property change is created.
+    /// </summary>
+    public event Action<FrameworkElement, string, object, Action<FrameworkElement, object?>>? ValueControlCreated;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="WpfControlFactory"/> class.
     /// </summary>
     public WpfControlFactory()
@@ -367,6 +372,13 @@ public class WpfControlFactory
 
         var (propertyInfo, _) = GetValidationInfo(target, prop.PropertyName);
 
+        // Register for value updates when property changes
+        ValueControlCreated?.Invoke(textBox, prop.PropertyName, target, (ctrl, val) =>
+        {
+            if (ctrl is TextBox tb)
+                tb.Text = val?.ToString() ?? "";
+        });
+
         textBox.TextChanged += (s, e) =>
         {
             var newValue = textBox.Text;
@@ -607,7 +619,7 @@ public class WpfControlFactory
 
         if (control != null)
         {
-            // Use property-specific binding property if available, otherwise try to auto-detect
+            // Use property-specific binding property if available
             var bindingProperty = prop.CustomControlBindingProperty;
             if (!string.IsNullOrEmpty(bindingProperty))
             {
@@ -618,9 +630,10 @@ public class WpfControlFactory
                     BindingOperations.SetBinding(control, dp, binding);
                 }
             }
-            else
+            else if (string.IsNullOrEmpty(factoryMethodName))
             {
-                // Auto-detect common dependency properties
+                // Auto-detect common dependency properties only when no factory method is used
+                // When factory method is used, the factory is responsible for setting up bindings
                 TryAutoBind(control, prop, target, controlType);
             }
             
@@ -901,7 +914,9 @@ public class WpfControlFactory
             MaxHeight = 150,
             Margin = new Thickness(0, 0, 0, 5),
             ItemsSource = collection as System.Collections.IEnumerable,
-            HorizontalContentAlignment = HorizontalAlignment.Stretch
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            SelectionMode = SelectionMode.Single,
+            IsSynchronizedWithCurrentItem = true
         };
 
         // Set ItemContainerStyle to make items stretch horizontally
@@ -911,10 +926,33 @@ public class WpfControlFactory
         itemContainerStyle.Setters.Add(new Setter(ListBoxItem.PaddingProperty, new Thickness(0)));
         listBox.ItemContainerStyle = itemContainerStyle;
 
+        // Bind SelectedItem if SelectedItemProperty is specified
+        if (!string.IsNullOrEmpty(prop.CollectionSelectedItemProperty))
+        {
+            var selectedItemProp = target.GetType().GetProperty(prop.CollectionSelectedItemProperty);
+            if (selectedItemProp != null)
+            {
+                listBox.SelectionChanged += (s, e) =>
+                {
+                    if (listBox.SelectedItem != null)
+                    {
+                        try
+                        {
+                            selectedItemProp.SetValue(target, listBox.SelectedItem);
+                        }
+                        catch
+                        {
+                            // Ignore setting errors
+                        }
+                    }
+                };
+            }
+        }
+
         // Create DataTemplate based on element type
         if (elementType != null)
         {
-            listBox.ItemTemplate = CreateItemDataTemplate(elementType, collection, listBox);
+            listBox.ItemTemplate = CreateItemDataTemplate(elementType, collection, listBox, prop.CollectionSelectedItemProperty, target);
         }
 
         panel.Children.Add(listBox);
@@ -1136,7 +1174,7 @@ public class WpfControlFactory
     /// <summary>
     /// Creates a DataTemplate for collection items based on element type.
     /// </summary>
-    private DataTemplate CreateItemDataTemplate(Type elementType, System.Collections.IList collection, ListBox listBox)
+    private DataTemplate CreateItemDataTemplate(Type elementType, System.Collections.IList collection, ListBox listBox, string? selectedItemPropertyName, object target)
     {
         // Simple types: TextBox directly bound
         if (elementType == typeof(string) ||
@@ -1145,17 +1183,17 @@ public class WpfControlFactory
             elementType == typeof(float) ||
             elementType.IsValueType)
         {
-            return CreateSimpleTypeDataTemplate(elementType, collection, listBox);
+            return CreateSimpleTypeDataTemplate(elementType, collection, listBox, selectedItemPropertyName, target);
         }
 
         // Complex types: generate property editors
-        return CreateComplexTypeDataTemplate(elementType, listBox);
+        return CreateComplexTypeDataTemplate(elementType, listBox, selectedItemPropertyName, target);
     }
 
     /// <summary>
     /// Creates a DataTemplate for simple types (string, int, etc.)
     /// </summary>
-    private DataTemplate CreateSimpleTypeDataTemplate(Type elementType, System.Collections.IList collection, ListBox listBox)
+    private DataTemplate CreateSimpleTypeDataTemplate(Type elementType, System.Collections.IList collection, ListBox listBox, string? selectedItemPropertyName, object target)
     {
         var template = new DataTemplate();
         var factory = new FrameworkElementFactory(typeof(TextBox));
@@ -1165,18 +1203,84 @@ public class WpfControlFactory
         factory.SetValue(TextBox.HorizontalContentAlignmentProperty, HorizontalAlignment.Left);
         factory.SetValue(TextBox.VerticalContentAlignmentProperty, VerticalAlignment.Center);
         factory.SetBinding(TextBox.TextProperty, new Binding(".") { Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
+        
+        // Add PreviewMouseDown to select the ListBoxItem when clicking on the TextBox
+        factory.AddHandler(TextBox.PreviewMouseDownEvent, new MouseButtonEventHandler((s, e) =>
+        {
+            if (s is TextBox tb)
+            {
+                var item = FindParent<ListBoxItem>(tb);
+                if (item != null)
+                {
+                    SelectItemAndUpdateProperty(listBox, item.DataContext, selectedItemPropertyName, target);
+                }
+            }
+        }));
+        
         template.VisualTree = factory;
         return template;
+    }
+
+    private static T? FindParent<T>(DependencyObject child) where T : DependencyObject
+    {
+        var parent = System.Windows.Media.VisualTreeHelper.GetParent(child);
+        while (parent != null)
+        {
+            if (parent is T result)
+                return result;
+            parent = System.Windows.Media.VisualTreeHelper.GetParent(parent);
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Selects the item in the ListBox and updates the bound property if specified.
+    /// </summary>
+    private static void SelectItemAndUpdateProperty(ListBox listBox, object? itemContext, string? selectedItemPropertyName, object target)
+    {
+        if (itemContext == null) return;
+        
+        listBox.SelectedItem = itemContext;
+        
+        // Directly set the property if specified (bypasses SelectionChanged event issues)
+        if (!string.IsNullOrEmpty(selectedItemPropertyName))
+        {
+            var selectedItemProp = target.GetType().GetProperty(selectedItemPropertyName);
+            if (selectedItemProp != null)
+            {
+                try
+                {
+                    selectedItemProp.SetValue(target, itemContext);
+                }
+                catch
+                {
+                    // Ignore setting errors
+                }
+            }
+        }
     }
 
     /// <summary>
     /// Creates a DataTemplate for complex types with multiple properties
     /// </summary>
-    private DataTemplate CreateComplexTypeDataTemplate(Type elementType, ListBox listBox)
+    private DataTemplate CreateComplexTypeDataTemplate(Type elementType, ListBox listBox, string? selectedItemPropertyName, object target)
     {
         var template = new DataTemplate();
         var outerFactory = new FrameworkElementFactory(typeof(StackPanel));
         outerFactory.SetValue(StackPanel.MarginProperty, new Thickness(0));
+        
+        // Add PreviewMouseDown to select the ListBoxItem when clicking on any element
+        outerFactory.AddHandler(StackPanel.PreviewMouseDownEvent, new MouseButtonEventHandler((s, e) =>
+        {
+            if (s is StackPanel sp)
+            {
+                var item = FindParent<ListBoxItem>(sp);
+                if (item != null)
+                {
+                    SelectItemAndUpdateProperty(listBox, item.DataContext, selectedItemPropertyName, target);
+                }
+            }
+        }));
 
         var properties = elementType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
 

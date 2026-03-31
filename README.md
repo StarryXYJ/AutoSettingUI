@@ -261,6 +261,7 @@ For more providers and advanced usage, see [DynamicLocalization](https://github.
 | `[Layout]`         | Property | Custom layout (width, height)            |
 | `[Validation]`     | Property | Custom validation method                 |
 | `[DisplayOrder]`   | Property | Controls display order (lower = first)   |
+| `[CollectionEditor]`| Property | Configures collection editing with add/remove/reorder and selected item binding |
 
 ## Extended Controls
 
@@ -278,7 +279,101 @@ For more providers and advanced usage, see [DynamicLocalization](https://github.
 
 ## Custom Control Binding
 
-Create custom control attributes by inheriting from `ControlBindingAttribute`:
+The `[ControlBinding]` attribute allows you to specify custom controls for properties. There are several ways to use it:
+
+### 1. Auto-bind with BindingProperty
+
+Specify the control type and the property to bind to:
+
+```csharp
+[ControlBinding(typeof(ProgressBar), "Value")]
+public double ProgressValue { get; set; } = 50.0;
+```
+
+This automatically creates a two-way binding between `ProgressValue` and `ProgressBar.Value`.
+
+### 2. Factory Method with Custom Binding
+
+When you need full control over the binding (e.g., custom converters, validation), use a factory method without specifying `BindingProperty`:
+
+```csharp
+[ControlBinding(typeof(Slider), FactoryMethod = nameof(CreateCustomSlider))]
+public double CustomSliderValue { get; set; } = 75.0;
+
+public Slider CreateCustomSlider()
+{
+    var slider = new Slider { Minimum = 0, Maximum = 100, Width = 200 };
+    
+    // Custom binding with your own logic
+    slider.Bind(Slider.ValueProperty, 
+        new Binding(nameof(CustomSliderValue)) 
+        { 
+            Source = this, 
+            Mode = BindingMode.TwoWay 
+        });
+    
+    return slider;
+}
+```
+
+> **Important:** When using a factory method without `BindingProperty`, the factory method is responsible for setting up bindings. The framework will not auto-bind.
+
+### 3. Control Type Only (Auto-detect)
+
+Specify only the control type, and the framework will attempt to auto-detect the binding property:
+
+```csharp
+[ControlBinding(typeof(TextBox))]
+public string AutoDetectedText { get; set; } = "Auto-detected binding";
+```
+
+The framework will try to bind to common properties like `Text`, `Value`, `IsChecked`, etc.
+
+### 4. Complex Factory Method
+
+Create fully customized controls with complete control over appearance and behavior:
+
+```csharp
+[ControlBinding(typeof(StackPanel), FactoryMethod = nameof(CreateRatingControl))]
+[ObservableProperty]
+private int _rating = 3;
+
+public StackPanel CreateRatingControl()
+{
+    var panel = new StackPanel { Orientation = Orientation.Horizontal };
+    
+    for (int i = 1; i <= 5; i++)
+    {
+        var starIndex = i;
+        var button = new Button { Content = "★", FontSize = 24 };
+        
+        button.Click += (s, e) => Rating = starIndex;
+        button.Bind(Button.ForegroundProperty,
+            new Binding(nameof(Rating))
+            {
+                Source = this,
+                Converter = new RatingConverter(starIndex)
+            });
+        
+        panel.Children.Add(button);
+    }
+    
+    return panel;
+}
+```
+
+### Binding Behavior Summary
+
+| BindingProperty | FactoryMethod | Behavior |
+|-----------------|---------------|----------|
+| Specified | Not specified | Auto-bind to specified property |
+| Specified | Specified | Auto-bind to specified property (factory creates control) |
+| Not specified | Not specified | Auto-detect common properties (WPF only) |
+| Not specified | Specified | **No auto-bind** - factory handles binding |
+
+### Creating Custom Control Attributes
+
+Create reusable attributes by inheriting from `ControlBindingAttribute`:
 
 ```csharp
 [AttributeUsage(AttributeTargets.Property)]
@@ -287,9 +382,13 @@ public sealed class DatePickerAttribute : ControlBindingAttribute
     public DatePickerAttribute() 
         : base(typeof(CalendarDatePicker), "SelectedDate") { }
 }
+
+// Usage
+[DatePicker]
+public DateTime BirthDate { get; set; }
 ```
 
-For complex controls, use factory methods:
+For complex controls with parameters:
 
 ```csharp
 public sealed class NumericUpDownAttribute : ControlBindingAttribute
@@ -306,6 +405,76 @@ public sealed class NumericUpDownAttribute : ControlBindingAttribute
         Maximum = (decimal)Maximum
     };
 }
+
+// Usage
+[NumericUpDown(Minimum = 0, Maximum = 100)]
+public int ItemCount { get; set; }
+```
+
+## Collection Editing
+
+AutoSettingUI provides built-in collection editing support with add, remove, and reorder capabilities. You can also bind the selected item to a separate property for detailed editing.
+
+### Basic Collection Editing
+
+```csharp
+[SettingUI]
+public class Settings
+{
+    [Title("Tags")]
+    public ObservableCollection<string> Tags { get; set; } = ["Important", "Work"];
+
+    [Title("People")]
+    public ObservableCollection<Person> People { get; set; } = new();
+}
+```
+
+### Selected Item Binding
+
+Use `SelectedItemProperty` to bind the collection's selected item to a property. This enables detailed editing of the selected item:
+
+```csharp
+[SettingUI]
+public class Settings
+{
+    [Title("Tags")]
+    [CollectionEditor(SelectedItemProperty = nameof(SelectedTag))]
+    public ObservableCollection<string> Tags { get; set; } = ["Important", "Work"];
+
+    [Title("Selected Tag")]
+    [Description("The currently selected tag from the list above")]
+    public string? SelectedTag { get; set; }
+
+    [Title("People")]
+    [CollectionEditor(SelectedItemProperty = nameof(SelectedPerson))]
+    public ObservableCollection<Person> People { get; set; } = new();
+
+    [Title("Selected Person")]
+    [Description("Edit the selected person's details below")]
+    public Person? SelectedPerson { get; set; }
+}
+```
+
+When a user selects an item in the collection editor, the `SelectedTag` or `SelectedPerson` property is automatically updated. The UI will also reflect changes when these properties are modified programmatically.
+
+### Collection Editor Options
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `AllowAdd` | `bool` | Allow adding new items (default: `true`) |
+| `AllowRemove` | `bool` | Allow removing items (default: `true`) |
+| `AllowReorder` | `bool` | Allow reordering items (default: `true`) |
+| `AllowEditItems` | `bool` | Allow inline editing of items (default: `true`) |
+| `SelectedItemProperty` | `string` | Property name to bind selected item to |
+| `EditorTypeName` | `string` | Custom editor type name |
+| `FactoryMethod` | `string` | Factory method for custom editor |
+
+### Read-Only Collection
+
+```csharp
+[Title("Versions (Read-Only)")]
+[CollectionEditor(AllowAdd = false, AllowRemove = false, AllowReorder = false)]
+public ObservableCollection<string> Versions { get; set; } = ["1.0.0", "1.1.0", "2.0.0"];
 ```
 
 ## Demo Applications
@@ -325,7 +494,7 @@ The repository includes demo applications showcasing all features:
 - ✅ Navigation toggle
 - ✅ Custom styled panels
 - ✅ Extended controls demonstration
-- ✅ Collection editing
+- ✅ Collection editing with selected item binding
 
 ## Packages
 

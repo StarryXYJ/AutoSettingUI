@@ -58,17 +58,12 @@ public partial class ApplicationSettings : ObservableObject
 
 [SettingUI]
 [MainHeader("User Preferences")]
-public class UserPreferences : INotifyPropertyChanged
+public partial class UserPreferences : ObservableObject
 {
     private bool _isAdmin = true;
     private string _email = "";
 
-    public event PropertyChangedEventHandler? PropertyChanged;
 
-    protected virtual void OnPropertyChanged(string propertyName)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
 
     [SubHeader("Display")]
     [Title("Theme")]
@@ -180,18 +175,28 @@ public class UserPreferences : INotifyPropertyChanged
 
     [SubHeader("Collection Examples")]
     [Title("Tags (Default Collection Editor)")]
+    [CollectionEditor(SelectedItemProperty = nameof(SelectedTag))]
     public List<string> Tags { get; set; } = ["Important", "Work"];
+
+    [Title("Selected Tag")] [Description("The currently selected tag from the list above")] [ObservableProperty]
+    private string? _selectedTag;
 
     [Title("Versions (Read-Only Collection)")]
     [CollectionEditor(AllowAdd = false, AllowRemove = false, AllowReorder = false)]
     public List<string> Versions { get; set; } = ["1.0.0", "1.1.0", "2.0.0"];
 
     [Title("People (Default Editor)")]
+    [CollectionEditor(SelectedItemProperty = nameof(SelectedPerson1))]
     public List<Person> People1 { get; set; } =
     [
         new Person { Name = "John Doe", Age = 30, Email = "john@example.com" },
         new Person { Name = "Jane Smith", Age = 25, Email = "jane@example.com" }
     ];
+
+    [Title("Selected Person (Default Editor)")]
+    [Description("The currently selected person from the default editor above")]
+    [ObservableProperty]
+    private Person? _selectedPerson1;
 
     [Title("People (Custom Editor)")]
     [CollectionEditor(typeof(PersonCollectionEditor))]
