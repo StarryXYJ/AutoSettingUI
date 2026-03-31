@@ -43,6 +43,12 @@ public sealed class CollectionEditorAttribute : Attribute
     public bool AllowEditItems { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the name of the property that should be bound to the selected item.
+    /// This enables two-way binding between the ListBox's SelectedItem and a property on the target object.
+    /// </summary>
+    public string? SelectedItemProperty { get; set; }
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="CollectionEditorAttribute"/> class
     /// using the default collection editor.
     /// </summary>

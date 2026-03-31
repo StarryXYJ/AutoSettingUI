@@ -901,7 +901,8 @@ public class WpfControlFactory
             MaxHeight = 150,
             Margin = new Thickness(0, 0, 0, 5),
             ItemsSource = collection as System.Collections.IEnumerable,
-            HorizontalContentAlignment = HorizontalAlignment.Stretch
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            SelectionMode = SelectionMode.Single
         };
 
         // Set ItemContainerStyle to make items stretch horizontally
@@ -910,6 +911,22 @@ public class WpfControlFactory
         itemContainerStyle.Setters.Add(new Setter(ListBoxItem.VerticalContentAlignmentProperty, VerticalAlignment.Stretch));
         itemContainerStyle.Setters.Add(new Setter(ListBoxItem.PaddingProperty, new Thickness(0)));
         listBox.ItemContainerStyle = itemContainerStyle;
+
+        // Bind SelectedItem if SelectedItemProperty is specified
+        if (!string.IsNullOrEmpty(prop.CollectionSelectedItemProperty))
+        {
+            var selectedItemProp = target.GetType().GetProperty(prop.CollectionSelectedItemProperty);
+            if (selectedItemProp != null)
+            {
+                listBox.SelectionChanged += (s, e) =>
+                {
+                    if (listBox.SelectedItem != null)
+                    {
+                        selectedItemProp.SetValue(target, listBox.SelectedItem);
+                    }
+                };
+            }
+        }
 
         // Create DataTemplate based on element type
         if (elementType != null)

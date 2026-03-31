@@ -39,6 +39,7 @@ public class UrsaAutoSettingPanel : TemplatedControl
     private readonly List<(global::Avalonia.Controls.Control Control, Func<bool> IsVisibleGetter)> _visibilityControls = new();
     private readonly List<(TextBlock TextBlock, string? ResourceKey, string FallbackText)> _localizedTextBlocks = new();
     private readonly List<(global::Avalonia.Controls.Control Control, string? PlaceholderKey, string? PlaceholderFallback)> _localizedPlaceholders = new();
+    private readonly List<(global::Avalonia.Controls.Control Control, string PropertyName, object Target, Action<global::Avalonia.Controls.Control, object?> UpdateAction)> _valueControls = new();
 
     #region Styled Properties
 
@@ -253,6 +254,19 @@ public class UrsaAutoSettingPanel : TemplatedControl
     {
         // Refresh all commands when any property changes
         Refresh();
+
+        // Update control values for the changed property
+        if (sender != null && !string.IsNullOrEmpty(e.PropertyName))
+        {
+            foreach (var (control, propName, target, updateAction) in _valueControls)
+            {
+                if (target == sender && propName == e.PropertyName)
+                {
+                    var value = _accessor?.GetValue(target, propName);
+                    updateAction(control, value);
+                }
+            }
+        }
     }
 
     private void OnCultureChanged(object? sender, CultureChangedEventArgs e)
@@ -524,6 +538,7 @@ public class UrsaAutoSettingPanel : TemplatedControl
         _visibilityControls.Clear();
         _localizedTextBlocks.Clear();
         _localizedPlaceholders.Clear();
+        _valueControls.Clear();
 
         var formPanel = new StackPanel
         {
@@ -1177,6 +1192,13 @@ public class UrsaAutoSettingPanel : TemplatedControl
             IsReadOnly = isReadOnly
         };
 
+        // Track control for value updates when property changes
+        _valueControls.Add((textBox, prop.PropertyName, target, (ctrl, val) =>
+        {
+            if (ctrl is TextBox tb)
+                tb.Text = val?.ToString() ?? "";
+        }));
+
         // Apply placeholder if specified
         if (!string.IsNullOrEmpty(prop.PlaceholderText))
         {
@@ -1305,14 +1327,18 @@ public class UrsaAutoSettingPanel : TemplatedControl
     {
         var elementType = GetElementTypeFromName(prop.CollectionElementTypeName);
         var collection = _accessor?.GetValue(target, prop.PropertyName) as IList;
+        
+        var propInfo = target.GetType().GetProperty(prop.PropertyName);
         if (elementType == null && collection != null)
         {
             elementType = GetCollectionElementType(collection.GetType());
         }
+        if (elementType == null && propInfo != null)
+        {
+            elementType = GetCollectionElementType(propInfo.PropertyType);
+        }
         if (collection == null)
         {
-            // Try to create a new list if the property is null
-            var propInfo = target.GetType().GetProperty(prop.PropertyName);
             if (propInfo != null && propInfo.CanWrite)
             {
                 var listType = typeof(List<>).MakeGenericType(elementType ?? typeof(object));
@@ -1329,8 +1355,32 @@ public class UrsaAutoSettingPanel : TemplatedControl
             MinHeight = 80,
             MaxHeight = 250,
             Margin = new Thickness(0, 0, 0, 10),
-            ItemsSource = collection as IEnumerable
+            ItemsSource = collection as IEnumerable,
+            SelectionMode = SelectionMode.Single
         };
+
+        // Bind SelectedItem if SelectedItemProperty is specified
+        if (!string.IsNullOrEmpty(prop.CollectionSelectedItemProperty))
+        {
+            var selectedItemProp = target.GetType().GetProperty(prop.CollectionSelectedItemProperty);
+            if (selectedItemProp != null)
+            {
+                listBox.SelectionChanged += (s, e) =>
+                {
+                    var item = listBox.SelectedItem;
+                    if (item != null)
+                    {
+                        try
+                        {
+                            selectedItemProp.SetValue(target, item);
+                        }
+                        catch
+                        {
+                        }
+                    }
+                };
+            }
+        }
 
         if (elementType != null)
         {

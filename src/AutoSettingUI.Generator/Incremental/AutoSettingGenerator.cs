@@ -602,6 +602,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
             bool collAllowReorder = true;
             bool collAllowEditItems = true;
             string? collElementTypeName = null;
+            string? collSelectedItemProperty = null;
 
             // Check if collection type
             var isCollection = IsCollectionType(prop.Type);
@@ -639,6 +640,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
                 if (allowRemoveVal != null) collAllowRemove = allowRemoveVal == "True";
                 if (allowReorderVal != null) collAllowReorder = allowReorderVal == "True";
                 if (allowEditItemsVal != null) collAllowEditItems = allowEditItemsVal == "True";
+                collSelectedItemProperty = GetNamedArgString(collEditorAttr, "SelectedItemProperty");
             }
 
             // For enum types, pre-compute the enum values as string array to avoid runtime Type.GetType()
@@ -689,6 +691,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
             sb.AppendLine($"                {(collAllowReorder ? "true" : "false")},");
             sb.AppendLine($"                {(collAllowEditItems ? "true" : "false")},");
             sb.AppendLine($"                {(collElementTypeName != null ? $"\"{collElementTypeName}\"" : "null")},");
+            sb.AppendLine($"                {(collSelectedItemProperty ?? "null")},");
             sb.AppendLine($"                {(placeholderText ?? "null")},");
             sb.AppendLine($"                {(descriptionText ?? "null")},");
             sb.AppendLine($"                {(isPassword ? "true" : "false")},");
@@ -1237,7 +1240,9 @@ public class AutoSettingGenerator : IIncrementalGenerator
     {
         var typeName = type.ToDisplayString();
         // Exclude string as it implements IEnumerable but is not a collection for our purposes
-        if (typeName == "string" || typeName == "System.String")
+        // Handle both string and string? (nullable string)
+        if (typeName == "string" || typeName == "string?" || 
+            typeName == "System.String" || typeName == "System.String?")
             return false;
 
         // Check if it implements IEnumerable

@@ -184,6 +184,7 @@ public class ReflectionSettingDescriptorProvider : ISettingDescriptorProvider
                 collectionEditorAttr?.AllowReorder ?? true,
                 collectionEditorAttr?.AllowEditItems ?? true,
                 collectionElementTypeName,
+                collectionEditorAttr?.SelectedItemProperty,
                 placeholderAttr?.Text,
                 descriptionAttr?.Text,
                 passwordAttr?.Mask ?? false,

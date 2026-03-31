@@ -2,9 +2,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AutoSettingUI.Ursa.Demo.Models;
 
-/// <summary>
-/// Sample class for demonstrating custom collection editing.
-/// </summary>
 public partial class Person : ObservableObject
 {
     [ObservableProperty]

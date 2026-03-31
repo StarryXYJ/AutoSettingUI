@@ -47,12 +47,6 @@ public partial class ApplicationSettings:ObservableObject
     [Title("Settings.Volume", UseResourceKey = true)]
     [ControlBinding(typeof(global::Avalonia.Controls.Slider),"Value",nameof(VolumeFactory))]
     public double Volume { get; set; } = 50.0;
-
-    [Hide]
-    public string InternalId { get; set; } = Guid.NewGuid().ToString();
-
-    public bool ShouldHideLogging => !EnableLogging;
-
     public Slider VolumeFactory()
     {
         var slider = new Slider
@@ -64,6 +58,12 @@ public partial class ApplicationSettings:ObservableObject
         };
         return slider;
     }
+    [Hide]
+    public string InternalId { get; set; } = Guid.NewGuid().ToString();
+
+    public bool ShouldHideLogging => !EnableLogging;
+
+    
 }
 
 /// <summary>
@@ -200,18 +200,30 @@ public partial class UserPreferences : ObservableObject
 
     [SubHeader("Collection Examples")]
     [Title("Tags (Default Collection Editor)")]
+    [CollectionEditor(SelectedItemProperty = nameof(SelectedTag))]
     public ObservableCollection<string> Tags { get; set; } =  [ "Important", "Work" ];
+
+    [Title("Selected Tag")]
+    [Description("The currently selected tag from the list above")]
+    [ObservableProperty]
+    private string? _selectedTag;
 
     [Title("Versions (Read-Only Collection)")]
     [CollectionEditor(AllowAdd = false, AllowRemove = false, AllowReorder = false)]
     public ObservableCollection<string> Versions { get; set; } = ["1.0.0", "1.1.0", "2.0.0"];
 
     [Title("People (Complex Collection)")]
+    [CollectionEditor(SelectedItemProperty = nameof(SelectedPerson))]
     public ObservableCollection<Person> People { get; set; } =
     [
         new Person { Name = "John Doe", Age = 30, Email = "john@example.com" },
         new Person { Name = "Jane Smith", Age = 25, Email = "jane@example.com" }
     ];
+
+    [Title("Selected Person")]
+    [Description("The currently selected person - edit details below")]
+    [ObservableProperty]
+    private Person? _selectedPerson;
 
     public UserPreferences()
     {
