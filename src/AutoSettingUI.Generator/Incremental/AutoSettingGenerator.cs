@@ -807,73 +807,102 @@ public class AutoSettingGenerator : IIncrementalGenerator
 
     private static IEnumerable<PropertyInfo> GetPublicInstanceProperties(INamedTypeSymbol cls, SourceProductionContext context)
     {
+        var result = new List<(int Order, PropertyInfo Info)>();
         int order = 0;
-        var properties = cls.GetMembers()
+
+        var publicProperties = cls.GetMembers()
               .OfType<IPropertySymbol>()
               .Where(p => p.DeclaredAccessibility == Accessibility.Public && !p.IsStatic)
-              .Select(p => new PropertyInfo(
-                  p.Name,
-                  p.Type,
-                  p.SetMethod != null && p.SetMethod.DeclaredAccessibility == Accessibility.Public,
-                  p.DeclaredAccessibility,
-                  p.GetAttributes(),
-                  p.Locations.FirstOrDefault(),
-                  false,
-                  null,
-                  order++));
+              .Select(p => (Member: (ISymbol)p, Location: p.Locations.FirstOrDefault(), IsObservable: false, Field: (IFieldSymbol?)null));
 
-        var allFields = cls.GetMembers().OfType<IFieldSymbol>().ToList();
-        var observableFields = new List<PropertyInfo>();
-        
-        foreach (var f in allFields)
+        var observableFields = cls.GetMembers()
+              .OfType<IFieldSymbol>()
+              .Where(f => HasObservablePropertyAttribute(f, context, out _))
+              .Select(f => (Member: (ISymbol)f, Location: f.Locations.FirstOrDefault(), IsObservable: true, Field: (IFieldSymbol?)f));
+
+        var allMembers = publicProperties.Concat(observableFields)
+              .OrderBy(m => m.Location?.GetLineSpan().StartLinePosition.Line ?? int.MaxValue);
+
+        foreach (var m in allMembers)
         {
-            if (HasObservablePropertyAttribute(f, context, out _))
+            if (m.IsObservable && m.Field != null)
             {
-                observableFields.Add(new PropertyInfo(
-                    GetPropertyNameFromField(f.Name),
-                    f.Type,
+                result.Add((order++, new PropertyInfo(
+                    GetPropertyNameFromField(m.Field.Name),
+                    m.Field.Type,
                     true,
                     Accessibility.Public,
-                    f.GetAttributes(),
-                    f.Locations.FirstOrDefault(),
+                    m.Field.GetAttributes(),
+                    m.Location,
                     true,
-                    f,
-                    order++));
+                    m.Field,
+                    result.Count)));
+            }
+            else if (m.Member is IPropertySymbol p)
+            {
+                result.Add((order++, new PropertyInfo(
+                    p.Name,
+                    p.Type,
+                    p.SetMethod != null && p.SetMethod.DeclaredAccessibility == Accessibility.Public,
+                    p.DeclaredAccessibility,
+                    p.GetAttributes(),
+                    m.Location,
+                    false,
+                    null,
+                    result.Count)));
             }
         }
 
-        return properties.Concat(observableFields);
+        return result.OrderBy(r => r.Order).Select(r => r.Info);
     }
 
     private static IEnumerable<PropertyInfo> GetPublicInstanceProperties(INamedTypeSymbol cls)
     {
-        var properties = cls.GetMembers()
+        var result = new List<(int Order, PropertyInfo Info)>();
+        int order = 0;
+
+        var publicProperties = cls.GetMembers()
               .OfType<IPropertySymbol>()
               .Where(p => p.DeclaredAccessibility == Accessibility.Public && !p.IsStatic)
-              .Select(p => new PropertyInfo(
-                  p.Name,
-                  p.Type,
-                  p.SetMethod != null && p.SetMethod.DeclaredAccessibility == Accessibility.Public,
-                  p.DeclaredAccessibility,
-                  p.GetAttributes(),
-                  p.Locations.FirstOrDefault(),
-                  false,
-                  null));
+              .Select(p => (Member: (ISymbol)p, Location: p.Locations.FirstOrDefault(), IsObservable: false, Field: (IFieldSymbol?)null));
 
-        var allFields = cls.GetMembers().OfType<IFieldSymbol>().ToList();
-        var observableFields = allFields
+        var observableFields = cls.GetMembers()
+              .OfType<IFieldSymbol>()
               .Where(f => HasObservablePropertyAttribute(f))
-              .Select(f => new PropertyInfo(
-                  GetPropertyNameFromField(f.Name),
-                  f.Type,
-                  true,
-                  Accessibility.Public,
-                  f.GetAttributes(),
-                  f.Locations.FirstOrDefault(),
-                  true,
-                  f));
+              .Select(f => (Member: (ISymbol)f, Location: f.Locations.FirstOrDefault(), IsObservable: true, Field: (IFieldSymbol?)f));
 
-        return properties.Concat(observableFields);
+        var allMembers = publicProperties.Concat(observableFields)
+              .OrderBy(m => m.Location?.GetLineSpan().StartLinePosition.Line ?? int.MaxValue);
+
+        foreach (var m in allMembers)
+        {
+            if (m.IsObservable && m.Field != null)
+            {
+                result.Add((order++, new PropertyInfo(
+                    GetPropertyNameFromField(m.Field.Name),
+                    m.Field.Type,
+                    true,
+                    Accessibility.Public,
+                    m.Field.GetAttributes(),
+                    m.Location,
+                    true,
+                    m.Field)));
+            }
+            else if (m.Member is IPropertySymbol p)
+            {
+                result.Add((order++, new PropertyInfo(
+                    p.Name,
+                    p.Type,
+                    p.SetMethod != null && p.SetMethod.DeclaredAccessibility == Accessibility.Public,
+                    p.DeclaredAccessibility,
+                    p.GetAttributes(),
+                    m.Location,
+                    false,
+                    null)));
+            }
+        }
+
+        return result.OrderBy(r => r.Order).Select(r => r.Info);
     }
 
     private static bool HasObservablePropertyAttribute(ISymbol symbol, SourceProductionContext context, out string? matchedAttrName)
