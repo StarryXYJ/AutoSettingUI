@@ -279,7 +279,101 @@ For more providers and advanced usage, see [DynamicLocalization](https://github.
 
 ## Custom Control Binding
 
-Create custom control attributes by inheriting from `ControlBindingAttribute`:
+The `[ControlBinding]` attribute allows you to specify custom controls for properties. There are several ways to use it:
+
+### 1. Auto-bind with BindingProperty
+
+Specify the control type and the property to bind to:
+
+```csharp
+[ControlBinding(typeof(ProgressBar), "Value")]
+public double ProgressValue { get; set; } = 50.0;
+```
+
+This automatically creates a two-way binding between `ProgressValue` and `ProgressBar.Value`.
+
+### 2. Factory Method with Custom Binding
+
+When you need full control over the binding (e.g., custom converters, validation), use a factory method without specifying `BindingProperty`:
+
+```csharp
+[ControlBinding(typeof(Slider), FactoryMethod = nameof(CreateCustomSlider))]
+public double CustomSliderValue { get; set; } = 75.0;
+
+public Slider CreateCustomSlider()
+{
+    var slider = new Slider { Minimum = 0, Maximum = 100, Width = 200 };
+    
+    // Custom binding with your own logic
+    slider.Bind(Slider.ValueProperty, 
+        new Binding(nameof(CustomSliderValue)) 
+        { 
+            Source = this, 
+            Mode = BindingMode.TwoWay 
+        });
+    
+    return slider;
+}
+```
+
+> **Important:** When using a factory method without `BindingProperty`, the factory method is responsible for setting up bindings. The framework will not auto-bind.
+
+### 3. Control Type Only (Auto-detect)
+
+Specify only the control type, and the framework will attempt to auto-detect the binding property:
+
+```csharp
+[ControlBinding(typeof(TextBox))]
+public string AutoDetectedText { get; set; } = "Auto-detected binding";
+```
+
+The framework will try to bind to common properties like `Text`, `Value`, `IsChecked`, etc.
+
+### 4. Complex Factory Method
+
+Create fully customized controls with complete control over appearance and behavior:
+
+```csharp
+[ControlBinding(typeof(StackPanel), FactoryMethod = nameof(CreateRatingControl))]
+[ObservableProperty]
+private int _rating = 3;
+
+public StackPanel CreateRatingControl()
+{
+    var panel = new StackPanel { Orientation = Orientation.Horizontal };
+    
+    for (int i = 1; i <= 5; i++)
+    {
+        var starIndex = i;
+        var button = new Button { Content = "★", FontSize = 24 };
+        
+        button.Click += (s, e) => Rating = starIndex;
+        button.Bind(Button.ForegroundProperty,
+            new Binding(nameof(Rating))
+            {
+                Source = this,
+                Converter = new RatingConverter(starIndex)
+            });
+        
+        panel.Children.Add(button);
+    }
+    
+    return panel;
+}
+```
+
+### Binding Behavior Summary
+
+| BindingProperty | FactoryMethod | Behavior |
+|-----------------|---------------|----------|
+| Specified | Not specified | Auto-bind to specified property |
+| Specified | Specified | Auto-bind to specified property (factory creates control) |
+| Not specified | Not specified | Auto-detect common properties (WPF only) |
+| Not specified | Specified | **No auto-bind** - factory handles binding |
+
+### Creating Custom Control Attributes
+
+Create reusable attributes by inheriting from `ControlBindingAttribute`:
 
 ```csharp
 [AttributeUsage(AttributeTargets.Property)]
@@ -288,9 +382,13 @@ public sealed class DatePickerAttribute : ControlBindingAttribute
     public DatePickerAttribute() 
         : base(typeof(CalendarDatePicker), "SelectedDate") { }
 }
+
+// Usage
+[DatePicker]
+public DateTime BirthDate { get; set; }
 ```
 
-For complex controls, use factory methods:
+For complex controls with parameters:
 
 ```csharp
 public sealed class NumericUpDownAttribute : ControlBindingAttribute
@@ -307,6 +405,10 @@ public sealed class NumericUpDownAttribute : ControlBindingAttribute
         Maximum = (decimal)Maximum
     };
 }
+
+// Usage
+[NumericUpDown(Minimum = 0, Maximum = 100)]
+public int ItemCount { get; set; }
 ```
 
 ## Collection Editing

@@ -19,6 +19,7 @@ public class ControlBindingAttribute:Attribute
 
     /// <summary>
     /// Gets or sets the target property on the custom control to bind to.
+    /// If not specified and a factory method is used, the factory is responsible for setting up bindings.
     /// </summary>
     public string? BindingProperty { get; set; }
 
@@ -40,7 +41,7 @@ public class ControlBindingAttribute:Attribute
     /// Initializes a new instance of the <see cref="ControlBindingAttribute"/> class.
     /// </summary>
     /// <param name="controlType">The type of the custom control to use.</param>
-    /// <param name="bindingProperty">The property of the control.</param>
+    /// <param name="bindingProperty">The property of the control to bind to.</param>
     public ControlBindingAttribute(Type controlType, string bindingProperty)
     {
         ControlType = controlType;
@@ -51,7 +52,7 @@ public class ControlBindingAttribute:Attribute
     /// Initializes a new instance of the <see cref="ControlBindingAttribute"/> class.
     /// </summary>
     /// <param name="controlType">The type of the custom control to use.</param>
-    /// <param name="bindingProperty">The property of the control.</param>
+    /// <param name="bindingProperty">The property of the control to bind to.</param>
     /// <param name="factoryMethod">Factory Method.</param>
     public ControlBindingAttribute(Type controlType, string bindingProperty, string factoryMethod)
     {

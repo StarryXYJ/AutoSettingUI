@@ -619,7 +619,7 @@ public class WpfControlFactory
 
         if (control != null)
         {
-            // Use property-specific binding property if available, otherwise try to auto-detect
+            // Use property-specific binding property if available
             var bindingProperty = prop.CustomControlBindingProperty;
             if (!string.IsNullOrEmpty(bindingProperty))
             {
@@ -630,9 +630,10 @@ public class WpfControlFactory
                     BindingOperations.SetBinding(control, dp, binding);
                 }
             }
-            else
+            else if (string.IsNullOrEmpty(factoryMethodName))
             {
-                // Auto-detect common dependency properties
+                // Auto-detect common dependency properties only when no factory method is used
+                // When factory method is used, the factory is responsible for setting up bindings
                 TryAutoBind(control, prop, target, controlType);
             }
             
