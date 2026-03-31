@@ -131,6 +131,7 @@ public class WpfAutoSettingPanel : Control
     private readonly List<(FrameworkElement Control, Func<bool> IsVisibleGetter)> _visibilityControls = new();
     private readonly List<(TextBlock TextBlock, string? ResourceKey, string FallbackText)> _localizedTextBlocks = new();
     private readonly List<(FrameworkElement Control, string? PlaceholderKey, string? PlaceholderFallback)> _localizedPlaceholders = new();
+    private readonly List<(FrameworkElement Control, string PropertyName, object Target, Action<FrameworkElement, object?> UpdateAction)> _valueControls = new();
     private readonly HashSet<INotifyPropertyChanged> _subscribedTargets = new();
     private ICultureService? _localizationService;
 
@@ -399,6 +400,11 @@ public class WpfAutoSettingPanel : Control
         _visibilityControls.Add((control, isVisibleGetter));
     }
 
+    private void OnValueControlCreated(FrameworkElement control, string propertyName, object target, Action<FrameworkElement, object?> updateAction)
+    {
+        _valueControls.Add((control, propertyName, target, updateAction));
+    }
+
     private void OnCultureChanged(object? sender, CultureChangedEventArgs e)
     {
         UpdateLocalizedTexts();
@@ -479,6 +485,21 @@ public class WpfAutoSettingPanel : Control
         // Refresh commands and ReadOnly states when any property changes
         // This ensures UI updates when properties like Email or IsAdmin change
         Refresh();
+
+        // Update control values for the changed property
+        if (sender != null && !string.IsNullOrEmpty(e.PropertyName))
+        {
+            var prop = sender.GetType().GetProperty(e.PropertyName);
+            var value = prop?.GetValue(sender);
+            
+            foreach (var (control, propName, target, updateAction) in _valueControls)
+            {
+                if (target == sender && propName == e.PropertyName)
+                {
+                    updateAction(control, value);
+                }
+            }
+        }
     }
 
     private void OnNavigationItemSelected(object sender, RoutedPropertyChangedEventArgs<object> e)
@@ -549,6 +570,7 @@ public class WpfAutoSettingPanel : Control
             var factory = new WpfControlFactory(descriptor, PropertyAccessor);
             factory.ReadOnlyControlCreated += OnReadOnlyControlCreated;
             factory.VisibilityControlCreated += OnVisibilityControlCreated;
+            factory.ValueControlCreated += OnValueControlCreated;
 
             var classSectionId = $"class_{classIndex}";
             

@@ -261,6 +261,7 @@ For more providers and advanced usage, see [DynamicLocalization](https://github.
 | `[Layout]`         | Property | Custom layout (width, height)            |
 | `[Validation]`     | Property | Custom validation method                 |
 | `[DisplayOrder]`   | Property | Controls display order (lower = first)   |
+| `[CollectionEditor]`| Property | Configures collection editing with add/remove/reorder and selected item binding |
 
 ## Extended Controls
 
@@ -308,6 +309,72 @@ public sealed class NumericUpDownAttribute : ControlBindingAttribute
 }
 ```
 
+## Collection Editing
+
+AutoSettingUI provides built-in collection editing support with add, remove, and reorder capabilities. You can also bind the selected item to a separate property for detailed editing.
+
+### Basic Collection Editing
+
+```csharp
+[SettingUI]
+public class Settings
+{
+    [Title("Tags")]
+    public ObservableCollection<string> Tags { get; set; } = ["Important", "Work"];
+
+    [Title("People")]
+    public ObservableCollection<Person> People { get; set; } = new();
+}
+```
+
+### Selected Item Binding
+
+Use `SelectedItemProperty` to bind the collection's selected item to a property. This enables detailed editing of the selected item:
+
+```csharp
+[SettingUI]
+public class Settings
+{
+    [Title("Tags")]
+    [CollectionEditor(SelectedItemProperty = nameof(SelectedTag))]
+    public ObservableCollection<string> Tags { get; set; } = ["Important", "Work"];
+
+    [Title("Selected Tag")]
+    [Description("The currently selected tag from the list above")]
+    public string? SelectedTag { get; set; }
+
+    [Title("People")]
+    [CollectionEditor(SelectedItemProperty = nameof(SelectedPerson))]
+    public ObservableCollection<Person> People { get; set; } = new();
+
+    [Title("Selected Person")]
+    [Description("Edit the selected person's details below")]
+    public Person? SelectedPerson { get; set; }
+}
+```
+
+When a user selects an item in the collection editor, the `SelectedTag` or `SelectedPerson` property is automatically updated. The UI will also reflect changes when these properties are modified programmatically.
+
+### Collection Editor Options
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `AllowAdd` | `bool` | Allow adding new items (default: `true`) |
+| `AllowRemove` | `bool` | Allow removing items (default: `true`) |
+| `AllowReorder` | `bool` | Allow reordering items (default: `true`) |
+| `AllowEditItems` | `bool` | Allow inline editing of items (default: `true`) |
+| `SelectedItemProperty` | `string` | Property name to bind selected item to |
+| `EditorTypeName` | `string` | Custom editor type name |
+| `FactoryMethod` | `string` | Factory method for custom editor |
+
+### Read-Only Collection
+
+```csharp
+[Title("Versions (Read-Only)")]
+[CollectionEditor(AllowAdd = false, AllowRemove = false, AllowReorder = false)]
+public ObservableCollection<string> Versions { get; set; } = ["1.0.0", "1.1.0", "2.0.0"];
+```
+
 ## Demo Applications
 
 The repository includes demo applications showcasing all features:
@@ -325,7 +392,7 @@ The repository includes demo applications showcasing all features:
 - ✅ Navigation toggle
 - ✅ Custom styled panels
 - ✅ Extended controls demonstration
-- ✅ Collection editing
+- ✅ Collection editing with selected item binding
 
 ## Packages
 
