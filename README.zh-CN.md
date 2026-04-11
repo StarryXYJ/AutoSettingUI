@@ -16,7 +16,7 @@
 - ✨ **特性驱动渲染** — 使用特性灵活自定义每个属性的渲染方式
 - ⚡ **AOT 兼容** — 增量 Roslyn 源生成器，完整支持 Native AOT 与裁剪发布
 - 🔄 **MVVM 支持** — 完美支持 CommunityToolkit.Mvvm `[ObservableProperty]`
-- 🌐 **国际化支持** — 内置本地化服务，支持动态语言切换
+- 🌐 **国际化支持** — 内置本地化服务，支持动态语言切换，基于 [DynamicLocalization](https://github.com/StarryXYJ/Avalonia.DynamicLocalization)
 - 🔌 **高度可扩展** — 可注入自定义 Provider 和 Accessor
 - 🧭 **内置导航栏** — 侧边栏树形导航
 - 🎯 **扩展控件支持** — ColorPicker、DatePicker、TimePicker、NumericUpDown 等
@@ -252,7 +252,6 @@ DynamicLocalization 支持多种翻译数据源：
 | `[Title]`          | 属性   | 设置属性标签               |
 | `[SubHeader]`      | 属性   | 创建子分区                 |
 | `[Hide]`           | 属性   | 从 UI 中隐藏               |
-| `[VisibleIf]`      | 属性   | 条件显示（基于方法返回值） |
 | `[Range]`          | 属性   | 数值范围（渲染为滑块）     |
 | `[ItemsSource]`    | 属性   | 下拉框数据源               |
 | `[ControlBinding]` | 属性   | 自定义控件绑定             |
@@ -262,6 +261,7 @@ DynamicLocalization 支持多种翻译数据源：
 | `[Layout]`         | 属性   | 自定义布局（宽度、高度）   |
 | `[Validation]`     | 属性   | 自定义验证方法             |
 | `[DisplayOrder]`   | 属性   | 控制显示顺序（数值小在前） |
+| `[CollectionEditor]`| 属性  | 配置集合编辑，支持增删改查、排序及选中项绑定 |
 
 ## 扩展控件
 
@@ -279,7 +279,101 @@ DynamicLocalization 支持多种翻译数据源：
 
 ## 自定义控件绑定
 
-通过继承 `ControlBindingAttribute` 创建自定义控件特性：
+`[ControlBinding]` 特性允许为属性指定自定义控件。有多种使用方式：
+
+### 1. 使用 BindingProperty 自动绑定
+
+指定控件类型和要绑定的属性：
+
+```csharp
+[ControlBinding(typeof(ProgressBar), "Value")]
+public double ProgressValue { get; set; } = 50.0;
+```
+
+这会自动在 `ProgressValue` 和 `ProgressBar.Value` 之间创建双向绑定。
+
+### 2. 工厂方法配合自定义绑定
+
+当需要完全控制绑定（如自定义转换器、验证）时，使用工厂方法但不指定 `BindingProperty`：
+
+```csharp
+[ControlBinding(typeof(Slider), FactoryMethod = nameof(CreateCustomSlider))]
+public double CustomSliderValue { get; set; } = 75.0;
+
+public Slider CreateCustomSlider()
+{
+    var slider = new Slider { Minimum = 0, Maximum = 100, Width = 200 };
+    
+    // 自定义绑定逻辑
+    slider.Bind(Slider.ValueProperty, 
+        new Binding(nameof(CustomSliderValue)) 
+        { 
+            Source = this, 
+            Mode = BindingMode.TwoWay 
+        });
+    
+    return slider;
+}
+```
+
+> **重要：** 使用工厂方法但不指定 `BindingProperty` 时，工厂方法需自行处理绑定，框架不会自动绑定。
+
+### 3. 仅指定控件类型（自动检测）
+
+仅指定控件类型，框架会尝试自动检测绑定属性：
+
+```csharp
+[ControlBinding(typeof(TextBox))]
+public string AutoDetectedText { get; set; } = "自动检测绑定";
+```
+
+框架会尝试绑定到常见属性如 `Text`、`Value`、`IsChecked` 等。
+
+### 4. 复杂工厂方法
+
+创建完全自定义的控件，完全控制外观和行为：
+
+```csharp
+[ControlBinding(typeof(StackPanel), FactoryMethod = nameof(CreateRatingControl))]
+[ObservableProperty]
+private int _rating = 3;
+
+public StackPanel CreateRatingControl()
+{
+    var panel = new StackPanel { Orientation = Orientation.Horizontal };
+    
+    for (int i = 1; i <= 5; i++)
+    {
+        var starIndex = i;
+        var button = new Button { Content = "★", FontSize = 24 };
+        
+        button.Click += (s, e) => Rating = starIndex;
+        button.Bind(Button.ForegroundProperty,
+            new Binding(nameof(Rating))
+            {
+                Source = this,
+                Converter = new RatingConverter(starIndex)
+            });
+        
+        panel.Children.Add(button);
+    }
+    
+    return panel;
+}
+```
+
+### 绑定行为总结
+
+| BindingProperty | FactoryMethod | 行为 |
+|-----------------|---------------|------|
+| 已指定 | 未指定 | 自动绑定到指定属性 |
+| 已指定 | 已指定 | 自动绑定到指定属性（工厂创建控件） |
+| 未指定 | 未指定 | 自动检测常见属性（仅 WPF） |
+| 未指定 | 已指定 | **不自动绑定** — 工厂方法处理绑定 |
+
+### 创建自定义控件特性
+
+通过继承 `ControlBindingAttribute` 创建可复用的特性：
 
 ```csharp
 [AttributeUsage(AttributeTargets.Property)]
@@ -288,9 +382,13 @@ public sealed class DatePickerAttribute : ControlBindingAttribute
     public DatePickerAttribute() 
         : base(typeof(CalendarDatePicker), "SelectedDate") { }
 }
+
+// 使用
+[DatePicker]
+public DateTime BirthDate { get; set; }
 ```
 
-复杂控件可使用工厂方法：
+带参数的复杂控件：
 
 ```csharp
 public sealed class NumericUpDownAttribute : ControlBindingAttribute
@@ -307,6 +405,76 @@ public sealed class NumericUpDownAttribute : ControlBindingAttribute
         Maximum = (decimal)Maximum
     };
 }
+
+// 使用
+[NumericUpDown(Minimum = 0, Maximum = 100)]
+public int ItemCount { get; set; }
+```
+
+## 集合编辑
+
+AutoSettingUI 提供内置的集合编辑支持，包括添加、删除和排序功能。还可以将选中项绑定到单独的属性进行详细编辑。
+
+### 基本集合编辑
+
+```csharp
+[SettingUI]
+public class Settings
+{
+    [Title("标签")]
+    public ObservableCollection<string> Tags { get; set; } = ["重要", "工作"];
+
+    [Title("人员")]
+    public ObservableCollection<Person> People { get; set; } = new();
+}
+```
+
+### 选中项绑定
+
+使用 `SelectedItemProperty` 将集合的选中项绑定到属性，实现对选中项的详细编辑：
+
+```csharp
+[SettingUI]
+public class Settings
+{
+    [Title("标签")]
+    [CollectionEditor(SelectedItemProperty = nameof(SelectedTag))]
+    public ObservableCollection<string> Tags { get; set; } = ["重要", "工作"];
+
+    [Title("选中的标签")]
+    [Description("上方列表中当前选中的标签")]
+    public string? SelectedTag { get; set; }
+
+    [Title("人员")]
+    [CollectionEditor(SelectedItemProperty = nameof(SelectedPerson))]
+    public ObservableCollection<Person> People { get; set; } = new();
+
+    [Title("选中的人员")]
+    [Description("在下方编辑选中人员的详细信息")]
+    public Person? SelectedPerson { get; set; }
+}
+```
+
+当用户在集合编辑器中选择项目时，`SelectedTag` 或 `SelectedPerson` 属性会自动更新。通过代码修改这些属性时，UI 也会同步反映变化。
+
+### 集合编辑器选项
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| `AllowAdd` | `bool` | 允许添加新项目（默认：`true`） |
+| `AllowRemove` | `bool` | 允许删除项目（默认：`true`） |
+| `AllowReorder` | `bool` | 允许重新排序（默认：`true`） |
+| `AllowEditItems` | `bool` | 允许行内编辑项目（默认：`true`） |
+| `SelectedItemProperty` | `string` | 绑定选中项的属性名 |
+| `EditorTypeName` | `string` | 自定义编辑器类型名 |
+| `FactoryMethod` | `string` | 自定义编辑器的工厂方法 |
+
+### 只读集合
+
+```csharp
+[Title("版本列表（只读）")]
+[CollectionEditor(AllowAdd = false, AllowRemove = false, AllowReorder = false)]
+public ObservableCollection<string> Versions { get; set; } = ["1.0.0", "1.1.0", "2.0.0"];
 ```
 
 ## 演示应用
@@ -326,7 +494,7 @@ public sealed class NumericUpDownAttribute : ControlBindingAttribute
 - ✅ 导航栏切换
 - ✅ 自定义样式面板
 - ✅ 扩展控件演示
-- ✅ 集合编辑
+- ✅ 集合编辑与选中项绑定
 
 ## 包说明
 
@@ -336,7 +504,7 @@ public sealed class NumericUpDownAttribute : ControlBindingAttribute
 | `AutoSettingUI.Ursa`      | Ursa 主题 Avalonia 面板  | Core, Extension.Shared |
 | `AutoSettingUI.WPF`       | WPF 面板                 | Core, Extension.Shared |
 | `AutoSettingUI.Generator` | Roslyn 源生成器（AOT）   | 独立（Analyzer）      |
-| `AutoSettingUI.Core`      | 特性、接口、模型         | 独立                  |
+| `AutoSettingUI.Core`      | 特性、接口、模型         | DynamicLocalization.Core |
 
 > **注意：** 安装 UI 框架包时会自动引入 `Core` 和 `Extension.Shared`。
 

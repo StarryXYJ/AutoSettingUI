@@ -32,10 +32,12 @@ public partial class ApplicationSettings : ObservableObject
     private bool _enableLogging;
 
     [Title("Settings.LogLevel", UseResourceKey = true)]
+    [Hide(nameof(ShouldHideLogging))]
     public LogLevel LogLevel { get; set; } = LogLevel.Info;
 
     [Title("Settings.MaxLogSize", UseResourceKey = true)]
     [Range(1, 100)]
+    [Hide(nameof(ShouldHideLogging))]
     public int MaxLogSize { get; set; } = 10;
 
     [Title("Settings.Volume", UseResourceKey = true)]
@@ -44,6 +46,8 @@ public partial class ApplicationSettings : ObservableObject
 
     [Hide]
     public string InternalId { get; set; } = Guid.NewGuid().ToString();
+
+    public bool ShouldHideLogging => !EnableLogging;
 
     public Slider VolumeFactory()
     {
@@ -62,10 +66,7 @@ public partial class ApplicationSettings : ObservableObject
 [MainHeader("User Preferences")]
 public partial class UserPreferences : ObservableObject
 {
-    private bool _isAdmin = true;
     private string _email = "";
-
-    
 
     [SubHeader("Display")]
     [Title("Theme")]
@@ -97,32 +98,40 @@ public partial class UserPreferences : ObservableObject
     [SubHeader("ReadOnly Examples")]
     [Title("Read-Only Field")]
     [ReadOnly(true)]
-    public string ReadOnlyField { get; set; } = "This field is read-only";
+    [ObservableProperty]
+    private string _readOnlyField = "This field is read-only";
 
     [Title("Dynamic ReadOnly")]
     [ReadOnly(nameof(CanEdit))]
-    public string DynamicReadOnlyField { get; set; } = "Only editable by admins";
+    [ObservableProperty]
+    private string _dynamicReadOnlyField = "Only editable by admins";
+
+    [Title("Dynamic ReadOnly")]
+    [ReadOnly(nameof(CanEdit))]
+    [ObservableProperty]
+    [NumericUpDown(Minimum = 0, Maximum = 100, Increment = 1)]
+    private int _dynamicReadOnlyFieldInt = 42;
 
     [ControlBinding(typeof(CheckBox), "IsChecked")]
-    public bool IsAdmin
-    {
-        get => _isAdmin;
-        set
-        {
-            if (_isAdmin != value)
-            {
-                _isAdmin = value;
-                OnPropertyChanged(nameof(IsAdmin));
-            }
-        }
-    }
+    [ObservableProperty]
+    private bool _isAdmin = true;
 
     [SubHeader("Notifications")]
     [Title("Enable Notifications")]
-    public bool EnableNotifications { get; set; } = true;
+    [ObservableProperty]
+    private bool _enableNotifications = true;
 
     [Title("Notification Sound")]
+    [Hide(nameof(ShouldHideNotifications))]
     public bool NotificationSound { get; set; } = true;
+
+    [Title("Notification Email")]
+    [Description("Email address for sending notifications")]
+    [Hide(nameof(ShouldHideNotifications))]
+    [Placeholder("notifications@example.com")]
+    public string NotificationEmail { get; set; } = "";
+
+    public bool ShouldHideNotifications => !EnableNotifications;
 
     [Title("Email Address")]
     [Description("Your email address for notifications and account recovery")]
@@ -181,7 +190,8 @@ public partial class UserPreferences : ObservableObject
     [CollectionEditor(SelectedItemProperty = nameof(SelectedTag))]
     public ObservableCollection<string> Tags { get; set; } = ["Important", "Work"];
 
-    [Title("Selected Tag")] [Description("The currently selected tag from the list above")]
+    [Title("Selected Tag")]
+    [Description("The currently selected tag from the list above")]
     [ObservableProperty]
     private string? _selectedTag;
 
@@ -197,7 +207,9 @@ public partial class UserPreferences : ObservableObject
         new Person { Name = "Jane Smith", Age = 25, Email = "jane@example.com" }
     ];
 
-    [Title("Selected Person")] [Description("The currently selected person - edit details below")] [ObservableProperty]
+    [Title("Selected Person")]
+    [Description("The currently selected person - edit details below")]
+    [ObservableProperty]
     private Person? _selectedPerson;
 
     public UserPreferences()
@@ -331,6 +343,86 @@ public partial class ExtendedControlsSettings : ObservableObject
     [ObservableProperty]
     [DisplayOrder(1)]
     private int _itemCount = 40;
+
+    #region ControlBinding Examples
+
+    [SubHeader("ControlBinding Examples")]
+
+    [Title("Progress (Auto-bind)")]
+    [Description("Uses ControlBinding with BindingProperty - auto binds to Value")]
+    [ControlBinding(typeof(global::Avalonia.Controls.ProgressBar), "Value")]
+    public double ProgressValue { get; set; } = 50.0;
+
+    [Title("Custom Slider (Factory Method)")]
+    [Description("Factory method handles binding manually - can customize converter, etc.")]
+    [ControlBinding(typeof(global::Avalonia.Controls.Slider), FactoryMethod = nameof(CreateCustomSlider))]
+    public double CustomSliderValue { get; set; } = 75.0;
+
+    public global::Avalonia.Controls.Slider CreateCustomSlider()
+    {
+        var slider = new global::Avalonia.Controls.Slider
+        {
+            Minimum = 0,
+            Maximum = 100,
+            Width = 200
+        };
+
+        slider.Bind(global::Avalonia.Controls.Slider.ValueProperty,
+            new global::Avalonia.Data.Binding(nameof(CustomSliderValue))
+            {
+                Source = this,
+                Mode = global::Avalonia.Data.BindingMode.TwoWay
+            });
+
+        return slider;
+    }
+
+    [Title("Auto-detected TextBox")]
+    [Description("Only control type specified - auto-detects Text property")]
+    [ControlBinding(typeof(global::Avalonia.Controls.TextBox))]
+    public string AutoDetectedText { get; set; } = "Auto-detected binding";
+
+    [Title("Rating (Complex Factory)")]
+    [Description("Factory creates a custom rating control with full customization")]
+    [ControlBinding(typeof(global::Avalonia.Controls.StackPanel), FactoryMethod = nameof(CreateRatingControl))]
+    [ObservableProperty]
+    private int _rating = 3;
+
+    public global::Avalonia.Controls.StackPanel CreateRatingControl()
+    {
+        var panel = new global::Avalonia.Controls.StackPanel
+        {
+            Orientation = global::Avalonia.Layout.Orientation.Horizontal,
+            Spacing = 5
+        };
+
+        for (int i = 1; i <= 5; i++)
+        {
+            var starIndex = i;
+            var button = new global::Avalonia.Controls.Button
+            {
+                Content = "★",
+                FontSize = 24,
+                Width = 40,
+                Height = 40
+            };
+
+            button.Click += (s, e) => Rating = starIndex;
+
+            button.Bind(global::Avalonia.Controls.Button.ForegroundProperty,
+                new global::Avalonia.Data.Binding(nameof(Rating))
+                {
+                    Source = this,
+                    Converter = new RatingConverter(starIndex)
+                });
+
+            panel.Children.Add(button);
+        }
+
+        return panel;
+    }
+
+    #endregion
 }
 
 public enum AppTheme
@@ -382,5 +474,31 @@ public partial class ThemeSettings : ObservableObject
                 _ => ThemeVariant.Default
             };
         }
+    }
+}
+
+public class RatingConverter : global::Avalonia.Data.Converters.IValueConverter
+{
+    private readonly int _starIndex;
+
+    public RatingConverter(int starIndex)
+    {
+        _starIndex = starIndex;
+    }
+
+    public object? Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+    {
+        if (value is int rating)
+        {
+            return rating >= _starIndex
+                ? global::Avalonia.Media.Brushes.Gold
+                : global::Avalonia.Media.Brushes.Gray;
+        }
+        return global::Avalonia.Media.Brushes.Gray;
+    }
+
+    public object? ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture)
+    {
+        throw new NotImplementedException();
     }
 }
