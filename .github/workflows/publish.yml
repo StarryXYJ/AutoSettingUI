@@ -49,6 +49,9 @@ jobs:
       - name: Build Avalonia
         run: dotnet build src/Extensions/AutoSettingUI.Avalonia/AutoSettingUI.Avalonia.csproj --configuration Release -p:ContinuousIntegrationBuild=true
 
+      - name: Build Avalonia 12
+        run: dotnet build src/Extensions/AutoSettingUI.Avalonia12/AutoSettingUI.Avalonia12.csproj --configuration Release -p:ContinuousIntegrationBuild=true
+
       - name: Build Ursa
         run: dotnet build src/Extensions/AutoSettingUI.Ursa/AutoSettingUI.Ursa.csproj --configuration Release -p:ContinuousIntegrationBuild=true
 
@@ -61,6 +64,9 @@ jobs:
       - name: Run tests
         run: dotnet test src/AutoSettingUI.Generator.Tests/AutoSettingUI.Generator.Tests.csproj --configuration Release --no-build --verbosity minimal
 
+      - name: Run Avalonia 12 tests
+        run: dotnet test src/AutoSettingUI.Avalonia12.Tests/AutoSettingUI.Avalonia12.Tests.csproj --configuration Release --verbosity minimal
+
       - name: Pack Core
         run: dotnet pack src/AutoSettingUI.Core/AutoSettingUI.Core.csproj --configuration Release --no-build --output artifacts
 
@@ -72,6 +78,9 @@ jobs:
 
       - name: Pack Avalonia
         run: dotnet pack src/Extensions/AutoSettingUI.Avalonia/AutoSettingUI.Avalonia.csproj --configuration Release --no-build --output artifacts
+
+      - name: Pack Avalonia 12
+        run: dotnet pack src/Extensions/AutoSettingUI.Avalonia12/AutoSettingUI.Avalonia12.csproj --configuration Release --no-build --output artifacts
 
       - name: Pack Ursa
         run: dotnet pack src/Extensions/AutoSettingUI.Ursa/AutoSettingUI.Ursa.csproj --configuration Release --no-build --output artifacts
