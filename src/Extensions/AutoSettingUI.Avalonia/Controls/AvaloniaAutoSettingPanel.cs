@@ -285,7 +285,11 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
                 var localizedPlaceholder = service.GetString(placeholderKey);
                 if (control is TextBox textBox)
                 {
+#if AVALONIA12
+                    textBox.PlaceholderText = localizedPlaceholder;
+#else
                     textBox.Watermark = localizedPlaceholder;
+#endif
                 }
             }
         }
@@ -1034,7 +1038,11 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
         // Apply placeholder to TextBox
         if (control is TextBox textBox && !string.IsNullOrEmpty(prop.PlaceholderText))
         {
+#if AVALONIA12
+            textBox.PlaceholderText = prop.PlaceholderText;
+#else
             textBox.Watermark = prop.PlaceholderText;
+#endif
         }
 
         // Apply description (tooltip)
@@ -1173,7 +1181,11 @@ public class AvaloniaAutoSettingPanel : TemplatedControl
         // Apply placeholder if specified
         if (!string.IsNullOrEmpty(prop.PlaceholderText))
         {
+#if AVALONIA12
+            textBox.PlaceholderText = prop.PlaceholderText;
+#else
             textBox.Watermark = prop.PlaceholderText;
+#endif
             
             if (prop.UsePlaceholderKey)
             {

@@ -27,6 +27,9 @@
 <!-- Avalonia -->
 <PackageReference Include="AutoSettingUI.Avalonia" />
 
+<!-- Avalonia 12 (choose this instead of AutoSettingUI.Avalonia) -->
+<PackageReference Include="AutoSettingUI.Avalonia12" />
+
 <!-- Ursa (Avalonia with Ursa theme) -->
 <PackageReference Include="AutoSettingUI.Ursa" />
 
@@ -39,7 +42,7 @@
 
 **Target Frameworks:** `net8.0; net9.0; net10.0` (WPF: `net8.0-windows; net9.0-windows; net10.0-windows`)
 
-**Avalonia:** `AutoSettingUI.Avalonia` requires Avalonia >= 11.0.0. `AutoSettingUI.Ursa` requires Avalonia >= 11.1.1 (Ursa dependency).
+**Avalonia:** `AutoSettingUI.Avalonia` targets Avalonia 11; `AutoSettingUI.Avalonia12` targets Avalonia 12. Use only the package matching your Avalonia major version: they share an assembly name and cannot be used together. `AutoSettingUI.Ursa` requires Avalonia >= 11.1.1 (Ursa dependency).
 
 ## Quick Start
 
@@ -501,6 +504,7 @@ The repository includes demo applications showcasing all features:
 | Package                   | Description                      | Dependencies              |
 | ------------------------- | -------------------------------- | ------------------------- |
 | `AutoSettingUI.Avalonia`  | Avalonia UI panel                | Core, Extension.Shared    |
+| `AutoSettingUI.Avalonia12` | Avalonia 12 UI panel            | Core, Extension.Shared    |
 | `AutoSettingUI.Ursa`      | Ursa-themed Avalonia panel       | Core, Extension.Shared    |
 | `AutoSettingUI.WPF`       | WPF panel                        | Core, Extension.Shared    |
 | `AutoSettingUI.Generator` | Roslyn Source Generator for AOT  | Standalone (Analyzer)     |

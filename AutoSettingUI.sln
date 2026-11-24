@@ -36,12 +36,24 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoSettingUI.Avalonia.Cros
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoSettingUI.Extension.Shared", "src\Extensions\AutoSettingUI.Extension.Shared\AutoSettingUI.Extension.Shared.csproj", "{9A1EBB9B-6D6C-40BC-AD22-C911DF448004}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoSettingUI.Avalonia12", "src\Extensions\AutoSettingUI.Avalonia12\AutoSettingUI.Avalonia12.csproj", "{D04D0E15-948A-44F0-ABA6-2FAE27490FAC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoSettingUI.Avalonia12.Tests", "src\AutoSettingUI.Avalonia12.Tests\AutoSettingUI.Avalonia12.Tests.csproj", "{88F32BB2-8BD0-45BD-AECC-42469634C1DD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{88F32BB2-8BD0-45BD-AECC-42469634C1DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{88F32BB2-8BD0-45BD-AECC-42469634C1DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{88F32BB2-8BD0-45BD-AECC-42469634C1DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{88F32BB2-8BD0-45BD-AECC-42469634C1DD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D04D0E15-948A-44F0-ABA6-2FAE27490FAC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D04D0E15-948A-44F0-ABA6-2FAE27490FAC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D04D0E15-948A-44F0-ABA6-2FAE27490FAC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D04D0E15-948A-44F0-ABA6-2FAE27490FAC}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B7DC0B72-9060-49DB-89E0-63FBDD9269DA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B7DC0B72-9060-49DB-89E0-63FBDD9269DA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B7DC0B72-9060-49DB-89E0-63FBDD9269DA}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -103,6 +115,8 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
+		{88F32BB2-8BD0-45BD-AECC-42469634C1DD} = {E9EAEB75-13C9-4AC0-9734-F2374DC8A194}
+		{D04D0E15-948A-44F0-ABA6-2FAE27490FAC} = {FEC5DFBE-67B3-44C8-81C9-90C4213BF940}
 		{B7DC0B72-9060-49DB-89E0-63FBDD9269DA} = {E9EAEB75-13C9-4AC0-9734-F2374DC8A194}
 		{FC3394A1-8FEF-4E9A-82A6-F5DBE1EB4D00} = {E9EAEB75-13C9-4AC0-9734-F2374DC8A194}
 		{8B64B632-C05C-4710-AA8C-819CF86319E8} = {E9EAEB75-13C9-4AC0-9734-F2374DC8A194}

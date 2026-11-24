@@ -54,7 +54,11 @@ public static class ControlLayoutHelper
     {
         var placeholderAttr = property.GetCustomAttribute<PlaceholderAttribute>();
         if (placeholderAttr != null)
+#if AVALONIA12
+            textBox.PlaceholderText = placeholderAttr.Text;
+#else
             textBox.Watermark = placeholderAttr.Text;
+#endif
     }
 
     /// <summary>

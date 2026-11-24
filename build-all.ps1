@@ -56,6 +56,7 @@ if ($Pack) {
         "src\AutoSettingUI.Generator\AutoSettingUI.Generator.csproj",
         "src\Extensions\AutoSettingUI.Extension.Shared\AutoSettingUI.Extension.Shared.csproj",
         "src\Extensions\AutoSettingUI.Avalonia\AutoSettingUI.Avalonia.csproj",
+        "src\Extensions\AutoSettingUI.Avalonia12\AutoSettingUI.Avalonia12.csproj",
         "src\Extensions\AutoSettingUI.Ursa\AutoSettingUI.Ursa.csproj",
         "src\Extensions\AutoSettingUI.WPF\AutoSettingUI.WPF.csproj"
     )
