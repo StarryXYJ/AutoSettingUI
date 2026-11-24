@@ -16,7 +16,7 @@
 - ✨ **特性驱动渲染** — 使用特性灵活自定义每个属性的渲染方式
 - ⚡ **AOT 兼容** — 增量 Roslyn 源生成器，完整支持 Native AOT 与裁剪发布
 - 🔄 **MVVM 支持** — 完美支持 CommunityToolkit.Mvvm `[ObservableProperty]`
-- 🌐 **国际化支持** — 内置本地化服务，支持动态语言切换
+- 🌐 **国际化支持** — 支持自定义本地化服务，可选 DynamicLocalization 适配器
 - 🔌 **高度可扩展** — 可注入自定义 Provider 和 Accessor
 - 🧭 **内置导航栏** — 侧边栏树形导航
 - 🎯 **扩展控件支持** — ColorPicker、DatePicker、TimePicker、NumericUpDown 等
@@ -156,92 +156,64 @@ AotSettingRegistry.Accessor = AotSettingRegistry.Provider;
 
 ## 国际化（i18n）
 
-AutoSettingUI 通过 [DynamicLocalization](https://github.com/StarryXYJ/DynamicLocalization) 支持动态语言切换。
-
-### 使用资源键
-
-在标题特性上设置 `UseResourceKey = true`：
+在文本特性上设置 `UseResourceKey = true`，并为面板提供
+`AutoSettingUI.Core.Interfaces.ILocalizationService`。资源来源和语言切换由应用负责；
+面板只查询键并监听变化。找不到键时返回 `null`，面板使用原文本。翻译变化时触发
+`LocalizationChanged`；通知可以来自后台线程。三个面板均刷新标题、标签和导航文本；
+Avalonia 与 Ursa 的内置文本输入框还会刷新占位文本。描述键和 WPF 占位文本尚未本地化。
 
 ```csharp
+using AutoSettingUI.Core.Attributes;
+using AutoSettingUI.Core.Interfaces;
+
 [SettingUI]
 [MainHeader("Settings.Application", UseResourceKey = true)]
 public class ApplicationSettings
 {
     [Title("Settings.AppName", UseResourceKey = true)]
-    public string AppName { get; set; } = "我的应用程序";
-
-    [Title("Settings.EnableLogging", UseResourceKey = true)]
-    public bool EnableLogging { get; set; }
+    public string AppName { get; set; } = "My Application";
 }
-```
 
-### 配置本地化服务
-
-**1. 创建资源文件（.resx）：**
-
-- `Strings.resx`（默认/英文）
-- `Strings.zh-CN.resx`（简体中文）
-
-**2. 创建资源访问类：**
-
-```csharp
-namespace YourApp.Resources;
-
-public static class Strings
+public sealed class DictionaryLocalizationService : ILocalizationService
 {
-    public static System.Resources.ResourceManager ResourceManager { get; } 
-        = new System.Resources.ResourceManager(
-            "YourApp.Resources.Strings", 
-            typeof(Strings).Assembly);
-}
-```
+    private IReadOnlyDictionary<string, string> _strings = new Dictionary<string, string>();
+    public event EventHandler? LocalizationChanged;
+    public string? GetString(string key) => _strings.TryGetValue(key, out var value) ? value : null;
 
-**3. 配置本地化服务：**
-
-```csharp
-using DynamicLocalization.Core;
-using DynamicLocalization.Core.Providers;
-
-public class MainViewModel
-{
-    public ICultureService LocalizationService { get; }
-
-    public MainViewModel()
+    public void SetTranslations(IReadOnlyDictionary<string, string> strings)
     {
-        var cultureService = new CultureService();
-        var resxProvider = new ResxLocalizationProvider();
-        resxProvider.Initialize(new ResxLocalizationProviderOptions
-        {
-            ResourceType = typeof(Strings)
-        });
-        cultureService.RegisterProvider(resxProvider);
-        LocalizationService = cultureService;
+        _strings = strings;
+        LocalizationChanged?.Invoke(this, EventArgs.Empty);
     }
-
-    public void SwitchToEnglish() => LocalizationService.SetCulture("en");
-    public void SwitchToChinese() => LocalizationService.SetCulture("zh-CN");
 }
 ```
 
-**4. 绑定到面板：**
+可以在代码中赋值或在 XAML 中绑定 `LocalizationService`，也可以由应用的 DI 容器
+注册和提供服务。Avalonia、Ursa 和 WPF 面板使用相同接口。
 
 ```xml
-<auto:AvaloniaAutoSettingPanel 
-    Targets="{Binding Targets}"
+<auto:AvaloniaAutoSettingPanel Targets="{Binding Targets}"
     LocalizationService="{Binding LocalizationService}" />
 ```
 
-### 本地化数据源
+### DynamicLocalization 适配器
 
-DynamicLocalization 支持多种翻译数据源：
+已有 `DynamicLocalization.Core.ICultureService` 的应用可安装可选包
+`AutoSettingUI.DynamicLocalization`，将服务包装为 `DynamicLocalizationAdapter` 后
+赋给面板。继续通过原服务切换语言；不再使用时释放适配器，它不拥有原服务。
 
-| 提供者 | 说明 |
-|--------|------|
-| `ResxLocalizationProvider` | 使用 .NET .resx 资源文件 |
-| `JsonLocalizationProvider` | 基于 JSON 文件的翻译 |
-| 自定义提供者 | 实现 `ILocalizationProvider` 接口，支持数据库、API 等 |
+```csharp
+using AutoSettingUI.DynamicLocalization;
 
-更多数据源和高级用法，请参阅 [DynamicLocalization](https://github.com/StarryXYJ/DynamicLocalization)。
+// cultureService 是应用已配置的 ICultureService。
+var adapter = new DynamicLocalizationAdapter(cultureService);
+panel.LocalizationService = adapter;
+cultureService.SetCulture("zh-CN");
+// 关闭时：panel.LocalizationService = null; adapter.Dispose();
+```
+
+**迁移：** `LocalizationService` 以前直接接受 `ICultureService`；现有代码需要使用
+适配器或实现新接口。Core 和 UI 包不再依赖 DynamicLocalization。
 
 ## 可用特性一览
 
@@ -333,6 +305,8 @@ public sealed class NumericUpDownAttribute : ControlBindingAttribute
 | 包名                      | 说明                     | 依赖                  |
 | ------------------------- | ------------------------ | --------------------- |
 | `AutoSettingUI.Avalonia`  | Avalonia UI 面板         | Core, Extension.Shared |
+| `AutoSettingUI.Avalonia12` | Avalonia 12 面板        | Core, Extension.Shared |
+| `AutoSettingUI.DynamicLocalization` | 可选本地化适配器 | Core, DynamicLocalization.Core |
 | `AutoSettingUI.Ursa`      | Ursa 主题 Avalonia 面板  | Core, Extension.Shared |
 | `AutoSettingUI.WPF`       | WPF 面板                 | Core, Extension.Shared |
 | `AutoSettingUI.Generator` | Roslyn 源生成器（AOT）   | 独立（Analyzer）      |

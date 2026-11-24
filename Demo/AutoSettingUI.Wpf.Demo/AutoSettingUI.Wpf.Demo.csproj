@@ -14,6 +14,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <ProjectReference Include="../../src/Extensions/AutoSettingUI.DynamicLocalization/AutoSettingUI.DynamicLocalization.csproj" />
         <ProjectReference Include="..\..\src\AutoSettingUI.Generator\AutoSettingUI.Generator.csproj" />
         <ProjectReference Include="..\..\src\Extensions\AutoSettingUI.WPF\AutoSettingUI.WPF.csproj" />
     </ItemGroup>

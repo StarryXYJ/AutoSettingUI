@@ -1,6 +1,7 @@
-name: Publish to NuGet
+name: Build and publish
 
 on:
+  pull_request:
   push:
     # branches:
     #   - main
@@ -43,6 +44,9 @@ jobs:
       - name: Build Extension.Shared
         run: dotnet build src/Extensions/AutoSettingUI.Extension.Shared/AutoSettingUI.Extension.Shared.csproj --configuration Release -p:ContinuousIntegrationBuild=true
 
+      - name: Build DynamicLocalization adapter
+        run: dotnet build src/Extensions/AutoSettingUI.DynamicLocalization/AutoSettingUI.DynamicLocalization.csproj --configuration Release -p:ContinuousIntegrationBuild=true
+
       - name: Build Avalonia
         run: dotnet build src/Extensions/AutoSettingUI.Avalonia/AutoSettingUI.Avalonia.csproj --configuration Release -p:ContinuousIntegrationBuild=true
 
@@ -55,6 +59,18 @@ jobs:
       - name: Build WPF
         run: dotnet build src/Extensions/AutoSettingUI.WPF/AutoSettingUI.WPF.csproj --configuration Release -p:ContinuousIntegrationBuild=true
 
+      - name: Build desktop demos
+        run: |
+          $projects = @(
+            'Demo/AutoSettingUI.Wpf.Demo/AutoSettingUI.Wpf.Demo.csproj',
+            'Demo/AutoSettingUI.Ursa.Demo/AutoSettingUI.Ursa.Demo.csproj',
+            'Demo/AutoSettingUI.Avalonia.CrossPlatform.Demo/AutoSettingUI.Avalonia.CrossPlatform.Demo/AutoSettingUI.Avalonia.CrossPlatform.Demo.csproj'
+          )
+          foreach ($project in $projects) {
+            dotnet build $project --configuration Release -p:PublishAot=false
+            if ($LASTEXITCODE -ne 0) { throw "Failed to build $project" }
+          }
+
       - name: Build Tests
         run: dotnet build src/AutoSettingUI.Generator.Tests/AutoSettingUI.Generator.Tests.csproj --configuration Release
 
@@ -64,6 +80,12 @@ jobs:
       - name: Run Avalonia 12 tests
         run: dotnet test src/AutoSettingUI.Avalonia12.Tests/AutoSettingUI.Avalonia12.Tests.csproj --configuration Release --verbosity minimal
 
+      - name: Run Avalonia 11 and Ursa tests
+        run: dotnet test src/AutoSettingUI.Avalonia11.Tests/AutoSettingUI.Avalonia11.Tests.csproj --configuration Release --verbosity minimal
+
+      - name: Run WPF tests
+        run: dotnet test src/AutoSettingUI.WPF.Tests/AutoSettingUI.WPF.Tests.csproj --configuration Release --verbosity minimal
+
       - name: Pack Core
         run: dotnet pack src/AutoSettingUI.Core/AutoSettingUI.Core.csproj --configuration Release --no-build --output artifacts
 
@@ -72,6 +94,9 @@ jobs:
 
       - name: Pack Extension.Shared
         run: dotnet pack src/Extensions/AutoSettingUI.Extension.Shared/AutoSettingUI.Extension.Shared.csproj --configuration Release --no-build --output artifacts
+
+      - name: Pack DynamicLocalization adapter
+        run: dotnet pack src/Extensions/AutoSettingUI.DynamicLocalization/AutoSettingUI.DynamicLocalization.csproj --configuration Release --no-build --output artifacts
 
       - name: Pack Avalonia
         run: dotnet pack src/Extensions/AutoSettingUI.Avalonia/AutoSettingUI.Avalonia.csproj --configuration Release --no-build --output artifacts
@@ -90,7 +115,11 @@ jobs:
 
       - name: Publish to NuGet
         if: startsWith(github.ref, 'refs/tags/v')
-        run: Get-ChildItem artifacts -Filter *.nupkg | ForEach-Object { dotnet nuget push $_.FullName --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate }
+        run: |
+          Get-ChildItem artifacts -Filter *.nupkg | ForEach-Object {
+            dotnet nuget push $_.FullName --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }} --skip-duplicate
+            if ($LASTEXITCODE -ne 0) { throw "Failed to publish $($_.Name)" }
+          }
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
