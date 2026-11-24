@@ -30,10 +30,12 @@ public partial class ApplicationSettings : ObservableObject
     private bool _enableLogging;
 
     [Title("Settings.LogLevel", UseResourceKey = true)]
+    [Hide(nameof(ShouldHideLogging))]
     public LogLevel CurLogLevel { get; set; } = LogLevel.Info;
 
     [Title("Settings.MaxLogSize", UseResourceKey = true)]
     [Range(1, 100)]
+    [Hide(nameof(ShouldHideLogging))]
     public int MaxLogSize { get; set; } = 10;
 
     [Title("Settings.Volume", UseResourceKey = true)]
@@ -42,6 +44,8 @@ public partial class ApplicationSettings : ObservableObject
 
     [Hide]
     public string InternalId { get; set; } = Guid.NewGuid().ToString();
+
+    public bool ShouldHideLogging => !EnableLogging;
 
     public Slider VolumeFactory()
     {
@@ -60,10 +64,7 @@ public partial class ApplicationSettings : ObservableObject
 [MainHeader("User Preferences")]
 public partial class UserPreferences : ObservableObject
 {
-    private bool _isAdmin = true;
     private string _email = "";
-
-
 
     [SubHeader("Display")]
     [Title("Theme")]
@@ -95,31 +96,40 @@ public partial class UserPreferences : ObservableObject
     [SubHeader("ReadOnly Examples")]
     [Title("Read-Only Field")]
     [ReadOnly(true)]
-    public string ReadOnlyField { get; set; } = "This field is read-only";
+    [ObservableProperty]
+    private string _readOnlyField = "This field is read-only";
 
     [Title("Dynamic ReadOnly")]
     [ReadOnly(nameof(CanEdit))]
-    public string DynamicReadOnlyField { get; set; } = "Only editable by admins";
+    [ObservableProperty]
+    private string _dynamicReadOnlyField = "Only editable by admins";
 
-    public bool IsAdmin
-    {
-        get => _isAdmin;
-        set
-        {
-            if (_isAdmin != value)
-            {
-                _isAdmin = value;
-                OnPropertyChanged(nameof(IsAdmin));
-            }
-        }
-    }
+    [Title("Dynamic ReadOnly")]
+    [ReadOnly(nameof(CanEdit))]
+    [ObservableProperty]
+    [Range(0, 100)]
+    private int _dynamicReadOnlyFieldInt = 42;
+
+    [ControlBinding(typeof(System.Windows.Controls.CheckBox), "IsChecked")]
+    [ObservableProperty]
+    private bool _isAdmin = true;
 
     [SubHeader("Notifications")]
     [Title("Enable Notifications")]
-    public bool EnableNotifications { get; set; } = true;
+    [ObservableProperty]
+    private bool _enableNotifications = true;
 
     [Title("Notification Sound")]
+    [Hide(nameof(ShouldHideNotifications))]
     public bool NotificationSound { get; set; } = true;
+
+    [Title("Notification Email")]
+    [Description("Email address for sending notifications")]
+    [Hide(nameof(ShouldHideNotifications))]
+    [Placeholder("notifications@example.com")]
+    public string NotificationEmail { get; set; } = "";
+
+    public bool ShouldHideNotifications => !EnableNotifications;
 
     [Title("Email Address")]
     [Description("Your email address for notifications and account recovery")]
@@ -178,7 +188,9 @@ public partial class UserPreferences : ObservableObject
     [CollectionEditor(SelectedItemProperty = nameof(SelectedTag))]
     public List<string> Tags { get; set; } = ["Important", "Work"];
 
-    [Title("Selected Tag")] [Description("The currently selected tag from the list above")] [ObservableProperty]
+    [Title("Selected Tag")]
+    [Description("The currently selected tag from the list above")]
+    [ObservableProperty]
     private string? _selectedTag;
 
     [Title("Versions (Read-Only Collection)")]
@@ -331,7 +343,87 @@ public partial class ExtendedControlsSettings : ObservableObject
     [Title("Settings.ItemCount", UseResourceKey = true)]
     [Range(0, 100)]
     [ObservableProperty]
+    [DisplayOrder(1)]
     private int _itemCount = 42;
+
+    #region ControlBinding Examples
+
+    [SubHeader("ControlBinding Examples")]
+
+    [Title("Progress (Auto-bind)")]
+    [Description("Uses ControlBinding with BindingProperty - auto binds to Value")]
+    [ControlBinding(typeof(System.Windows.Controls.ProgressBar), "Value")]
+    public double ProgressValue { get; set; } = 50.0;
+
+    [Title("Custom Slider (Factory Method)")]
+    [Description("Factory method handles binding manually - can customize converter, etc.")]
+    [ControlBinding(typeof(System.Windows.Controls.Slider), FactoryMethod = nameof(CreateCustomSlider))]
+    public double CustomSliderValue { get; set; } = 75.0;
+
+    public System.Windows.Controls.Slider CreateCustomSlider()
+    {
+        var slider = new System.Windows.Controls.Slider
+        {
+            Minimum = 0,
+            Maximum = 100,
+            Width = 200
+        };
+
+        slider.SetBinding(System.Windows.Controls.Slider.ValueProperty,
+            new System.Windows.Data.Binding(nameof(CustomSliderValue))
+            {
+                Source = this,
+                Mode = System.Windows.Data.BindingMode.TwoWay
+            });
+
+        return slider;
+    }
+
+    [Title("Auto-detected TextBox")]
+    [Description("Only control type specified - auto-detects Text property")]
+    [ControlBinding(typeof(System.Windows.Controls.TextBox))]
+    public string AutoDetectedText { get; set; } = "Auto-detected binding";
+
+    [Title("Rating (Complex Factory)")]
+    [Description("Factory creates a custom rating control with full customization")]
+    [ControlBinding(typeof(System.Windows.Controls.StackPanel), FactoryMethod = nameof(CreateRatingControl))]
+    [ObservableProperty]
+    private int _rating = 3;
+
+    public System.Windows.Controls.StackPanel CreateRatingControl()
+    {
+        var panel = new System.Windows.Controls.StackPanel
+        {
+            Orientation = System.Windows.Controls.Orientation.Horizontal
+        };
+
+        for (int i = 1; i <= 5; i++)
+        {
+            var starIndex = i;
+            var button = new System.Windows.Controls.Button
+            {
+                Content = "★",
+                FontSize = 24,
+                Width = 40,
+                Height = 40
+            };
+
+            button.Click += (s, e) => Rating = starIndex;
+
+            button.SetBinding(System.Windows.Controls.Button.ForegroundProperty,
+                new System.Windows.Data.Binding(nameof(Rating))
+                {
+                    Source = this,
+                    Converter = new RatingConverter(starIndex)
+                });
+
+            panel.Children.Add(button);
+        }
+
+        return panel;
+    }
+
+    #endregion
 }
 
 public enum AppTheme
@@ -374,4 +466,30 @@ public partial class ThemeSettings : ObservableObject
         AppTheme.Blue,
         AppTheme.HighContrast
     };
+}
+
+public class RatingConverter : System.Windows.Data.IValueConverter
+{
+    private readonly int _starIndex;
+
+    public RatingConverter(int starIndex)
+    {
+        _starIndex = starIndex;
+    }
+
+    public object Convert(object value, System.Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    {
+        if (value is int rating)
+        {
+            return rating >= _starIndex
+                ? Brushes.Gold
+                : Brushes.Gray;
+        }
+        return Brushes.Gray;
+    }
+
+    public object ConvertBack(object value, System.Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    {
+        throw new System.NotImplementedException();
+    }
 }

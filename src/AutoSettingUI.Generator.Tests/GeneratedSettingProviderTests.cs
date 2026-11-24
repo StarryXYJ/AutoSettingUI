@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using AutoSettingUI.Core.Attributes;
+using AutoSettingUI.Core.Interfaces;
+using AutoSettingUI.Core.Models;
+using AutoSettingUI.Core.Registry;
 using AutoSettingUI.Generator.Incremental;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -598,8 +601,7 @@ public class TestSettings
 
         AssertContains(generated, "[ModuleInitializer]");
         AssertContains(generated, "public static void Initialize()");
-        AssertContains(generated, "AotSettingRegistry.Provider = instance;");
-        AssertContains(generated, "AotSettingRegistry.Accessor = instance;");
+        AssertContains(generated, "AotSettingRegistry.RegisterProvider(instance);");
     }
 
     [Fact]
@@ -912,5 +914,200 @@ public class TestSettings
     {
         Assert.False(text.Contains(notExpected, StringComparison.Ordinal), 
             $"Expected NOT to find '{notExpected}' in generated code.");
+    }
+}
+
+public sealed class AotSettingRegistryTests
+{
+    [Fact]
+    public void RegisterProvider_AddsProviderToList()
+    {
+        AotSettingRegistry.Clear();
+        var provider = new MockSettingDescriptorProvider();
+
+        AotSettingRegistry.RegisterProvider(provider);
+
+        var allProviders = AotSettingRegistry.GetAllProviders();
+        Assert.Single(allProviders);
+        Assert.Contains(provider, allProviders);
+        AotSettingRegistry.Clear();
+    }
+
+    [Fact]
+    public void RegisterProvider_DoesNotAddDuplicate()
+    {
+        AotSettingRegistry.Clear();
+        var provider = new MockSettingDescriptorProvider();
+
+        AotSettingRegistry.RegisterProvider(provider);
+        AotSettingRegistry.RegisterProvider(provider);
+
+        var allProviders = AotSettingRegistry.GetAllProviders();
+        Assert.Single(allProviders);
+        AotSettingRegistry.Clear();
+    }
+
+    [Fact]
+    public void RegisterProvider_MultipleProviders_AllRegistered()
+    {
+        AotSettingRegistry.Clear();
+        var provider1 = new MockSettingDescriptorProvider("Type1");
+        var provider2 = new MockSettingDescriptorProvider("Type2");
+        var provider3 = new MockSettingDescriptorProvider("Type3");
+
+        AotSettingRegistry.RegisterProvider(provider1);
+        AotSettingRegistry.RegisterProvider(provider2);
+        AotSettingRegistry.RegisterProvider(provider3);
+
+        var allProviders = AotSettingRegistry.GetAllProviders();
+        Assert.Equal(3, allProviders.Count);
+        Assert.Contains(provider1, allProviders);
+        Assert.Contains(provider2, allProviders);
+        Assert.Contains(provider3, allProviders);
+        AotSettingRegistry.Clear();
+    }
+
+    [Fact]
+    public void Provider_ReturnsCompositeProvider_WhenMultipleRegistered()
+    {
+        AotSettingRegistry.Clear();
+        var provider1 = new MockSettingDescriptorProvider("Type1");
+        var provider2 = new MockSettingDescriptorProvider("Type2");
+
+        AotSettingRegistry.RegisterProvider(provider1);
+        AotSettingRegistry.RegisterProvider(provider2);
+
+        var provider = AotSettingRegistry.Provider;
+        Assert.NotNull(provider);
+        Assert.True(provider.HasDescriptor("Type1"));
+        Assert.True(provider.HasDescriptor("Type2"));
+        AotSettingRegistry.Clear();
+    }
+
+    [Fact]
+    public void Provider_GetDescriptor_SearchesAllProviders()
+    {
+        AotSettingRegistry.Clear();
+        var provider1 = new MockSettingDescriptorProvider("Type1");
+        var provider2 = new MockSettingDescriptorProvider("Type2");
+
+        AotSettingRegistry.RegisterProvider(provider1);
+        AotSettingRegistry.RegisterProvider(provider2);
+
+        var provider = AotSettingRegistry.Provider;
+        Assert.NotNull(provider);
+        
+        var descriptor1 = provider.GetDescriptor("Type1");
+        Assert.NotNull(descriptor1);
+        Assert.Equal("Type1", descriptor1.TypeName);
+        
+        var descriptor2 = provider.GetDescriptor("Type2");
+        Assert.NotNull(descriptor2);
+        Assert.Equal("Type2", descriptor2.TypeName);
+        
+        AotSettingRegistry.Clear();
+    }
+
+    [Fact]
+    public void Provider_GetAllDescriptors_CombinesAllProviders()
+    {
+        AotSettingRegistry.Clear();
+        var provider1 = new MockSettingDescriptorProvider("Type1");
+        var provider2 = new MockSettingDescriptorProvider("Type2");
+
+        AotSettingRegistry.RegisterProvider(provider1);
+        AotSettingRegistry.RegisterProvider(provider2);
+
+        var provider = AotSettingRegistry.Provider;
+        Assert.NotNull(provider);
+        
+        var allDescriptors = provider.GetAllDescriptors();
+        Assert.Equal(2, allDescriptors.Count);
+        
+        AotSettingRegistry.Clear();
+    }
+
+    [Fact]
+    public void UnregisterProvider_RemovesProvider()
+    {
+        AotSettingRegistry.Clear();
+        var provider1 = new MockSettingDescriptorProvider("Type1");
+        var provider2 = new MockSettingDescriptorProvider("Type2");
+
+        AotSettingRegistry.RegisterProvider(provider1);
+        AotSettingRegistry.RegisterProvider(provider2);
+
+        AotSettingRegistry.UnregisterProvider(provider1);
+
+        var allProviders = AotSettingRegistry.GetAllProviders();
+        Assert.Single(allProviders);
+        Assert.Contains(provider2, allProviders);
+        AotSettingRegistry.Clear();
+    }
+
+    [Fact]
+    public void Clear_RemovesAllProviders()
+    {
+        AotSettingRegistry.Clear();
+        var provider1 = new MockSettingDescriptorProvider("Type1");
+        var provider2 = new MockSettingDescriptorProvider("Type2");
+
+        AotSettingRegistry.RegisterProvider(provider1);
+        AotSettingRegistry.RegisterProvider(provider2);
+
+        AotSettingRegistry.Clear();
+
+        var allProviders = AotSettingRegistry.GetAllProviders();
+        Assert.Empty(allProviders);
+    }
+
+    [Fact]
+    public void Provider_Set_AddsToProviderList()
+    {
+        AotSettingRegistry.Clear();
+        var provider = new MockSettingDescriptorProvider("Type1");
+
+        AotSettingRegistry.Provider = provider;
+
+        var allProviders = AotSettingRegistry.GetAllProviders();
+        Assert.Single(allProviders);
+        Assert.Contains(provider, allProviders);
+        AotSettingRegistry.Clear();
+    }
+
+    private sealed class MockSettingDescriptorProvider : ISettingDescriptorProvider, IPropertyValueAccessor
+    {
+        private readonly string _typeName;
+
+        public MockSettingDescriptorProvider(string typeName = "MockType")
+        {
+            _typeName = typeName;
+        }
+
+        public SettingClassDescriptor? GetDescriptor(Type type) => GetDescriptor(type.FullName ?? type.Name);
+
+        public SettingClassDescriptor? GetDescriptor(string typeName)
+        {
+            if (typeName == _typeName)
+            {
+                return new SettingClassDescriptor(_typeName, _typeName, null, [], []);
+            }
+            return null;
+        }
+
+        public IReadOnlyList<SettingClassDescriptor> GetAllDescriptors()
+        {
+            return [new SettingClassDescriptor(_typeName, _typeName, null, [], [])];
+        }
+
+        public bool HasDescriptor(Type type) => HasDescriptor(type.FullName ?? type.Name);
+
+        public bool HasDescriptor(string typeName) => typeName == _typeName;
+
+        public object? GetValue(object target, string propertyName) => null;
+
+        public void SetValue(object target, string propertyName, object? value) { }
+
+        public object? GetEnumValue(string typeName, string value) => null;
     }
 }

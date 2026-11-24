@@ -196,8 +196,7 @@ public class AutoSettingGenerator : IIncrementalGenerator
         sb.AppendLine("        public static void Initialize()");
         sb.AppendLine("        {");
         sb.AppendLine("            var instance = new GeneratedSettingProvider();");
-        sb.AppendLine("            AotSettingRegistry.Provider = instance;");
-        sb.AppendLine("            AotSettingRegistry.Accessor = instance;");
+        sb.AppendLine("            AotSettingRegistry.RegisterProvider(instance);");
         sb.AppendLine("        }");
         sb.AppendLine();
         sb.AppendLine("        private readonly Dictionary<string, SettingClassDescriptor> _descriptors");
