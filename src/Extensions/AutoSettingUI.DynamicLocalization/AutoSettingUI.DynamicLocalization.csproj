@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <MinVerTagPrefix>v</MinVerTagPrefix>
+        <MinVerAutoIncrement>patch</MinVerAutoIncrement>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PackageId>AutoSettingUI.DynamicLocalization</PackageId>
+        <Authors>Sakuya Starry</Authors>
+        <Description>Optional DynamicLocalization adapter for AutoSettingUI</Description>
+        <PackageTags>settings;configuration;localization</PackageTags>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/StarryXYJ/AutoSettingUI</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/StarryXYJ/AutoSettingUI.git</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="DynamicLocalization.Core" Version="2.0.0" />
+        <PackageReference Include="MinVer" Version="8.0.0-alpha.1" PrivateAssets="all" />
+        <ProjectReference Include="../../AutoSettingUI.Core/AutoSettingUI.Core.csproj" />
+        <None Include="README.md" Pack="true" PackagePath="/" />
+    </ItemGroup>
+</Project>

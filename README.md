@@ -16,7 +16,7 @@
 - ✨ **Attribute-driven** — Decorate properties with attributes to customize rendering
 - ⚡ **AOT-compatible** — Incremental Roslyn Source Generator enables full Native AOT and trimming support
 - 🔄 **MVVM Support** — Works with CommunityToolkit.Mvvm `[ObservableProperty]`
-- 🌐 **i18n Support** — Built-in localization service with dynamic language switching powered by [DynamicLocalization](https://github.com/StarryXYJ/Avalonia.DynamicLocalization)
+- 🌐 **i18n Support** — Use your own localization service, with optional DynamicLocalization adapter
 - 🔌 **Extensible** — Inject custom providers and accessors
 - 🧭 **Built-in navigation** — Sidebar tree navigation to sections
 - 🎯 **Extended Controls** — ColorPicker, DatePicker, TimePicker, NumericUpDown, and more
@@ -26,6 +26,9 @@
 ```xml
 <!-- Avalonia -->
 <PackageReference Include="AutoSettingUI.Avalonia" />
+
+<!-- Avalonia 12 (choose this instead of AutoSettingUI.Avalonia) -->
+<PackageReference Include="AutoSettingUI.Avalonia12" />
 
 <!-- Ursa (Avalonia with Ursa theme) -->
 <PackageReference Include="AutoSettingUI.Ursa" />
@@ -39,7 +42,7 @@
 
 **Target Frameworks:** `net8.0; net9.0; net10.0` (WPF: `net8.0-windows; net9.0-windows; net10.0-windows`)
 
-**Avalonia:** `AutoSettingUI.Avalonia` requires Avalonia >= 11.0.0. `AutoSettingUI.Ursa` requires Avalonia >= 11.1.1 (Ursa dependency).
+**Avalonia:** `AutoSettingUI.Avalonia` targets Avalonia 11; `AutoSettingUI.Avalonia12` targets Avalonia 12. Use only the package matching your Avalonia major version: they share an assembly name and cannot be used together. `AutoSettingUI.Ursa` requires Avalonia >= 11.1.1 (Ursa dependency).
 
 ## Quick Start
 
@@ -156,92 +159,70 @@ AotSettingRegistry.Accessor = AotSettingRegistry.Provider;
 
 ## Internationalization (i18n)
 
-AutoSettingUI supports dynamic language switching powered by [DynamicLocalization](https://github.com/StarryXYJ/DynamicLocalization).
-
-### Using Resource Keys
-
-Set `UseResourceKey = true` on title attributes:
+Mark text as a resource key with `UseResourceKey = true` and assign an
+`AutoSettingUI.Core.Interfaces.ILocalizationService` to the panel. The service
+owns its translation source and language selection; the panel only queries keys
+and listens for changes. Return `null` for a missing key to display the original
+text. Raise `LocalizationChanged` whenever translations change; notifications
+may come from a background thread. Headings, labels, and navigation titles
+refresh in all panels; built-in Avalonia and Ursa text inputs also refresh their
+placeholders. Description keys and WPF placeholders are not currently localized.
 
 ```csharp
+using AutoSettingUI.Core.Attributes;
+using AutoSettingUI.Core.Interfaces;
+
 [SettingUI]
 [MainHeader("Settings.Application", UseResourceKey = true)]
 public class ApplicationSettings
 {
     [Title("Settings.AppName", UseResourceKey = true)]
     public string AppName { get; set; } = "My Application";
-
-    [Title("Settings.EnableLogging", UseResourceKey = true)]
-    public bool EnableLogging { get; set; }
 }
-```
 
-### Setting Up Localization
-
-**1. Create resource files (.resx):**
-
-- `Strings.resx` (default/English)
-- `Strings.zh-CN.resx` (Chinese Simplified)
-
-**2. Create a resource accessor class:**
-
-```csharp
-namespace YourApp.Resources;
-
-public static class Strings
+public sealed class DictionaryLocalizationService : ILocalizationService
 {
-    public static System.Resources.ResourceManager ResourceManager { get; } 
-        = new System.Resources.ResourceManager(
-            "YourApp.Resources.Strings", 
-            typeof(Strings).Assembly);
-}
-```
+    private IReadOnlyDictionary<string, string> _strings = new Dictionary<string, string>();
+    public event EventHandler? LocalizationChanged;
+    public string? GetString(string key) => _strings.TryGetValue(key, out var value) ? value : null;
 
-**3. Configure the localization service:**
-
-```csharp
-using DynamicLocalization.Core;
-using DynamicLocalization.Core.Providers;
-
-public class MainViewModel
-{
-    public ICultureService LocalizationService { get; }
-
-    public MainViewModel()
+    public void SetTranslations(IReadOnlyDictionary<string, string> strings)
     {
-        var cultureService = new CultureService();
-        var resxProvider = new ResxLocalizationProvider();
-        resxProvider.Initialize(new ResxLocalizationProviderOptions
-        {
-            ResourceType = typeof(Strings)
-        });
-        cultureService.RegisterProvider(resxProvider);
-        LocalizationService = cultureService;
+        _strings = strings;
+        LocalizationChanged?.Invoke(this, EventArgs.Empty);
     }
-
-    public void SwitchToEnglish() => LocalizationService.SetCulture("en");
-    public void SwitchToChinese() => LocalizationService.SetCulture("zh-CN");
 }
 ```
 
-**4. Bind to the panel:**
+Assign the service to `LocalizationService` in code or bind it in XAML. Register
+and resolve it through your application's DI container if desired. The same
+interface is used by the Avalonia, Ursa, and WPF panels.
 
 ```xml
-<auto:AvaloniaAutoSettingPanel 
-    Targets="{Binding Targets}"
+<auto:AvaloniaAutoSettingPanel Targets="{Binding Targets}"
     LocalizationService="{Binding LocalizationService}" />
 ```
 
-### Localization Providers
+### DynamicLocalization adapter
 
-DynamicLocalization supports multiple data sources for translations:
+For an existing `DynamicLocalization.Core.ICultureService`, install the optional
+`AutoSettingUI.DynamicLocalization` package and assign a `DynamicLocalizationAdapter`
+to the panel. Keep the culture service to switch languages and dispose the
+adapter when it is no longer used; it does not own the culture service.
 
-| Provider | Description |
-|----------|-------------|
-| `ResxLocalizationProvider` | Uses .NET .resx resource files |
-| `JsonLocalizationProvider` | JSON file-based translations |
-| Custom Provider | Implement `ILocalizationProvider` for database, API, etc. |
+```csharp
+using AutoSettingUI.DynamicLocalization;
 
-For more providers and advanced usage, see [DynamicLocalization](https://github.com/StarryXYJ/DynamicLocalization).
+// cultureService is an existing ICultureService configured by the application.
+var adapter = new DynamicLocalizationAdapter(cultureService);
+panel.LocalizationService = adapter;
+cultureService.SetCulture("zh-CN");
+// On shutdown: panel.LocalizationService = null; adapter.Dispose();
+```
+
+**Migration:** `LocalizationService` previously accepted `ICultureService`
+directly. Existing consumers must wrap it in the adapter or implement the new
+interface. Core and the UI packages no longer depend on DynamicLocalization.
 
 ## Available Attributes
 
@@ -501,10 +482,13 @@ The repository includes demo applications showcasing all features:
 | Package                   | Description                      | Dependencies              |
 | ------------------------- | -------------------------------- | ------------------------- |
 | `AutoSettingUI.Avalonia`  | Avalonia UI panel                | Core, Extension.Shared    |
+| `AutoSettingUI.Avalonia12` | Avalonia 12 UI panel            | Core, Extension.Shared    |
+| `AutoSettingUI.Avalonia12` | Avalonia 12 panel              | Core, Extension.Shared    |
+| `AutoSettingUI.DynamicLocalization` | Optional localization adapter | Core, DynamicLocalization.Core |
 | `AutoSettingUI.Ursa`      | Ursa-themed Avalonia panel       | Core, Extension.Shared    |
 | `AutoSettingUI.WPF`       | WPF panel                        | Core, Extension.Shared    |
 | `AutoSettingUI.Generator` | Roslyn Source Generator for AOT  | Standalone (Analyzer)     |
-| `AutoSettingUI.Core`      | Attributes, interfaces, models   | DynamicLocalization.Core  |
+| `AutoSettingUI.Core`      | Attributes, interfaces, models   | —  |
 
 > **Note:** `Core` and `Extension.Shared` are automatically included when installing UI framework packages.
 

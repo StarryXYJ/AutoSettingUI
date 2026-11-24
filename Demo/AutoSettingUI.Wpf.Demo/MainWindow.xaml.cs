@@ -5,6 +5,7 @@ using System.Windows.Media;
 using AutoSettingUI.WPF.Controls;
 using AutoSettingUI.Wpf.Demo.Models;
 using DynamicLocalization.Core;
+using AutoSettingUI.DynamicLocalization;
 
 namespace AutoSettingUI.Wpf.Demo;
 
@@ -19,15 +20,7 @@ public partial class MainWindow : Window
     private readonly ICultureService _localizationService;
     private string _currentLanguage = "en";
 
-    public ICultureService LocalizationService
-    {
-        get => _localizationService;
-        set
-        {
-            SettingsPanel.LocalizationService = value;
-            CustomSettingsPanel.LocalizationService = value;
-        }
-    }
+    public ICultureService LocalizationService => _localizationService;
 
     public string CurrentLanguage
     {
@@ -44,7 +37,10 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         _localizationService = localizationService;
-        LocalizationService = localizationService;
+        var adapter = new DynamicLocalizationAdapter(localizationService);
+        SettingsPanel.LocalizationService = adapter;
+        CustomSettingsPanel.LocalizationService = adapter;
+        Closed += (_, _) => adapter.Dispose();
 
         SettingsPanel.Targets = _targets;
         SettingsPanel.Targets.Add(_themeSettings);

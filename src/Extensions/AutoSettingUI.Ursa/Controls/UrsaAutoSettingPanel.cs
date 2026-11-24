@@ -12,11 +12,11 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.VisualTree;
+using Avalonia.Threading;
 using AutoSettingUI.Core.Attributes;
 using AutoSettingUI.Core.Interfaces;
 using AutoSettingUI.Core.Models;
 using AutoSettingUI.Core.Providers;
-using DynamicLocalization.Core;
 
 namespace AutoSettingUI.Ursa.Controls;
 
@@ -88,8 +88,8 @@ public class UrsaAutoSettingPanel : TemplatedControl
     /// <summary>
     /// Defines the <see cref="LocalizationService"/> property.
     /// </summary>
-    public static readonly StyledProperty<ICultureService?> LocalizationServiceProperty =
-        AvaloniaProperty.Register<UrsaAutoSettingPanel, ICultureService?>(nameof(LocalizationService));
+    public static readonly StyledProperty<ILocalizationService?> LocalizationServiceProperty =
+        AvaloniaProperty.Register<UrsaAutoSettingPanel, ILocalizationService?>(nameof(LocalizationService));
 
     #endregion
 
@@ -172,9 +172,9 @@ public class UrsaAutoSettingPanel : TemplatedControl
 
     /// <summary>
     /// Gets or sets the localization service for dynamic language switching.
-    /// When set, all text in the panel will be automatically updated when the culture changes.
+    /// Resource-key headings and labels refresh when the service reports a change.
     /// </summary>
-    public ICultureService? LocalizationService
+    public ILocalizationService? LocalizationService
     {
         get => GetValue(LocalizationServiceProperty);
         set => SetValue(LocalizationServiceProperty, value);
@@ -269,29 +269,42 @@ public class UrsaAutoSettingPanel : TemplatedControl
         }
     }
 
-    private void OnCultureChanged(object? sender, CultureChangedEventArgs e)
+    private bool _localizationAttached;
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
+        base.OnAttachedToVisualTree(e);
+        _localizationAttached = true;
+        if (LocalizationService is { } service)
+            service.LocalizationChanged += OnLocalizationChanged;
         UpdateLocalizedTexts();
     }
 
-    private void OnLocalizationServicePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        if (e.PropertyName == "Item[]")
-        {
+        if (LocalizationService is { } service)
+            service.LocalizationChanged -= OnLocalizationChanged;
+        _localizationAttached = false;
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    private void OnLocalizationChanged(object? sender, EventArgs e)
+    {
+        if (Dispatcher.UIThread.CheckAccess())
             UpdateLocalizedTexts();
-        }
+        else
+            Dispatcher.UIThread.Post(UpdateLocalizedTexts);
     }
 
     private void UpdateLocalizedTexts()
     {
         var service = LocalizationService;
-        if (service == null) return;
 
         foreach (var (textBlock, resourceKey, fallbackText) in _localizedTextBlocks)
         {
             if (!string.IsNullOrEmpty(resourceKey))
             {
-                textBlock.Text = service.GetString(resourceKey);
+                textBlock.Text = ResolveLocalizedText(service, resourceKey, fallbackText);
             }
         }
 
@@ -299,7 +312,7 @@ public class UrsaAutoSettingPanel : TemplatedControl
         {
             if (!string.IsNullOrEmpty(placeholderKey))
             {
-                var localizedPlaceholder = service.GetString(placeholderKey);
+                var localizedPlaceholder = ResolveLocalizedText(service, placeholderKey, placeholderFallback ?? placeholderKey);
                 if (control is TextBox textBox)
                 {
                     textBox.Watermark = localizedPlaceholder;
@@ -313,11 +326,17 @@ public class UrsaAutoSettingPanel : TemplatedControl
         }
     }
 
-    private void UpdateNavigationNodeTitle(NavigationNode node, ICultureService service)
+    private static string ResolveLocalizedText(ILocalizationService? service, string key, string fallback)
+    {
+        var text = service?.GetString(key);
+        return string.IsNullOrEmpty(text) ? fallback : text;
+    }
+
+    private void UpdateNavigationNodeTitle(NavigationNode node, ILocalizationService? service)
     {
         if (!string.IsNullOrEmpty(node.TitleKey))
         {
-            node.Title = service.GetString(node.TitleKey);
+            node.Title = ResolveLocalizedText(service, node.TitleKey, node.TitleKey);
         }
 
         foreach (var child in node.Children)
@@ -365,16 +384,14 @@ public class UrsaAutoSettingPanel : TemplatedControl
         }
         else if (change.Property == LocalizationServiceProperty)
         {
-            if (change.OldValue is ICultureService oldService)
+            if (_localizationAttached && change.OldValue is ILocalizationService oldService)
             {
-                oldService.CultureChanged -= OnCultureChanged;
-                oldService.PropertyChanged -= OnLocalizationServicePropertyChanged;
+                oldService.LocalizationChanged -= OnLocalizationChanged;
             }
             
-            if (change.NewValue is ICultureService newService)
+            if (_localizationAttached && change.NewValue is ILocalizationService newService)
             {
-                newService.CultureChanged += OnCultureChanged;
-                newService.PropertyChanged += OnLocalizationServicePropertyChanged;
+                newService.LocalizationChanged += OnLocalizationChanged;
             }
             
             UpdateLocalizedTexts();
@@ -670,6 +687,7 @@ public class UrsaAutoSettingPanel : TemplatedControl
         }
 
         _formScrollViewer.Content = formPanel;
+        UpdateLocalizedTexts();
     }
 
     private global::Avalonia.Controls.Control CreateSectionHeader(string title, string sectionId, bool isMainHeader, string? titleKey = null)

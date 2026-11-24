@@ -6,6 +6,7 @@ using AutoSettingUI.Avalonia.CrossPlatform.Demo.Models;
 using Avalonia;
 using Avalonia.Styling;
 using DynamicLocalization.Core;
+using AutoSettingUI.DynamicLocalization;
 
 namespace AutoSettingUI.Avalonia.CrossPlatform.Demo.ViewModels;
 
@@ -32,8 +33,10 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private ThemeSettings _themeSettings = new();
 
+    private readonly ICultureService _cultureService;
+
     [ObservableProperty]
-    private ICultureService _localizationService;
+    private DynamicLocalizationAdapter _localizationService;
 
     [ObservableProperty]
     private string _currentLanguage = "en";
@@ -47,7 +50,8 @@ public partial class MainViewModel : ViewModelBase
 
     public MainViewModel(ICultureService localizationService)
     {
-        LocalizationService = localizationService;
+        _cultureService = localizationService;
+        LocalizationService = new DynamicLocalizationAdapter(localizationService);
 
         Targets.Add(ThemeSettings);
         Targets.Add(ExtendedSettings);
@@ -108,14 +112,14 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void SwitchToEnglish()
     {
-        LocalizationService.SetCulture("en");
+        _cultureService.SetCulture("en");
         CurrentLanguage = "en";
     }
 
     [RelayCommand]
     private void SwitchToChinese()
     {
-        LocalizationService.SetCulture("zh-CN");
+        _cultureService.SetCulture("zh-CN");
         CurrentLanguage = "zh-CN";
     }
 }

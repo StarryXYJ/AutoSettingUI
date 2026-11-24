@@ -19,6 +19,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <ProjectReference Include="../../src/Extensions/AutoSettingUI.DynamicLocalization/AutoSettingUI.DynamicLocalization.csproj" />
         <AvaloniaResource Include="Assets\**"/>
     </ItemGroup>
 

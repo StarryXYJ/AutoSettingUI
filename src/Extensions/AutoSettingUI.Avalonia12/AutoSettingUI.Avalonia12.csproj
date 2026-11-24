@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+        <AssemblyName>AutoSettingUI.Avalonia</AssemblyName>
+        <DefineConstants>$(DefineConstants);AVALONIA12</DefineConstants>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <IsAotCompatible>true</IsAotCompatible>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+        <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+        <NoWarn>$(NoWarn);IL2026;IL2057;IL2067;IL2070;IL2072;IL2075;IL3050</NoWarn>
+        <MinVerTagPrefix>v</MinVerTagPrefix>
+        <MinVerAutoIncrement>patch</MinVerAutoIncrement>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PackageId>AutoSettingUI.Avalonia12</PackageId>
+        <Authors>Sakuya Starry</Authors>
+        <Description>Avalonia 12 UI implementation for AutoSettingUI</Description>
+        <PackageTags>settings;configuration;ui;avalonia;cross-platform</PackageTags>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/StarryXYJ/AutoSettingUI</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/StarryXYJ/AutoSettingUI.git</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+    <ItemGroup>
+        <Compile Include="../AutoSettingUI.Avalonia/**/*.cs" Exclude="../AutoSettingUI.Avalonia/bin/**;../AutoSettingUI.Avalonia/obj/**" />
+        <AvaloniaResource Include="../AutoSettingUI.Avalonia/Themes/Generic.axaml" Link="Themes/Generic.axaml" />
+        <None Include="README.md" Pack="true" PackagePath="/" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="12.0.5" />
+        <PackageReference Include="Avalonia.Controls.ColorPicker" Version="12.0.5" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.5" />
+        <PackageReference Include="MinVer" Version="8.0.0-alpha.1" PrivateAssets="all" />
+        <ProjectReference Include="../../AutoSettingUI.Core/AutoSettingUI.Core.csproj" />
+        <ProjectReference Include="../AutoSettingUI.Extension.Shared/AutoSettingUI.Extension.Shared.csproj" />
+    </ItemGroup>
+</Project>
